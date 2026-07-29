@@ -1,0 +1,14 @@
+flowchart TD
+    A["Conversation / reflection<br/>surface a candidate fact"] --> B["Classifier tags type<br/>(1 of 11: person, event, preference,<br/>health-adjacent, decision, mood, ...)"]
+    B --> C{"Sensitive type?<br/>(health-adjacent, relationship,<br/>finance)"}
+    C -->|yes| D["Always explicit chip:<br/>'Want me to remember this?'"]
+    C -->|no| D
+    D -->|user accepts| E["Store: typed row + embedding<br/>(pgvector) + source turn + consent stamp"]
+    D -->|user declines| F["Discard - never stored"]
+    E --> G["Retrieval at conversation time:<br/>top-k semantic + recency + type filter"]
+    G --> H{"Visibility gate:<br/>context appropriate?<br/>(no health facts in casual chat)"}
+    H -->|pass| I["Injected into prompt<br/>with memory-ID citation"]
+    H -->|blocked| J["Withheld this turn"]
+    E --> K["Memory Vault screen:<br/>user sees, edits, deletes anything"]
+    K --> L["Delete = hard delete<br/>+ embedding removed"]
+    E --> M["Nightly consolidation:<br/>dedupe, decay, theme extraction"]

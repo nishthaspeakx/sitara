@@ -1,0 +1,53 @@
+flowchart LR
+    subgraph Client["Expo React Native · iOS + Android"
+        ]
+        UI["8-language UI"]
+        AV["Live2D Tara avatar<br/>13 states"]
+        VO["Voice layer<br/>push-to-talk + audio briefs"]
+    end
+    subgraph Backend["NestJS modular monolith · AWS ap-south-1 (+ us-east-1 read)"]
+        GW["API Gateway<br/>Firebase Auth"]
+        ORC["Conversation<br/>Orchestrator"]
+        AST["Astrology Engine<br/>Swiss Ephemeris · Lahiri<br/>typed fact-IDs"]
+        NUM["Numerology Engine<br/>Chaldean primary"]
+        MEM["Memory Service<br/>11 types · consent-gated"]
+        RANK["Morning Ranking<br/>17 modules"]
+        SAFE["Safety Ladder L1–L5"]
+        SUB["Billing<br/>Stripe + Razorpay"]
+        NOTIF["Notifications<br/>OneSignal + WhatsApp"]
+    end
+    subgraph Data["Data"]
+        PG[("PostgreSQL 16<br/>+ pgvector")]
+        RD[("Redis / BullMQ")]
+        S3[("S3: audio,<br/>avatars, exports")]
+    end
+    subgraph AI["AI Services"]
+        CL["Claude API"]
+        STT["Sarvam AI + Deepgram STT"]
+        TTS["ElevenLabs + Sarvam Bulbul TTS"]
+    end
+    subgraph Obs["Observability"]
+        PH["PostHog"]
+        LF["Langfuse"]
+    end
+    UI --> GW
+    AV --> GW
+    VO --> GW
+    GW --> ORC
+    ORC --> AST
+    ORC --> NUM
+    ORC --> MEM
+    ORC --> SAFE
+    ORC --> CL
+    VO -.-> STT
+    ORC -.-> TTS
+    RANK --> AST
+    RANK --> MEM
+    NOTIF --> RANK
+    MEM --> PG
+    AST --> PG
+    ORC --> RD
+    TTS --> S3
+    ORC --> LF
+    GW --> PH
+    SUB --> GW

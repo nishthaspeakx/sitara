@@ -1,0 +1,13 @@
+flowchart TD
+    A["04:30 IST batch:<br/>compute panchang + transits<br/>for every active user (Swiss Ephemeris)"] --> B["Fact set with typed IDs<br/>(tithi, nakshatra, moon sign,<br/>active transits, dasha context)"]
+    B --> C["Morning Ranking Engine<br/>scores 17 content modules"]
+    C --> D{"Select top modules<br/>(60–90s read, ≤9 items/day)"}
+    D --> E["LLM composes brief<br/>cite-or-die: every claim<br/>must reference a fact-ID"]
+    E --> F["Lint pass:<br/>uncited claim → regenerate"]
+    F --> G["Render in user's language<br/>+ TTS audio (Tara Warm)"]
+    G --> H["Push at user's chosen time<br/>(default 7:00 local)"]
+    H --> I["User opens brief"]
+    I --> J["Why this guidance?<br/>tap reveals fact-IDs + chart source"]
+    I --> K["One-tap actions:<br/>remind me · ask Tara · save"]
+    K --> L["Signals feed tomorrow's ranking"]
+    J --> L

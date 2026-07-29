@@ -1,0 +1,53 @@
+flowchart TD
+    subgraph Identity["Identity & profile"]
+        U[("users")] --> P[("profiles")]
+        U --> BD[("birth_details<br/>CSFLE")]
+        U --> FM[("family_members")]
+        FM --> BD
+        U --> CO[("consents")]
+    end
+    subgraph Astro["Astrology (computed + cached)"]
+        BD --> CH[("charts<br/>facts embedded, versioned")]
+        PCH[("panchang_cache<br/>date+geohash+tradition<br/>TTL 90d")]
+        TR[("transit_cache<br/>global, TTL 400d")]
+        NU[("numerology_profiles")]
+    end
+    subgraph Daily["Daily loop"]
+        CH --> DB2[("daily_briefings<br/>uniq user+date")]
+        PCH --> DB2
+        TR --> DB2
+        DB2 --> GL[("guidance_logs<br/>fact-IDs + why payload")]
+        NR[("night_reflections")]
+        GO[("goals")]
+    end
+    subgraph Conv["Conversation & memory"]
+        CV[("conversations<br/>rolling summary")]
+        MS[("messages<br/>CSFLE · shard: conversation")]
+        ME[("memories<br/>Vector Search index · CSFLE")]
+        CV --> MS
+        MS --> ME
+        ME --> CV
+        VS[("voice_sessions<br/>metadata only, no audio")]
+    end
+    subgraph Money["Money & comms"]
+        SB[("subscriptions")]
+        PM[("payments<br/>8yr retention")]
+        NT[("notifications<br/>TTL 180d")]
+        SB --> PM
+    end
+    subgraph Ops["Ops & content"]
+        SE2[("safety_events")]
+        AU[("audit_logs<br/>append-only 7yr")]
+        LC[("localized_content<br/>versioned + sign-offs")]
+        PD[("pronunciation_dictionaries")]
+        FF[("feature_flags / experiments")]
+    end
+    U --> CV
+    U --> SB
+    U --> NT
+    DB2 --> NT
+    MS --> SE2
+    LC --> DB2
+    LC --> NT
+    ARCH["Online Archive:<br/>conversations >12mo ·<br/>briefings >18mo"] -.-> CV
+    ARCH -.-> DB2

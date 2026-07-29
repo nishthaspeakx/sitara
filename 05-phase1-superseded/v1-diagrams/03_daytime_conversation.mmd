@@ -1,0 +1,25 @@
+sequenceDiagram
+    participant U as User
+    participant App as App (text/voice)
+    participant O as Orchestrator
+    participant AE as Astrology Engine
+    participant M as Memory (pgvector)
+    participant S as Safety Ladder
+    participant C as Claude API
+    U->>App: "Should I sign the lease this week?" (any of 8 languages)
+    App->>O: transcript + language tag
+    O->>S: L1 screen (self-harm / medical / legal / financial-risk)
+    S-->>O: clear (or escalate L2–L5)
+    par retrieve context
+        O->>AE: current transits, dasha, muhurta windows for user chart
+        AE-->>O: typed facts with IDs
+        O->>M: top-k relevant memories (visibility-gated)
+        M-->>O: "moving flat, budget worry (June)"
+    end
+    O->>C: system prompt + facts + memories + conversation state
+    C-->>O: reflective guidance citing fact-IDs
+    O->>O: lint: every astrological claim cites a fact-ID
+    O-->>App: reply + "why this guidance" + memory chip suggestion
+    App-->>U: text + optional Tara voice + avatar state "thoughtful"
+    U->>App: accepts memory chip
+    App->>M: store consented memory (type: decision-context)

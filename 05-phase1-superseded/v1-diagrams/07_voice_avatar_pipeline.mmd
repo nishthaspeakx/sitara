@@ -1,0 +1,36 @@
+flowchart LR
+    subgraph Input["User speaks (push-to-talk)"]
+        MIC["Mic capture<br/>16kHz stream"]
+    end
+    subgraph STT["Speech-to-Text"]
+        LANG{"Language router"}
+        SARVAM["Sarvam AI<br/>(Hindi + 5 Indic)"]
+        DG["Deepgram<br/>(English, Hinglish)"]
+    end
+    subgraph Brain["Orchestrator"]
+        ORC["Context + facts + memory<br/>→ Claude API"]
+        EMO["Response tagged with<br/>emotion + avatar state"]
+    end
+    subgraph TTS["Text-to-Speech · 'Tara Warm'"]
+        EL["ElevenLabs<br/>(EN / Hinglish)"]
+        BB["Sarvam Bulbul<br/>(Indic languages)"]
+        CACHE["S3 audio cache<br/>(briefs pre-rendered)"]
+    end
+    subgraph Avatar["Live2D Tara · 2.5D"]
+        STATE["13 states: warm-neutral, listening,<br/>thoughtful, delighted, calm, concerned..."]
+        LIP["Lip-sync from<br/>phoneme timings"]
+    end
+    MIC --> LANG
+    LANG --> SARVAM
+    LANG --> DG
+    SARVAM --> ORC
+    DG --> ORC
+    ORC --> EMO
+    EMO --> EL
+    EMO --> BB
+    EL --> CACHE
+    BB --> CACHE
+    CACHE --> OUT["Audio playback"]
+    EMO --> STATE
+    OUT --> LIP
+    STATE --> LIP

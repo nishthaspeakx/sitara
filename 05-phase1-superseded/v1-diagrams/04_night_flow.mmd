@@ -1,0 +1,13 @@
+flowchart TD
+    A["Optional night push<br/>(user-enabled, default 21:30 local)"] --> B["Night screen: dimmed palette,<br/>Tara avatar state 'calm'"]
+    B --> C["Prompt 1 · How did today feel?<br/>(tap mood or speak)"]
+    C --> D["Prompt 2 · One thing worth remembering?"]
+    D --> E["Prompt 3 · Anything on your mind for tomorrow?"]
+    E --> F["Tara reflects back:<br/>day summary + tomorrow's<br/>panchang preview (fact-cited)"]
+    F --> G{"Memory chips offered<br/>(explicit consent)"}
+    G -->|accept| H["Store typed memories<br/>(mood, event, intention)"]
+    G -->|decline| I["Nothing stored"]
+    H --> J["Nightly consolidation job:<br/>dedupe, decay stale items,<br/>update user themes"]
+    I --> K["Session ends ≤3 min<br/>no streaks, no guilt mechanics"]
+    J --> K
+    K --> L["Feeds tomorrow's morning<br/>ranking engine"]

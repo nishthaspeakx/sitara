@@ -1,0 +1,23 @@
+flowchart TD
+    A["00:30 local-region:<br/>global pre-jobs compute<br/>panchang per date+geohash+tradition<br/>(thousands of users share one doc)"] --> PC[("panchang_cache")]
+    B["Celery Beat tick every 15 min"] --> C["Select users whose local brief_time<br/>is 90–30 min ahead<br/>(wave hashed by user_id)"]
+    C --> D{"Priority queues"}
+    D -->|"paying"| E["Generate now"]
+    D -->|"trial"| E
+    D -->|"dormant"| F["Skip — generate on open"]
+    E --> G["Fetch chart facts (Layer A cache)<br/>+ panchang facts (shared cache)"]
+    PC --> G
+    G --> H["Ranking engine:<br/>17 modules → 60–90s brief"]
+    H --> I["Template composition +<br/>LLM polish (batched,<br/>low-temp, prompt-cached)"]
+    I --> J["Grounding validation<br/>(cite-or-die)"]
+    J -->|"fail"| K["Degrade: verified core cards<br/>(panchang + 1 chart theme, no LLM)"]
+    J --> L{"Voice-brief enabled +<br/>open-rate >20%?"}
+    L -->|yes| M["TTS pre-render +<br/>baked viseme track"]
+    L -->|no| N["Synthesize on first open"]
+    M --> O[("daily_briefings<br/>idempotent user+date")]
+    N --> O
+    K --> O
+    O --> P["Notification at exact local time<br/>(push / WhatsApp / email)"]
+    Q["Location-change event<br/>(user flew overnight)"] --> R["Targeted regenerate"]
+    R --> O
+    S["Queue-depth SLO breach"] --> T["Cost lever: ranking-only briefs<br/>ship first, upgrade lazily"]

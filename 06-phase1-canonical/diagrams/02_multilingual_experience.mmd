@@ -1,0 +1,14 @@
+flowchart TD
+    A["First screen:<br/>8 language cards,<br/>each in its own script,<br/>Tara greeting audio on tap"] --> B["Locale set app-wide:<br/>UI strings · script · fonts ·<br/>voice · formats · calendars"]
+    B --> C["next-intl [locale] routing<br/>ICU catalogs from CMS<br/>per-route, tree-shaken"]
+    C --> D["EVERY surface in-locale:<br/>onboarding · chat · voice · briefs ·<br/>notifications · payments · receipts ·<br/>settings · errors · help · support"]
+    D --> E{"Missing string<br/>at runtime?"}
+    E -->|same-family fallback| F["Hinglish → Hindi<br/>+ P1 localisation defect logged"]
+    E -->|no fallback available| G["ASK the user, in-locale:<br/>'May I show this part in English<br/>until it's ready?'"]
+    G -->|consents| H["Recorded, per-surface,<br/>reversible in settings"]
+    G -->|declines| I["Surface hidden gracefully,<br/>feature waits for the wave"]
+    D --> J{"Generated reply<br/>language-quality check"}
+    J -->|pass| K["Delivered"]
+    J -->|fail| L["One corrective regeneration"]
+    L -->|fail again| M["Safe in-locale fallback line<br/>+ human review queue"]
+    N["Language wave gate:<br/>100% checklist signed<br/>(strings · voice · QA panels ·<br/>support · legal)"] -->|"flag enables"| A

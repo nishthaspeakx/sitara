@@ -1,0 +1,9 @@
+flowchart LR
+    S1["Stage 1 · 1K users<br/>ECS Fargate: 2 api · 2 realtime ·<br/>1 astro · 2 workers<br/>Mongo M30 replica set<br/>₹1.5–2.5L/mo"] -->|"5K users or beta exit"| S2
+    S2["Stage 2 · 100K users<br/>autoscaled 6–10 api · 8 realtime<br/>Mongo M50 + us-east-1 read replica<br/>Redis cluster · 600 voice streams<br/>warm standby region<br/>₹8–14L/mo"] -->|"p95 >400ms sustained<br/>or queue lag >60s"| S3
+    S3["Stage 3 · 1M users<br/>EKS · 30–60 api pods · 40+ realtime<br/>Mongo M80+ sharded ×3<br/>(messages · memories · briefings)<br/>Online Archive · 6K voice streams<br/>₹45–70L/mo"] -->|"messages >500M docs<br/>or write p95 >50ms<br/>or residency mandate"| S4
+    S4["Stage 4 · 10M users<br/>multi-region active-active (stateless)<br/>Global Cluster zone-sharded<br/>by residency · 40K+ voice streams<br/>12M notifications/hr<br/>₹2.5–4Cr/mo"]
+    B1["Bottleneck: none<br/>(headroom)"] -.-> S1
+    B2["Bottleneck: WebSocket fan-out<br/>→ Redis pub/sub + sticky LB"] -.-> S2
+    B3["Bottleneck: Mongo writes +<br/>voice provider quotas<br/>→ shard + capacity contracts"] -.-> S3
+    B4["Bottleneck: morning burst +<br/>notification throughput<br/>→ wave spreading + sharded senders"] -.-> S4

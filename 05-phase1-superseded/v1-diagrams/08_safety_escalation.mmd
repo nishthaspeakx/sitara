@@ -1,0 +1,13 @@
+flowchart TD
+    A["Every user message +<br/>every Tara reply candidate"] --> B["L1 · Automated screen<br/>(classifier: self-harm, medical,<br/>legal, financial-risk, minors)"]
+    B -->|clear| OK["Normal reflective guidance<br/>(never deterministic predictions<br/>about health, death, divorce, jobs)"]
+    B -->|flag| C["L2 · Constrained response mode<br/>astrology framing removed,<br/>empathetic + factual only"]
+    C --> D{"Risk class"}
+    D -->|medical / legal / financial| E["L3 · Explicit redirect:<br/>'This needs a qualified professional'<br/>+ no chart-based advice on outcome"]
+    D -->|emotional distress| F["L3 · Supportive mode:<br/>slow down, validate,<br/>offer helpline info if user wishes"]
+    D -->|acute self-harm signal| G["L4 · Crisis protocol:<br/>direct helpline resources,<br/>session flagged, avatar 'concerned',<br/>no astrology content at all"]
+    G --> H["L5 · Human review queue<br/>(24h SLA) + pattern audit"]
+    E --> I["All L2+ events logged<br/>to safety dashboard"]
+    F --> I
+    G --> I
+    OK --> J["Weekly sampled audit:<br/>1% of conversations reviewed<br/>against ethics code"]

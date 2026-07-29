@@ -1,0 +1,13 @@
+flowchart TD
+    A["Conversation / reflection surfaces<br/>a candidate fact"] --> B["Classifier: 1 of 11 types<br/>(person · event · preference · decision ·<br/>mood · intention · health-adjacent · …)"]
+    B --> C["Explicit consent chip, in-locale:<br/>'Want me to remember this?'"]
+    C -->|declined| D["Discarded — never stored"]
+    C -->|accepted| E["Stored in MongoDB 'memories':<br/>typed doc + embedding (Atlas Vector Search)<br/>+ consent record + source ref"]
+    E --> F["Retrieval at turn time:<br/>vector top-k (cosine) + recency boost<br/>+ type filter + decay score"]
+    F --> G{"Visibility gate:<br/>context-appropriate?<br/>(no health-adjacent facts<br/>in casual chat)"}
+    G -->|pass| H["Injected into prompt<br/>with memory-ID citation"]
+    G -->|blocked| I["Withheld this turn"]
+    E --> J["Memory Vault screen:<br/>view · edit · delete · consent history"]
+    J --> K["Delete = hard delete<br/>+ embedding removed"]
+    E --> L["Nightly consolidation:<br/>dedupe · decay stale ·<br/>theme extraction"]
+    L --> F

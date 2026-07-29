@@ -1,0 +1,25 @@
+flowchart TD
+    ROOT["/ (locale detect → /[locale])"] --> UNAUTH{"Authenticated?"}
+    UNAUTH -->|no| MKT["/[locale]/welcome<br/>marketing/landing · voice sample<br/>→ sign-in entry"]
+    MKT --> OB["/[locale]/start<br/>ONBOARDING STACK (linear, no tabs)<br/>lang → auth → consent → birth →<br/>place → interest → name →<br/>priorities → voice → first-reading"]
+    OB -->|"first reading complete"| TODAY
+    UNAUTH -->|yes| TODAY["/[locale]/today<br/>TAB 1 · Today<br/>(night takeover after 20:00)"]
+    TODAY --> WHY["sheet: why-this /today/brief/[card]/why"]
+    TODAY --> TIM["/today/timings"]
+    TODAY --> FEST["/today/festival"]
+    ASK["/[locale]/ask<br/>TAB 2 · Ask Tara (chat)"] --> CALL["overlay: /ask/call<br/>(full-screen, pip on minimise)"]
+    ASK --> STORY["overlay: /stories/[id]<br/>(viewer, P1 flag)"]
+    JRNL["/[locale]/journal<br/>TAB 3 · Journal"] --> JD["/journal/[date]"]
+    JRNL --> SRCH["/journal/search"]
+    YOU["/[locale]/you<br/>TAB 4 · You"] --> MEM["/you/memories → /you/memories/[id]"]
+    YOU --> FAM["/you/family → /you/family/[id]"]
+    YOU --> SUB["/you/subscription<br/>→ paywall sheet · gift flow"]
+    YOU --> SET["/you/settings (sections)"]
+    YOU --> PRIV["/you/privacy (export · delete)"]
+    YOU --> HELP["/you/help (articles · support chat)"]
+    TODAY -.tabs.- ASK -.tabs.- JRNL -.tabs.- YOU
+    NOTIF["Notification deep links"] -->|"brief"| TODAY
+    NOTIF -->|"reminder/context"| ASK
+    NOTIF -->|"payment/dunning"| SUB
+    SAFE["Safety escalation (L3+):<br/>full-screen takeover route /support/now<br/>exits only to /ask or /you/help<br/>never to paywall or stories"] -.-> ASK
+    RULES["Back behaviour: browser-native;<br/>sheets close on back before route pops;<br/>tab switch preserves per-tab stack;<br/>onboarding back = previous step, never exits to blank;<br/>all routes locale-prefixed; unauth deep link →<br/>sign-in → return to target"]
