@@ -1,4 +1,4 @@
-"""App factory (SPEC §6.3 modular monolith). M1 modules: auth."""
+"""App factory (SPEC §6.3 modular monolith). Modules: auth, numerology."""
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -11,6 +11,8 @@ from sitara_api.auth.router import router as auth_router
 from sitara_api.config import Settings
 from sitara_api.db import ensure_indexes, make_mongo, make_redis
 from sitara_api.errors import install_error_handlers
+from sitara_api.numerology.adapter import AstroNumerologyAdapter
+from sitara_api.numerology.router import router as numerology_router
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -32,9 +34,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         project_id=settings.firebase_project_id,
         credentials_path=settings.google_application_credentials,
     )
+    app.state.numerology_adapter = AstroNumerologyAdapter(
+        settings.astro_base_url, settings.astro_timeout_seconds
+    )
 
     install_error_handlers(app)
     app.include_router(auth_router)
+    app.include_router(numerology_router)
 
     @app.get("/healthz")
     def healthz() -> dict[str, str]:

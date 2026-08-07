@@ -5,6 +5,11 @@ WORKDIR /app
 COPY packages/schemas/python packages/schemas/python
 COPY services/astro services/astro
 WORKDIR /app/services/astro
-RUN uv sync --frozen --no-dev
+# pyswisseph ships no cp312 manylinux wheels — build it from source, then drop the toolchain
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential \
+    && uv sync --frozen --no-dev \
+    && apt-get purge -y build-essential && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
+ENV SWISSEPH_DATA_PATH=/app/services/astro/data/swisseph
 EXPOSE 8003
 CMD ["uv", "run", "--no-sync", "uvicorn", "sitara_astro.main:app", "--host", "0.0.0.0", "--port", "8003"]

@@ -1,0 +1,24 @@
+schema_version: 1
+case_id: NC-011
+category: user_edited
+status: pending          # ONLY `golden verify` (a named human) may set this
+source: null
+verified_by: null
+verified_on: null
+notes: "User spells long ī as 'ee'; engine follows the human."
+input:
+  name_as_entered: "सीता"
+  script: devanagari
+  confirmed_latin: "Seeta"
+  name_source: user_edited
+  dob: "1974-01-06"
+  master_numbers: reduce
+expected:                # hand-computed from the published tables — §5.5 needs 100%
+  moolank: NEEDS_VERIFICATION
+  bhagyank: NEEDS_VERIFICATION
+  chaldean_name_number: NEEDS_VERIFICATION
+  chaldean_compound: NEEDS_VERIFICATION
+  pythagorean_name_number: NEEDS_VERIFICATION
+  pythagorean_compound: NEEDS_VERIFICATION
+  iso15919: NEEDS_VERIFICATION
+  suggested_latin: NEEDS_VERIFICATION

@@ -54,9 +54,22 @@
       "step_up_required": "Aapki suraksha ke liye, link karne se pehle apni pehchaan verify karein.",
       "no_pending_conflict": "Abhi kuch resolve karne ke liye nahin hai."
     },
+    "astro": {
+      "insufficient_birth_data": "Ise sahi se calculate karne ke liye mere paas poori jaankari nahin hai — kya hum ise poora kar lein?",
+      "place_unresolved": "Us janm sthaan ka time zone confirm nahin ho paya. Jagah ki details check karke dobara koshish karein.",
+      "engine_unavailable": "Calculation seva abhi thodi der ke liye available nahin hai. Thodi der mein dobara try karein.",
+      "provider_disputed": "Hamare sources is detail par abhi poori tarah sehmat nahin hain, isliye hum guess karne ki bajaye dobara jaanch rahe hain.",
+      "name_unconfirmed": "Aapke ank nikalne se pehle apne naam ki spelling confirm karein.",
+      "name_invalid": "Is naam mein aise characters hain jo hum naam ki tarah nahin padh pa rahe. Check karke dobara koshish karein."
+    },
     "sys": {
       "validation": "Request mein kuch theek nahin tha. Dobara koshish karein.",
       "internal": "Hamari taraf se kuch gadbad ho gayi. Thodi der mein dobara try karein."
+    }
+  },
+  "numerology": {
+    "transliteration": {
+      "confirm": "Humne aapka naam ‘{name}’ padha — sahi hai?"
     }
   }
 }

@@ -1,0 +1,24 @@
+schema_version: 1
+case_id: NC-016
+category: moolank_edge
+status: pending          # ONLY `golden verify` (a named human) may set this
+source: null
+verified_by: null
+verified_on: null
+notes: "Day 31 → 4; month boundary."
+input:
+  name_as_entered: "Vikram"
+  script: latin
+  confirmed_latin: "Vikram"
+  name_source: latin_as_entered
+  dob: "1990-05-31"
+  master_numbers: reduce
+expected:                # hand-computed from the published tables — §5.5 needs 100%
+  moolank: NEEDS_VERIFICATION
+  bhagyank: NEEDS_VERIFICATION
+  chaldean_name_number: NEEDS_VERIFICATION
+  chaldean_compound: NEEDS_VERIFICATION
+  pythagorean_name_number: NEEDS_VERIFICATION
+  pythagorean_compound: NEEDS_VERIFICATION
+  iso15919: NEEDS_VERIFICATION
+  suggested_latin: NEEDS_VERIFICATION

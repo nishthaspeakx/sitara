@@ -54,9 +54,22 @@
       "step_up_required": "For your safety, please verify it's you before linking.",
       "no_pending_conflict": "There's nothing to resolve right now."
     },
+    "astro": {
+      "insufficient_birth_data": "I don't have enough information to calculate this accurately — shall we complete it?",
+      "place_unresolved": "We couldn't confirm the timezone for that birth place. Please check the place details and try again.",
+      "engine_unavailable": "Calculations are briefly unavailable. Please try again in a moment.",
+      "provider_disputed": "Our sources don't fully agree on this detail right now, so we're double-checking rather than guessing.",
+      "name_unconfirmed": "Please confirm how your name is spelled before we calculate your numbers.",
+      "name_invalid": "That name has characters we can't read as a name. Please check it and try again."
+    },
     "sys": {
       "validation": "Something in the request wasn't right. Please try again.",
       "internal": "Something went wrong on our side. Please try again in a moment."
+    }
+  },
+  "numerology": {
+    "transliteration": {
+      "confirm": "We read your name as ‘{name}’ — correct?"
     }
   }
 }

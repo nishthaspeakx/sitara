@@ -9,10 +9,22 @@ dependencies = [
     "pydantic>=2.7",
     "pydantic-settings>=2.5",
     "sitara-schemas",
+    "pyswisseph>=2.10.3",
+    "tzdata==2025.2",
 ]
 
+[project.scripts]
+sitara-golden = "sitara_astro.golden.cli:main"
+
 [dependency-groups]
-dev = ["pytest>=8", "httpx>=0.27", "ruff>=0.7", "pyright>=1.1.380"]
+dev = [
+    "pytest>=8",
+    "httpx>=0.27",
+    "ruff>=0.7",
+    "pyright>=1.1.380",
+    "pyyaml>=6",
+    "types-pyyaml>=6.0.12.20260724",
+]
 
 [tool.uv.sources]
 sitara-schemas = { path = "../../packages/schemas/python", editable = true }
@@ -23,6 +35,9 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/sitara_astro"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100

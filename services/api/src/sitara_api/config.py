@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     access_ttl_seconds: int = 900
     refresh_ttl_seconds: int = 30 * 24 * 3600
 
+    # §6.3: sitara-astro is an INTERNAL service; only this API fronts it publicly.
+    astro_base_url: str = "http://localhost:8003"
+    astro_timeout_seconds: float = 3.0
+
     # §27: 5 OTP fails → 15-minute lock.
     otp_max_fails: int = 5
     otp_lock_seconds: int = 900
