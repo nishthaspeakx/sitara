@@ -1,0 +1,67 @@
+# Sitara CI (playbook §1.5) — every PR green before merge, including Claude Code's own.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  js:
+    name: lint · typecheck · build · token-lint · i18n-lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm token-lint
+      - run: pnpm i18n-lint
+
+  py:
+    name: ruff · pytest (${{ matrix.package }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        package:
+          - packages/schemas/python
+          - services/api
+          - services/realtime
+          - services/astro
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - run: uv sync
+        working-directory: ${{ matrix.package }}
+      - run: |
+          if [ -f pyproject.toml ] && grep -q ruff pyproject.toml; then uv run ruff check .; fi
+        working-directory: ${{ matrix.package }}
+      - run: uv run pytest -q
+        working-directory: ${{ matrix.package }}
+
+  schemas-drift:
+    name: schemas codegen drift guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python3 packages/schemas/scripts/generate.py
+      - run: git diff --exit-code -- packages/schemas
+
+  golden-set:
+    # Placeholder until M2 lands the harness; becomes RELEASE-BLOCKING then (§5.5).
+    name: golden-set (placeholder — blocking from M2)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "golden-set harness lands in M2; this job then runs pytest services/astro/tests/golden and FAILS under 99.9% parity on verified cases"

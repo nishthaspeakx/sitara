@@ -1,0 +1,20 @@
+{
+  "name": "sitara-app",
+  "private": true,
+  "packageManager": "pnpm@11.20.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "token-lint": "node packages/tokens/scripts/token-lint.mjs",
+    "i18n-lint": "node packages/i18n/scripts/i18n-lint.mjs"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.0"
+  }
+}
