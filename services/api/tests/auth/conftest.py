@@ -16,7 +16,7 @@ from sitara_api.app import create_app
 from sitara_api.auth.firebase import InvalidFirebaseToken, VerifiedIdentity, get_verifier
 from sitara_api.config import Settings
 
-MONGO_URI = "mongodb://localhost:27017"
+MONGO_URI = "mongodb://localhost:27018"  # compose mongo — NEVER a machine-local mongod
 REDIS_URI = "redis://localhost:6379/15"  # db 15 reserved for tests, flushed per test
 
 ADULT_DOB = "1990-01-15"

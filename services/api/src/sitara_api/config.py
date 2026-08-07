@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     port: int = 8001
-    mongodb_uri: str = "mongodb://localhost:27017/sitara"
+    mongodb_uri: str = "mongodb://localhost:27018/sitara"
     mongo_db: str = "sitara"
     redis_url: str = "redis://localhost:6379/0"
 

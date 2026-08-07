@@ -6,7 +6,9 @@ services:
   mongo:
     image: mongo:7
     ports:
-      - "27017:27017"
+      # Host port 27018 — a developer-machine mongod may own 27017; the stack
+      # must never share a port with (or leak data into) unrelated local DBs.
+      - "27018:27017"
     volumes:
       - mongo-data:/data/db
     healthcheck:
