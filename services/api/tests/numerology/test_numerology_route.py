@@ -133,6 +133,8 @@ class TestHappyPath:
         assert set(body["facts"][0]) == {
             "fact_id", "kind", "value", "precision", "method",
             "valid_from", "valid_to", "engine_semver", "data_revision",
+            # M3: §5.2 describes a snapshot as (id, value, source, confidence).
+            "source", "confidence",
         }
 
     def test_confirmed_name_adds_name_numbers(self, client_factory) -> None:  # noqa: ANN001

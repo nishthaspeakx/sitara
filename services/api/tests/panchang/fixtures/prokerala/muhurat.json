@@ -1,0 +1,23 @@
+{
+  "_recording": {
+    "status": "provisional",
+    "recorded_at": null,
+    "note": "PROVISIONAL \u2014 shape written from vendor documentation, NOT recorded from a live API. Run `python -m sitara_api.panchang.record --all` with trial keys to replace. See fixtures/README.md.",
+    "request": {
+      "method": "GET",
+      "path": "/v2/astrology/auspicious-period"
+    }
+  },
+  "status_code": 200,
+  "body": {
+    "status": "ok",
+    "data": {
+      "muhurat": [
+        {
+          "start": "2026-11-19T07:14:00+05:30",
+          "end": "2026-11-19T09:45:00+05:30"
+        }
+      ]
+    }
+  }
+}

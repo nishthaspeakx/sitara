@@ -7,6 +7,14 @@ Bounded-context modules in one process (auth, users/profiles, localisation, astr
 - LLM never computes astrology — facts come from the astrology facade over sitara-astro (§5.3).
 - All strings via i18n keys; idempotency keys on all mutation endpoints; no secrets/PII in logs (§13).
 
+## panchang module (M3, §5.2 Layer B/D) — invariants that must not regress
+- **No majority vote anywhere.** §32.2 replaced §5.2 Layer D's "majority source" with an authority rule. `adjudicate.py` is pure and vote-free; a test parses its AST to keep it that way.
+- **Layer A is never outvoted** on deterministic astronomy (boundary instants, sunrise/sunset) — vendor disagreement raises a review flag, never `disputed`. When Layer A cannot answer, §32.2's DivineAPI-primary rule takes over (`FactClass.PANCHANG_ASTRONOMY`).
+- **Prokerala is never persisted** — ToS. `PanchangCache.put` raises on it; Layer-A fallbacks are recomputed, not stored. So exactly one provider occupies a panchang row and §6.4's uniq index holds.
+- **Cache keys are global** (`sitara_schemas.cache_keys`, §7.2) — a user id in one would fan a person's data across everyone sharing the row.
+- **Provider shapes are UNVERIFIED** until `python -m sitara_api.panchang.record` runs against trial keys. See `tests/panchang/fixtures/README.md`; the skipping provenance test is the honest marker — do not delete it.
+- CI never calls a vendor: `test_no_live_network.py` blocks DNS + connect for non-loopback.
+
 ## Commands
 - Run: `uv run uvicorn sitara_api.main:app --port 8001 --reload`
 - Test: `uv run pytest -q` · Lint: `uv run ruff check .` · Types: `uv run pyright`

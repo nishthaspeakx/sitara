@@ -32,3 +32,58 @@ class Settings(BaseSettings):
     # §27: 5 OTP fails → 15-minute lock.
     otp_max_fails: int = 5
     otp_lock_seconds: int = 900
+
+    # --- §5.2 Layer B panchang providers ---------------------------------
+    # Keys live in .env / Secrets Manager, never here and never in git.
+    # A blank key is not an error: the provider then behaves as "down" and the
+    # §8 degradation ladder runs, which is the playbook's kill-the-key
+    # acceptance. Base URLs and paths are configurable so a shape correction
+    # found at fixture-recording time needs no code change.
+    divineapi_base_url: str = "https://astroapi-4.divineapi.com"
+    divineapi_api_key: str | None = None
+    divineapi_auth_token: str | None = None
+    divineapi_timeout_seconds: float = 4.0
+    divineapi_path_panchang: str | None = None
+    divineapi_path_day_timings: str | None = None
+    divineapi_path_muhurat: str | None = None
+
+    prokerala_base_url: str = "https://api.prokerala.com"
+    prokerala_client_id: str | None = None
+    prokerala_client_secret: str | None = None
+    prokerala_timeout_seconds: float = 4.0
+    prokerala_path_token: str | None = None
+    prokerala_path_panchang: str | None = None
+    prokerala_path_day_timings: str | None = None
+    prokerala_path_muhurat: str | None = None
+
+    # §8: fail fast after 5 errors/30s, half-open probes.
+    panchang_breaker_errors: int = 5
+    panchang_breaker_window_seconds: float = 30.0
+    panchang_breaker_half_open_seconds: float = 60.0
+
+    # §7.2 cache TTLs.
+    panchang_cache_ttl_days: int = 90
+    muhurat_cache_ttl_days: int = 30
+    transit_cache_ttl_days: int = 400
+
+    # Fixture recording — set to 1 ONLY while recording; CI never sets it.
+    sitara_record_fixtures: bool = False
+
+    def divineapi_paths(self) -> dict[str, str]:
+        return _present(
+            panchang=self.divineapi_path_panchang,
+            day_timings=self.divineapi_path_day_timings,
+            muhurat=self.divineapi_path_muhurat,
+        )
+
+    def prokerala_paths(self) -> dict[str, str]:
+        return _present(
+            token=self.prokerala_path_token,
+            panchang=self.prokerala_path_panchang,
+            day_timings=self.prokerala_path_day_timings,
+            muhurat=self.prokerala_path_muhurat,
+        )
+
+
+def _present(**values: str | None) -> dict[str, str]:
+    return {k: v for k, v in values.items() if v}

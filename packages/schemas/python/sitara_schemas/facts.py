@@ -8,7 +8,7 @@ generation time; old artefacts read snapshots, never recomputations.
 """
 
 import re
-from datetime import datetime
+from datetime import date, datetime
 from enum import StrEnum
 from typing import Annotated, Literal, Union
 
@@ -90,7 +90,7 @@ NAKSHATRA_ORDER: tuple[Nakshatra, ...] = tuple(Nakshatra)
 
 
 class FactKind(StrEnum):
-    """Closed taxonomy of engine-emitted facts (M2). New kinds are PR-reviewed."""
+    """Closed taxonomy of engine-emitted facts (M3). New kinds are PR-reviewed."""
 
     NATAL_GRAHA_POSITION = "natal.graha.position"
     NATAL_GRAHA_NAKSHATRA = "natal.graha.nakshatra"
@@ -103,6 +103,90 @@ class FactKind(StrEnum):
     NUMEROLOGY_MOOLANK = "numerology.moolank"
     NUMEROLOGY_BHAGYANK = "numerology.bhagyank"
     NUMEROLOGY_NAME_NUMBER = "numerology.name_number"
+    # M3 §5.2 Layer B/D. panchang.* boundary + rise/set facts are deterministic
+    # astronomy (Layer A authoritative, §32.2); panchang.day_timing, muhurat.*
+    # and festival.* are calendar interpretation (DivineAPI primary).
+    PANCHANG_TITHI_BOUNDARY = "panchang.tithi.boundary"
+    PANCHANG_NAKSHATRA_BOUNDARY = "panchang.nakshatra.boundary"
+    PANCHANG_SUNRISE_SUNSET = "panchang.sunrise_sunset"
+    PANCHANG_DAY_TIMING = "panchang.day_timing"
+    MUHURAT_WINDOW = "muhurat.window"
+    FESTIVAL_OBSERVANCE = "festival.observance"
+
+
+class FactSource(StrEnum):
+    """Which layer produced the SERVED value of a fact (§5.2, §32.2).
+
+    Recorded on every snapshot so a Trust Sheet can state its provenance and so
+    the Layer-D comparison job can never silently swap one source for another.
+    """
+
+    LAYER_A = "layer_a"
+    DIVINEAPI = "divineapi"
+    PROKERALA = "prokerala"
+
+
+class Tradition(StrEnum):
+    """Lunar-month reckoning — part of every §7.2 panchang cache key.
+
+    Regional calendars (Tamil/Malayalam) arrive with the DivineAPI Prakash
+    upgrade (§5.2 Layer B); this is the launch set.
+    """
+
+    AMANTA = "amanta"
+    PURNIMANTA = "purnimanta"
+
+
+class Paksha(StrEnum):
+    """Lunar fortnight. Derived arithmetically from the tithi index, not named
+    by a vendor: tithi 1–15 is shukla, 16–30 krishna."""
+
+    SHUKLA = "shukla"
+    KRISHNA = "krishna"
+
+
+class DayTimingKind(StrEnum):
+    """Sunrise-anchored day divisions (§5.2 Layer B: Rahu Kaal, Yamaganda,
+    Gulikai; choghadiya/gowri panchangam from DivineAPI)."""
+
+    RAHU_KAAL = "rahu_kaal"
+    YAMAGANDA = "yamaganda"
+    GULIKAI = "gulikai"
+    ABHIJIT = "abhijit"
+    CHOGHADIYA_DAY = "choghadiya_day"
+    CHOGHADIYA_NIGHT = "choghadiya_night"
+
+
+class Choghadiya(StrEnum):
+    """The seven choghadiya names. The client maps these to i18n keys — a
+    rendered name never crosses the wire (§2.4)."""
+
+    UDVEG = "udveg"
+    CHAR = "char"
+    LABH = "labh"
+    AMRIT = "amrit"
+    KAAL = "kaal"
+    SHUBH = "shubh"
+    ROG = "rog"
+
+
+class TimingQuality(StrEnum):
+    """Auspiciousness band. Copy per §13/§29.2 is never fear-selling — the
+    client renders `inauspicious` as a neutral caution, never a warning."""
+
+    AUSPICIOUS = "auspicious"
+    NEUTRAL = "neutral"
+    INAUSPICIOUS = "inauspicious"
+
+
+class MuhuratType(StrEnum):
+    """DivineAPI's muhurat finder categories (§5.2 provider table)."""
+
+    MARRIAGE = "marriage"
+    GRIHA_PRAVESH = "griha_pravesh"
+    VEHICLE = "vehicle"
+    BUSINESS = "business"
+    GENERAL = "general"
 
 
 class DashaLevel(StrEnum):
@@ -223,6 +307,10 @@ class FactMethod(BaseModel):
     bhava_system: BhavaSystem | None = None
     dasha_year: DashaYearBasis | None = None
     tz: TzMethod | None = None
+    # §5.2 Layer A rise/set. Default upper_limb_refracted — the definition
+    # published almanacs use, so our sunrise matches the one a user can look up.
+    rise_set: Literal["upper_limb_refracted", "disc_center"] | None = None
+    tradition: Tradition | None = None
     # numerology (§22.10 / §5.5)
     numerology_system: NumerologySystem | None = None
     master_numbers: MasterNumberPolicy | None = None
@@ -355,6 +443,126 @@ class NameNumberValue(BaseModel):
     reduction_steps: tuple[int, ...] = Field(min_length=1)
 
 
+class _Window(BaseModel):
+    """Shared start/end validation for every time-window fact."""
+
+    model_config = ConfigDict(frozen=True)
+
+    starts_utc: AwareDatetime
+    ends_utc: AwareDatetime
+
+    @model_validator(mode="after")
+    def _check_window(self) -> "_Window":
+        if self.ends_utc <= self.starts_utc:
+            raise ValueError("ends_utc must be after starts_utc")
+        return self
+
+
+class TithiBoundaryValue(_Window):
+    """The tithi running over a window, with the instants it opens and closes.
+
+    Deterministic astronomy: the elongation crossing is found by bisection on
+    our own ephemeris, so §32.2 makes Layer A authoritative here.
+    """
+
+    value_kind: Literal["tithi_boundary"] = "tithi_boundary"
+    tithi_index: int = Field(ge=1, le=30)
+    paksha: Paksha
+
+    @model_validator(mode="after")
+    def _check_paksha(self) -> "TithiBoundaryValue":
+        expected = Paksha.SHUKLA if self.tithi_index <= 15 else Paksha.KRISHNA
+        if self.paksha is not expected:
+            raise ValueError(f"tithi {self.tithi_index} is {expected}, not {self.paksha}")
+        return self
+
+
+class NakshatraBoundaryValue(_Window):
+    """The nakshatra the Moon occupies over a window, with its edge instants."""
+
+    value_kind: Literal["nakshatra_boundary"] = "nakshatra_boundary"
+    nakshatra: Nakshatra
+    nakshatra_index: int = Field(ge=1, le=27)
+
+    @model_validator(mode="after")
+    def _check_index(self) -> "NakshatraBoundaryValue":
+        if NAKSHATRA_ORDER[self.nakshatra_index - 1] is not self.nakshatra:
+            raise ValueError(f"nakshatra_index {self.nakshatra_index} is not {self.nakshatra}")
+        return self
+
+
+class SunriseSunsetValue(BaseModel):
+    """Rise/set/solar-noon for one local date at one place.
+
+    `next_sunrise_utc` closes the night, so night choghadiya needs no second
+    lookup. A place-date with no rise or no set (polar) never produces this
+    fact — the engine declines rather than inventing one (§5.3).
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    value_kind: Literal["sunrise_sunset"] = "sunrise_sunset"
+    sunrise_utc: AwareDatetime
+    sunset_utc: AwareDatetime
+    solar_noon_utc: AwareDatetime
+    next_sunrise_utc: AwareDatetime
+
+    @model_validator(mode="after")
+    def _check_order(self) -> "SunriseSunsetValue":
+        if not (self.sunrise_utc < self.solar_noon_utc < self.sunset_utc < self.next_sunrise_utc):
+            raise ValueError("sunrise < solar_noon < sunset < next_sunrise is required")
+        return self
+
+
+class DayTimingValue(_Window):
+    """One sunrise-anchored window: a rahu-kaal band or a choghadiya part."""
+
+    value_kind: Literal["day_timing"] = "day_timing"
+    timing: DayTimingKind
+    quality: TimingQuality
+    choghadiya: Choghadiya | None = None
+    part_index: int | None = Field(default=None, ge=1, le=8)
+
+    @model_validator(mode="after")
+    def _check_choghadiya(self) -> "DayTimingValue":
+        is_chogh = self.timing in (DayTimingKind.CHOGHADIYA_DAY, DayTimingKind.CHOGHADIYA_NIGHT)
+        if is_chogh and (self.choghadiya is None or self.part_index is None):
+            raise ValueError("choghadiya timings require choghadiya + part_index")
+        if not is_chogh and self.choghadiya is not None:
+            raise ValueError(f"{self.timing} must not carry a choghadiya name")
+        return self
+
+
+class MuhuratWindowValue(_Window):
+    """One muhurat window, labelled with the place it was computed FOR (§30.2).
+
+    place_label/place_tz are carried on the fact itself so a window computed for
+    "wedding in Jaipur" can never be rendered as if it were the user's own city.
+    """
+
+    value_kind: Literal["muhurat_window"] = "muhurat_window"
+    muhurat_type: MuhuratType
+    quality: TimingQuality
+    place_label: str = Field(min_length=1, max_length=120)
+    place_tz: str = Field(min_length=1)
+
+
+class FestivalObservanceValue(BaseModel):
+    """A festival/observance on one local date for one region+tradition.
+
+    `festival_id` is a stable slug; the client resolves it to in-locale copy —
+    a vendor's English festival name never reaches a user (§2.4).
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    value_kind: Literal["festival_observance"] = "festival_observance"
+    festival_id: str = Field(pattern=r"^[a-z0-9_]+$", max_length=64)
+    date_local: date
+    region: str = Field(pattern=r"^[a-z0-9_-]+$", max_length=32)
+    tradition: Tradition
+
+
 FactValue = Annotated[
     Union[
         GrahaPositionValue,
@@ -366,6 +574,12 @@ FactValue = Annotated[
         MoolankValue,
         BhagyankValue,
         NameNumberValue,
+        TithiBoundaryValue,
+        NakshatraBoundaryValue,
+        SunriseSunsetValue,
+        DayTimingValue,
+        MuhuratWindowValue,
+        FestivalObservanceValue,
     ],
     Field(discriminator="value_kind"),
 ]
@@ -382,6 +596,12 @@ KIND_VALUE_KIND: dict[FactKind, str] = {
     FactKind.NUMEROLOGY_MOOLANK: "moolank",
     FactKind.NUMEROLOGY_BHAGYANK: "bhagyank",
     FactKind.NUMEROLOGY_NAME_NUMBER: "name_number",
+    FactKind.PANCHANG_TITHI_BOUNDARY: "tithi_boundary",
+    FactKind.PANCHANG_NAKSHATRA_BOUNDARY: "nakshatra_boundary",
+    FactKind.PANCHANG_SUNRISE_SUNSET: "sunrise_sunset",
+    FactKind.PANCHANG_DAY_TIMING: "day_timing",
+    FactKind.MUHURAT_WINDOW: "muhurat_window",
+    FactKind.FESTIVAL_OBSERVANCE: "festival_observance",
 }
 
 # fact:<kind_path>/<scope>/<subject>@v<chart_version>
@@ -423,6 +643,10 @@ class FactSnapshot(BaseModel):
     valid_to: AwareDatetime | None
     engine_semver: str
     data_revision: str
+    # §5.2 describes a snapshot as (id, value, source, confidence). Defaulted so
+    # every artefact written before M3 stays valid on read.
+    source: FactSource = FactSource.LAYER_A
+    confidence: ConfidenceState | None = None
 
     @field_validator("fact_id")
     @classmethod
@@ -459,16 +683,21 @@ __all__ = [
     "RASHI_ORDER",
     "BhagyankValue",
     "BhavaSystem",
+    "Choghadiya",
     "ConfidenceState",
     "DashaLevel",
     "DashaPeriodValue",
     "DashaYearBasis",
+    "DayTimingKind",
+    "DayTimingValue",
     "EpheSource",
     "FactKind",
     "FactMethod",
     "FactPrecision",
     "FactSnapshot",
+    "FactSource",
     "FactValue",
+    "FestivalObservanceValue",
     "Graha",
     "GrahaPositionValue",
     "HouseAssignmentValue",
@@ -476,13 +705,21 @@ __all__ = [
     "LagnaValue",
     "MasterNumberPolicy",
     "MoolankValue",
+    "MuhuratType",
+    "MuhuratWindowValue",
     "Nakshatra",
+    "NakshatraBoundaryValue",
     "NakshatraValue",
     "NameNumberValue",
     "NameSource",
     "NodeType",
     "NumerologySystem",
+    "Paksha",
     "Rashi",
+    "SunriseSunsetValue",
+    "TimingQuality",
+    "TithiBoundaryValue",
+    "Tradition",
     "TzMethod",
     "build_fact_id",
 ]

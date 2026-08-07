@@ -44,7 +44,7 @@ class AstroNumerologyAdapter:
         # Pass a known ASTRO_* code straight through so the client sees one
         # taxonomy; anything else becomes an engine-unavailable envelope.
         code = self._upstream_code(response)
-        if code in _ASTRO_CODES:
+        if code is not None and code in _ASTRO_CODES:
             raise ApiError(code)
         logger.warning("sitara-astro returned %s", response.status_code)
         raise ApiError(ErrorCode.ASTRO_ENGINE_UNAVAILABLE)

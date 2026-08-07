@@ -1,0 +1,31 @@
+{
+  "_recording": {
+    "status": "provisional",
+    "recorded_at": null,
+    "note": "PROVISIONAL \u2014 shape written from vendor documentation, NOT recorded from a live API. Run `python -m sitara_api.panchang.record --all` with trial keys to replace. See fixtures/README.md.",
+    "request": {
+      "method": "POST",
+      "path": "/indian-api/v1/panchang"
+    }
+  },
+  "status_code": 200,
+  "body": {
+    "success": true,
+    "data": {
+      "sunrise": "2026-08-08 06:17:29",
+      "sunset": "2026-08-08 19:11:04",
+      "tithi": {
+        "number": 10,
+        "name": "Dashami",
+        "start": "2026-08-07 21:04:00",
+        "end": "2026-08-08 22:41:00"
+      },
+      "nakshatra": {
+        "number": 4,
+        "name": "Rohini",
+        "start": "2026-08-08 03:12:00",
+        "end": "2026-08-09 05:48:00"
+      }
+    }
+  }
+}

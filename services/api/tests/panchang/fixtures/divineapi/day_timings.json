@@ -1,0 +1,115 @@
+{
+  "_recording": {
+    "status": "provisional",
+    "recorded_at": null,
+    "note": "PROVISIONAL \u2014 shape written from vendor documentation, NOT recorded from a live API. Run `python -m sitara_api.panchang.record --all` with trial keys to replace. See fixtures/README.md.",
+    "request": {
+      "method": "POST",
+      "path": "/indian-api/v1/choghadiya"
+    }
+  },
+  "status_code": 200,
+  "body": {
+    "success": true,
+    "data": {
+      "rahu_kaal": {
+        "start": "2026-08-08 09:30:00",
+        "end": "2026-08-08 11:07:00"
+      },
+      "yamaganda": {
+        "start": "2026-08-08 13:53:00",
+        "end": "2026-08-08 15:30:00"
+      },
+      "gulikai": {
+        "start": "2026-08-08 06:17:00",
+        "end": "2026-08-08 07:54:00"
+      },
+      "choghadiya": {
+        "day": [
+          {
+            "name": "kaal",
+            "start": "2026-08-08 06:17:00",
+            "end": "2026-08-08 07:54:00"
+          },
+          {
+            "name": "shubh",
+            "start": "2026-08-08 07:54:00",
+            "end": "2026-08-08 09:30:00"
+          },
+          {
+            "name": "rog",
+            "start": "2026-08-08 09:30:00",
+            "end": "2026-08-08 11:07:00"
+          },
+          {
+            "name": "udveg",
+            "start": "2026-08-08 11:07:00",
+            "end": "2026-08-08 12:44:00"
+          },
+          {
+            "name": "char",
+            "start": "2026-08-08 12:44:00",
+            "end": "2026-08-08 14:21:00"
+          },
+          {
+            "name": "labh",
+            "start": "2026-08-08 14:21:00",
+            "end": "2026-08-08 15:57:00"
+          },
+          {
+            "name": "amrit",
+            "start": "2026-08-08 15:57:00",
+            "end": "2026-08-08 17:34:00"
+          },
+          {
+            "name": "kaal",
+            "start": "2026-08-08 17:34:00",
+            "end": "2026-08-08 19:11:00"
+          }
+        ],
+        "night": [
+          {
+            "name": "labh",
+            "start": "2026-08-08 19:11:00",
+            "end": "2026-08-08 20:34:00"
+          },
+          {
+            "name": "udveg",
+            "start": "2026-08-08 20:34:00",
+            "end": "2026-08-08 21:57:00"
+          },
+          {
+            "name": "shubh",
+            "start": "2026-08-08 21:57:00",
+            "end": "2026-08-08 23:20:00"
+          },
+          {
+            "name": "amrit",
+            "start": "2026-08-08 23:20:00",
+            "end": "2026-08-09 00:43:00"
+          },
+          {
+            "name": "char",
+            "start": "2026-08-09 00:43:00",
+            "end": "2026-08-09 02:06:00"
+          },
+          {
+            "name": "rog",
+            "start": "2026-08-09 02:06:00",
+            "end": "2026-08-09 03:29:00"
+          },
+          {
+            "name": "kaal",
+            "start": "2026-08-09 03:29:00",
+            "end": "2026-08-09 04:52:00"
+          },
+          {
+            "name": "labh",
+            "start": "2026-08-09 04:52:00",
+            "end": "2026-08-09 06:16:00"
+          }
+        ]
+      }
+    }
+  }
+}

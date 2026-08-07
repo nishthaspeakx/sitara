@@ -25,8 +25,9 @@ The single most important asset in the repo. Grows to 10,000 human-verified case
 |---|---|---|---|
 | astrology `cases/GC-*.yaml` | 25 seeded | ≥99.9% on verified | [cases/README.md](cases/README.md) |
 | numerology `numerology/NC-*.yaml` | 20 seeded of 500 | **100%** (exact arithmetic) | [numerology/README.md](numerology/README.md) |
+| panchang `panchang/PC-*.yaml` | 8 seeded | ≥99.9% on verified | [panchang/README.md](panchang/README.md) |
 
-Both share one envelope, one CLI (`python -m sitara_astro.golden`, routed by
-case-id prefix) and one rule: only a named human may set `status: verified`.
+All three share one envelope, one CLI (`python -m sitara_astro.golden`, routed
+by case-id prefix) and one rule: only a named human may set `status: verified`.
 Harness code: `services/astro/src/sitara_astro/golden/`, tests in
 `services/astro/tests/golden/`.

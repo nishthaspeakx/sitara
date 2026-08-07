@@ -60,7 +60,8 @@
       "engine_unavailable": "Calculation seva abhi thodi der ke liye available nahin hai. Thodi der mein dobara try karein.",
       "provider_disputed": "Hamare sources is detail par abhi poori tarah sehmat nahin hain, isliye hum guess karne ki bajaye dobara jaanch rahe hain.",
       "name_unconfirmed": "Aapke ank nikalne se pehle apne naam ki spelling confirm karein.",
-      "name_invalid": "Is naam mein aise characters hain jo hum naam ki tarah nahin padh pa rahe. Check karke dobara koshish karein."
+      "name_invalid": "Is naam mein aise characters hain jo hum naam ki tarah nahin padh pa rahe. Check karke dobara koshish karein.",
+      "no_sunrise_at_location": "Us jagah par us din ka sooryoday nahi nikal pa rahi hoon, isliye wahan ka sahi samay nahi bata sakti."
     },
     "sys": {
       "validation": "Request mein kuch theek nahin tha. Dobara koshish karein.",
@@ -71,5 +72,14 @@
     "transliteration": {
       "confirm": "Humne aapka naam ‘{name}’ padha — sahi hai?"
     }
+  },
+  "panchang": {
+    "sources": {
+      "verified_two": "2 swatantra sources se jaancha gaya",
+      "single": "Aaj ek hi source se",
+      "internal": "Hamare apne engine se calculate kiya"
+    },
+    "disputed_note": "Is timing par hamare sources thode alag hain, isliye main ise general rakh rahi hoon.",
+    "place_label": "{city} ki timings"
   }
 }

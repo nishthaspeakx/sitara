@@ -48,7 +48,10 @@ def test_natal_happy_path() -> None:
     assert set(sample) == {
         "fact_id", "kind", "value", "precision", "method",
         "valid_from", "valid_to", "engine_semver", "data_revision",
+        # M3: §5.2 describes a snapshot as (id, value, source, confidence).
+        "source", "confidence",
     }
+    assert sample["source"] == "layer_a"
 
 
 def test_dasha_happy_path() -> None:

@@ -3,9 +3,9 @@
 import datetime as dt
 
 from pydantic import BaseModel, Field
-from sitara_schemas.facts import FactSnapshot
+from sitara_schemas.facts import FactSnapshot, Tradition
 
-from sitara_astro.engine.inputs import BirthDetails, EngineOptions
+from sitara_astro.engine.inputs import BirthDetails, EngineOptions, Place
 from sitara_astro.numerology.inputs import NumerologyOptions
 
 
@@ -22,6 +22,21 @@ class TransitsRequest(FactsRequest):
 
 class FactsResponse(BaseModel):
     facts: list[FactSnapshot]
+
+
+class PanchangRequest(BaseModel):
+    """Layer-A panchang for a LOCAL date at an explicit place (§30.2).
+
+    There is no `subject`: panchang facts are global, keyed by place+tradition
+    (§7.2/§34.2), and a user id must never reach this endpoint.
+    """
+
+    local_date: dt.date
+    place: Place
+    tradition: Tradition = Tradition.AMANTA
+    options: EngineOptions = EngineOptions()
+    chart_version: int = Field(default=1, ge=1)
+    include_day_timings: bool = True
 
 
 class NumerologyRequest(BaseModel):

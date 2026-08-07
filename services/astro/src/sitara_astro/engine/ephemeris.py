@@ -8,9 +8,10 @@ the event loop.
 
 import threading
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from importlib import metadata
 from pathlib import Path
+from typing import Literal
 
 import swisseph as swe
 from sitara_schemas.facts import BhavaSystem, EpheSource, Graha, NodeType
@@ -101,6 +102,48 @@ def graha_longitudes(utc_dt: datetime, node_type: NodeType) -> dict[Graha, Eclip
             longitude_deg=(rahu_values[0] + 180.0) % 360.0, speed_deg_per_day=rahu_values[3]
         )
     return states
+
+
+RiseSetEvent = Literal["rise", "set", "noon"]
+
+_RSMI: dict[RiseSetEvent, int] = {
+    "rise": swe.CALC_RISE,
+    "set": swe.CALC_SET,
+    "noon": swe.CALC_MTRANSIT,
+}
+
+
+def sun_event_after(
+    utc_dt: datetime, lat: float, lon: float, event: RiseSetEvent, disc_center: bool = False
+) -> datetime | None:
+    """First solar rise/set/meridian-transit STRICTLY after `utc_dt`.
+
+    Strictly matters: swisseph returns the event at the search instant itself,
+    so chaining calls from a previous result would loop on it forever. The
+    search therefore begins one second later — no two solar events are that
+    close, so nothing real can be skipped.
+
+    Returns None when the event does not occur within the search window — polar
+    day and polar night are real answers, and the caller declines rather than
+    inventing one (§5.3).
+
+    Default convention is upper limb with refraction: the definition published
+    almanacs use, so our sunrise matches the one a user can look up. Recorded on
+    every fact as FactMethod.rise_set so a reviewer can adjudicate it (§5.2).
+    """
+    jd = _julian_day_ut(utc_dt) + 1.0 / 86400.0
+    flags = _RSMI[event]
+    if disc_center:
+        flags |= swe.BIT_DISC_CENTER
+    with _SWE_LOCK:
+        return_code, times = swe.rise_trans(
+            jd, swe.SUN, flags, (lon, lat, 0.0), 0.0, 0.0, _CALC_FLAG
+        )
+    if return_code < 0 or not times or times[0] == 0.0:
+        return None
+    year, month, day, hours = swe.revjul(times[0], swe.GREG_CAL)
+    midnight = datetime(year, month, day, tzinfo=UTC)
+    return midnight + timedelta(hours=hours)
 
 
 def ascendant_and_cusps(

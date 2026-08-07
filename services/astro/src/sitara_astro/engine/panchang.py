@@ -58,6 +58,26 @@ def _first_change(at: datetime, node_type: NodeType, index_of) -> datetime:  # n
     return hi.replace(microsecond=0)
 
 
+def _last_change(at: datetime, node_type: NodeType, index_of) -> datetime:  # noqa: ANN001
+    """Bisect for the instant the value running at `at` BEGAN.
+
+    Mirror image of _first_change: the index is monotonic over the window, so
+    the single change-point between "differs from now" and "equals now" is the
+    start of the current tithi/nakshatra.
+    """
+    current = index_of(at, node_type)
+    lo, hi = at - _SEARCH_LIMIT, at
+    if index_of(lo, node_type) == current:  # pragma: no cover - window is generous
+        raise ValueError(f"no boundary within {_SEARCH_LIMIT} before {at.isoformat()}")
+    while hi - lo > _RESOLUTION:
+        mid = lo + (hi - lo) / 2
+        if index_of(mid, node_type) == current:
+            hi = mid
+        else:
+            lo = mid
+    return hi.replace(microsecond=0)
+
+
 def next_nakshatra_boundary(at: datetime, node_type: NodeType) -> datetime:
     """Instant the Moon leaves the nakshatra it occupies at `at`."""
     return _first_change(at, node_type, _moon_nakshatra_index)
@@ -66,3 +86,21 @@ def next_nakshatra_boundary(at: datetime, node_type: NodeType) -> datetime:
 def next_tithi_boundary(at: datetime, node_type: NodeType) -> datetime:
     """Instant the tithi running at `at` ends."""
     return _first_change(at, node_type, tithi_index)
+
+
+def tithi_window(at: datetime, node_type: NodeType) -> tuple[int, datetime, datetime]:
+    """(tithi index, start, end) of the tithi running at `at`."""
+    return (
+        tithi_index(at, node_type),
+        _last_change(at, node_type, tithi_index),
+        _first_change(at, node_type, tithi_index),
+    )
+
+
+def nakshatra_window(at: datetime, node_type: NodeType) -> tuple[int, datetime, datetime]:
+    """(nakshatra index 0-26, start, end) of the nakshatra the Moon occupies."""
+    return (
+        _moon_nakshatra_index(at, node_type),
+        _last_change(at, node_type, _moon_nakshatra_index),
+        _first_change(at, node_type, _moon_nakshatra_index),
+    )

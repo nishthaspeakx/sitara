@@ -60,7 +60,8 @@
       "engine_unavailable": "Calculations are briefly unavailable. Please try again in a moment.",
       "provider_disputed": "Our sources don't fully agree on this detail right now, so we're double-checking rather than guessing.",
       "name_unconfirmed": "Please confirm how your name is spelled before we calculate your numbers.",
-      "name_invalid": "That name has characters we can't read as a name. Please check it and try again."
+      "name_invalid": "That name has characters we can't read as a name. Please check it and try again.",
+      "no_sunrise_at_location": "I can't work out sunrise for that place on that date, so I can't give you accurate timings there."
     },
     "sys": {
       "validation": "Something in the request wasn't right. Please try again.",
@@ -71,5 +72,14 @@
     "transliteration": {
       "confirm": "We read your name as ‘{name}’ — correct?"
     }
+  },
+  "panchang": {
+    "sources": {
+      "verified_two": "Verified against 2 independent sources",
+      "single": "From one source today",
+      "internal": "Calculated by our own engine"
+    },
+    "disputed_note": "Our sources differ slightly on this timing, so I'm keeping it general.",
+    "place_label": "Timings for {city}"
   }
 }
