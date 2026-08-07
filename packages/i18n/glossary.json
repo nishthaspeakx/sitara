@@ -1,0 +1,10 @@
+{
+  "$comment": "Glossary seed (SPEC §2.4) — canonical terms the language-quality validator lints against. Grows with the localisation pipeline (M12). Tara is never called an avatar.",
+  "terms": [
+    { "term": "Tara", "rule": "never translated, never 'avatar' — 'Tara · AI guide' disclosure is permanent" },
+    { "term": "Sitara", "rule": "product name, never translated" },
+    { "term": "panchang", "rule": "domain term, kept native in all locales" },
+    { "term": "nakshatra", "rule": "domain term, kept native in all locales" },
+    { "term": "muhurat", "rule": "domain term, kept native in all locales" }
+  ]
+}

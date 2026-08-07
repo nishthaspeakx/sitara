@@ -1,0 +1,12 @@
+{
+  "app": {
+    "title": "Sitara",
+    "tagline": "Aapke sitare, samjhe hue."
+  },
+  "home": {
+    "greeting": "Namaste, main Tara hoon.",
+    "placeholder": "Sitara app ban rahi hai — walking skeleton zinda hai.",
+    "services": "{count, plural, one {# service chalu hai} other {# services chalu hain}}",
+    "locale_label": "Bhasha: Hinglish"
+  }
+}

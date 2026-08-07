@@ -1,0 +1,12 @@
+{
+  "app": {
+    "title": "Sitara",
+    "tagline": "Your stars, understood."
+  },
+  "home": {
+    "greeting": "Namaste, I am Tara.",
+    "placeholder": "The Sitara app is under construction — the walking skeleton is alive.",
+    "services": "{count, plural, one {# service healthy} other {# services healthy}}",
+    "locale_label": "Language: English"
+  }
+}

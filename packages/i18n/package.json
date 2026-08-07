@@ -1,0 +1,13 @@
+{
+  "name": "@sitara/i18n",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sitara ICU message catalogs (SPEC §2.4) — en, hi-Latn (Hinglish), hi first; key parity enforced",
+  "type": "module",
+  "exports": {
+    "./messages/*": "./messages/*"
+  },
+  "scripts": {
+    "lint": "node scripts/i18n-lint.mjs"
+  }
+}

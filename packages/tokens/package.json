@@ -1,0 +1,21 @@
+{
+  "name": "@sitara/tokens",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sitara design tokens (SPEC §24.2, both themes) — Style Dictionary → CSS vars + Tailwind preset",
+  "type": "module",
+  "exports": {
+    "./css": "./dist/css/tokens.css",
+    "./tailwind-preset": "./dist/tailwind.preset.cjs"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "lint": "node scripts/token-lint.mjs"
+  },
+  "devDependencies": {
+    "style-dictionary": "^4.3.0"
+  },
+  "files": [
+    "dist"
+  ]
+}
