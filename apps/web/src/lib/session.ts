@@ -51,7 +51,7 @@ export function firebaseErrorKey(code: string): string {
   switch (code) {
     case "auth/invalid-phone-number":
     case "auth/missing-phone-number":
-      return "errors.sys.validation";
+      return "errors.auth.invalid_phone";
     case "auth/too-many-requests":
       return "errors.auth.otp_throttled";
     case "auth/invalid-verification-code":

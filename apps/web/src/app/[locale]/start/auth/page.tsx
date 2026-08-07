@@ -15,6 +15,7 @@ import { ErrorAlert, ProgressDots } from "@/components/onboarding";
 import { useRouter } from "@/i18n/navigation";
 import { setPendingPhone } from "@/lib/auth-flow";
 import { APPLE_SIGNIN_ENABLED, firebaseAuth, invisibleRecaptcha } from "@/lib/firebase";
+import { normalizeIndianPhone } from "@/lib/phone";
 import { exchangeSession, firebaseErrorKey, isDobRequired } from "@/lib/session";
 
 export default function AuthPage() {
@@ -34,9 +35,10 @@ export default function AuthPage() {
     setErrorKey(null);
     const auth = firebaseAuth(locale);
     try {
+      const e164 = normalizeIndianPhone(phone);
       const verifier = invisibleRecaptcha(auth, recaptchaHost.current);
-      const confirmation = await signInWithPhoneNumber(auth, phone.trim(), verifier);
-      setPendingPhone(phone.trim(), confirmation);
+      const confirmation = await signInWithPhoneNumber(auth, e164, verifier);
+      setPendingPhone(e164, confirmation);
       router.push("/start/verify");
     } catch (err) {
       console.warn("[auth] phone sign-in failed:", err);

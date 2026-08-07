@@ -43,6 +43,7 @@
     "auth": {
       "underage": "Sitara is for adults 18 and over, so we can't create this account. Thank you for your honesty.",
       "dob_required": "Please share your date of birth to create your account.",
+      "invalid_phone": "That phone number doesn't look right. Please check it and try again.",
       "invalid_token": "That sign-in didn't go through. Please try again.",
       "session_expired": "Your session has ended. Please sign in again.",
       "otp_throttled": "Too many attempts. Please wait 15 minutes and try again.",

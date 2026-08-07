@@ -43,6 +43,7 @@
     "auth": {
       "underage": "Sitara 18 saal aur usse bade logon ke liye hai, isliye yeh account nahin ban sakta. Aapki sachchai ke liye shukriya.",
       "dob_required": "Account banane ke liye apni date of birth batayein.",
+      "invalid_phone": "Yeh phone number sahi nahin lag raha. Check karke dobara koshish karein.",
       "invalid_token": "Sign-in poora nahin ho paya. Dobara koshish karein.",
       "session_expired": "Aapka session khatam ho gaya hai. Dobara sign in karein.",
       "otp_throttled": "Bahut baar koshish ho chuki hai. 15 minute ruk kar dobara try karein.",
