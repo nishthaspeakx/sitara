@@ -1,0 +1,43 @@
+{
+  "$comment": "SPEC §34.6 — the ONE voice/call WebSocket wire protocol, for voice notes and live calls, on WS /call/session and the chat socket. Binary frames = 16kHz mono PCM chunks with an 8-byte header (4-byte monotonic seq + 4-byte flags). Text frames = JSON control events {type, seq, ts, payload} with this CLOSED type set. Server acks control events by seq. Heartbeat every 10s; server reaps at 30s silence. Reconnect within 5 min resumes via session token, else handoff.to_text fires with full context. The AsyncAPI document is generated from this package.",
+  "enum_name": "ControlEventType",
+  "binary_frame": {
+    "audio_format": "pcm_s16le",
+    "sample_rate_hz": 16000,
+    "channels": 1,
+    "header_bytes": 8,
+    "header_layout": [
+      { "name": "seq", "bytes": 4, "description": "monotonic sequence number, big-endian uint32" },
+      { "name": "flags", "bytes": 4, "description": "bit flags, big-endian uint32" }
+    ]
+  },
+  "control_event_shape": {
+    "model_name": "ControlEvent",
+    "fields": [
+      { "name": "type", "type": "ControlEventType", "description": "One of the closed event type set" },
+      { "name": "seq", "type": "integer", "description": "Monotonic sequence number; server acks by seq" },
+      { "name": "ts", "type": "number", "description": "Sender epoch timestamp, milliseconds" },
+      { "name": "payload", "type": "object", "description": "Event-type-specific payload (typed per event in M9)" }
+    ]
+  },
+  "heartbeat_interval_s": 10,
+  "reap_after_silence_s": 30,
+  "resume_window_s": 300,
+  "members": [
+    { "type": "session.start" },
+    { "type": "session.ready" },
+    { "type": "session.end" },
+    { "type": "vad.state" },
+    { "type": "barge_in" },
+    { "type": "tts.start" },
+    { "type": "tts.chunk_meta" },
+    { "type": "tts.end" },
+    { "type": "presence.state" },
+    { "type": "captions.partial" },
+    { "type": "captions.final" },
+    { "type": "entitlement.warning" },
+    { "type": "error" },
+    { "type": "handoff.to_text" },
+    { "type": "resume.offer" }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "$comment": "SPEC §7.1 / §34.3 — the canonical 17 morning modules. CLOSED SET: the ranking engine emits ONLY these IDs. Order is the spec's enumeration order. Changing this list requires a §31.3 change-control entry.",
+  "enum_name": "MorningModule",
+  "members": [
+    { "id": "energy_of_day", "ordinal": 1, "label": "Energy of the day" },
+    { "id": "personal_chart_theme", "ordinal": 2, "label": "Personal chart theme" },
+    { "id": "moon_nakshatra_note", "ordinal": 3, "label": "Moon / nakshatra note" },
+    { "id": "colour", "ordinal": 4, "label": "Colour" },
+    { "id": "number", "ordinal": 5, "label": "Number" },
+    { "id": "favourable_window", "ordinal": 6, "label": "Favourable window" },
+    { "id": "caution_window", "ordinal": 7, "label": "Caution window" },
+    { "id": "priorities", "ordinal": 8, "label": "Priorities" },
+    { "id": "what_to_avoid", "ordinal": 9, "label": "What to avoid" },
+    { "id": "food_and_drink", "ordinal": 10, "label": "Food & drink" },
+    { "id": "work", "ordinal": 11, "label": "Work" },
+    { "id": "relationship", "ordinal": 12, "label": "Relationship" },
+    { "id": "family_reminder", "ordinal": 13, "label": "Family reminder" },
+    { "id": "festival_observance", "ordinal": 14, "label": "Festival / observance" },
+    { "id": "goal_check", "ordinal": 15, "label": "Goal check" },
+    { "id": "spiritual_practice", "ordinal": 16, "label": "Spiritual practice" },
+    { "id": "tomorrow_prep_teaser", "ordinal": 17, "label": "Tomorrow-prep teaser" }
+  ]
+}

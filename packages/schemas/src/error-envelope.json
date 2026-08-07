@@ -1,0 +1,10 @@
+{
+  "$comment": "SPEC §34.4 — the ONE canonical error envelope. No module invents its own error shape. message_key resolves to in-locale copy via the CMS (localized_content).",
+  "model_name": "ErrorEnvelope",
+  "fields": [
+    { "name": "code", "type": "ErrorCode", "description": "Namespaced error code (closed enum, error-codes.json)" },
+    { "name": "message_key", "type": "string", "description": "i18n key resolved to in-locale copy via the CMS — never raw English text" },
+    { "name": "trace_id", "type": "string", "description": "OpenTelemetry trace id for support/audit correlation" },
+    { "name": "retryable", "type": "boolean", "description": "Whether the client may retry the operation" }
+  ]
+}
