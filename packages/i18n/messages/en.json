@@ -8,5 +8,54 @@
     "placeholder": "The Sitara app is under construction — the walking skeleton is alive.",
     "services": "{count, plural, one {# service healthy} other {# services healthy}}",
     "locale_label": "Language: English"
+  },
+  "auth": {
+    "title": "Let's begin",
+    "subtitle": "Sign in to meet Tara — your mornings start here.",
+    "phone_label": "Phone number",
+    "phone_placeholder": "+91 98765 43210",
+    "continue": "Continue",
+    "or": "or",
+    "google": "Continue with Google",
+    "sending": "Sending code…",
+    "legal_hint": "Sitara is for adults (18+). Your details stay yours.",
+    "link": {
+      "conflict_prompt": "Which details are correct? The other record will be archived, not merged."
+    }
+  },
+  "verify": {
+    "title": "Enter the code",
+    "sent_to": "We sent a 6-digit code to {phone}",
+    "code_label": "6-digit code",
+    "verify": "Verify",
+    "verifying": "Verifying…",
+    "resend": "Resend code",
+    "resend_in": "{seconds, plural, one {Resend in # second} other {Resend in # seconds}}",
+    "change_number": "Change number"
+  },
+  "dob": {
+    "title": "Your date of birth",
+    "subtitle": "Sitara is for adults — we check once, at sign-up.",
+    "label": "Date of birth",
+    "continue": "Create my account"
+  },
+  "errors": {
+    "auth": {
+      "underage": "Sitara is for adults 18 and over, so we can't create this account. Thank you for your honesty.",
+      "dob_required": "Please share your date of birth to create your account.",
+      "invalid_token": "That sign-in didn't go through. Please try again.",
+      "session_expired": "Your session has ended. Please sign in again.",
+      "otp_throttled": "Too many attempts. Please wait 15 minutes and try again.",
+      "provider_conflict": "This sign-in method already belongs to another account.",
+      "link_offer": "You already have a Sitara account with these details. Sign in with your original method, then link this one from Settings.",
+      "apple_unavailable": "Apple sign-in isn't available yet — please use phone or Google.",
+      "forbidden": "You don't have access to that.",
+      "step_up_required": "For your safety, please verify it's you before linking.",
+      "no_pending_conflict": "There's nothing to resolve right now."
+    },
+    "sys": {
+      "validation": "Something in the request wasn't right. Please try again.",
+      "internal": "Something went wrong on our side. Please try again in a moment."
+    }
   }
 }

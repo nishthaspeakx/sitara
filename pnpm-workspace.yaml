@@ -4,8 +4,10 @@ packages:
   - "packages/schemas/typescript"
 allowBuilds:
   '@bundled-es-modules/glob': false
+  '@firebase/util': false
   '@parcel/watcher': true
   '@swc/core': true
+  protobufjs: false
   sharp: true
   style-dictionary: false
   unrs-resolver: true

@@ -34,6 +34,12 @@ services:
     environment:
       MONGODB_URI: mongodb://mongo:27017/sitara
       REDIS_URL: redis://redis:6379/0
+      # §34.5 Admin-SDK verification — key stays out of the image (.dockerignore)
+      # and is mounted read-only below.
+      GOOGLE_APPLICATION_CREDENTIALS: .secrets/firebase-service-account.json
+      FIREBASE_PROJECT_ID: sitara-f6063
+    volumes:
+      - ../services/api/.secrets:/app/services/api/.secrets:ro
     depends_on:
       mongo:
         condition: service_healthy

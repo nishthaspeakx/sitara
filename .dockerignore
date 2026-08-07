@@ -1,0 +1,12 @@
+# Never bake secrets or local state into images (§22.12 access hygiene).
+# Runtime credentials are volume-mounted by infra/docker-compose.dev.yml.
+**/.secrets
+**/.env
+**/.env.*
+!**/.env.example
+**/node_modules
+**/.venv
+**/.next
+**/.turbo
+**/__pycache__
+.git

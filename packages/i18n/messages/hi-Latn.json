@@ -8,5 +8,54 @@
     "placeholder": "Sitara app ban rahi hai — walking skeleton zinda hai.",
     "services": "{count, plural, one {# service chalu hai} other {# services chalu hain}}",
     "locale_label": "Bhasha: Hinglish"
+  },
+  "auth": {
+    "title": "Chaliye shuru karein",
+    "subtitle": "Sign in karke Tara se miliye — aapki subah yahin se shuru hoti hai.",
+    "phone_label": "Phone number",
+    "phone_placeholder": "+91 98765 43210",
+    "continue": "Aage badhein",
+    "or": "ya",
+    "google": "Google se continue karein",
+    "sending": "Code bheja ja raha hai…",
+    "legal_hint": "Sitara sirf adults (18+) ke liye hai. Aapki details aapki hi rahengi.",
+    "link": {
+      "conflict_prompt": "Kaunsi details sahi hain? Doosra record archive hoga, merge nahin."
+    }
+  },
+  "verify": {
+    "title": "Code daaliye",
+    "sent_to": "Humne {phone} par 6-digit ka code bheja hai",
+    "code_label": "6-digit code",
+    "verify": "Verify karein",
+    "verifying": "Verify ho raha hai…",
+    "resend": "Code dobara bhejein",
+    "resend_in": "{seconds, plural, one {# second mein dobara bhejein} other {# seconds mein dobara bhejein}}",
+    "change_number": "Number badlein"
+  },
+  "dob": {
+    "title": "Aapki date of birth",
+    "subtitle": "Sitara adults ke liye hai — hum sirf ek baar, sign-up par check karte hain.",
+    "label": "Date of birth",
+    "continue": "Mera account banayein"
+  },
+  "errors": {
+    "auth": {
+      "underage": "Sitara 18 saal aur usse bade logon ke liye hai, isliye yeh account nahin ban sakta. Aapki sachchai ke liye shukriya.",
+      "dob_required": "Account banane ke liye apni date of birth batayein.",
+      "invalid_token": "Sign-in poora nahin ho paya. Dobara koshish karein.",
+      "session_expired": "Aapka session khatam ho gaya hai. Dobara sign in karein.",
+      "otp_throttled": "Bahut baar koshish ho chuki hai. 15 minute ruk kar dobara try karein.",
+      "provider_conflict": "Yeh sign-in tareeka pehle se kisi aur account se juda hai.",
+      "link_offer": "In details ke saath aapka Sitara account pehle se hai. Apne purane tareeke se sign in karein, phir Settings se isse link karein.",
+      "apple_unavailable": "Apple sign-in abhi available nahin hai — phone ya Google use karein.",
+      "forbidden": "Aapko iski access nahin hai.",
+      "step_up_required": "Aapki suraksha ke liye, link karne se pehle apni pehchaan verify karein.",
+      "no_pending_conflict": "Abhi kuch resolve karne ke liye nahin hai."
+    },
+    "sys": {
+      "validation": "Request mein kuch theek nahin tha. Dobara koshish karein.",
+      "internal": "Hamari taraf se kuch gadbad ho gayi. Thodi der mein dobara try karein."
+    }
   }
 }

@@ -34,6 +34,14 @@ jobs:
           - services/api
           - services/realtime
           - services/astro
+    # M1 auth tests run against real Mongo+Redis (same images as the dev stack).
+    services:
+      mongo:
+        image: mongo:7
+        ports: ["27017:27017"]
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5

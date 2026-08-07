@@ -9,10 +9,13 @@ dependencies = [
     "pydantic>=2.7",
     "pydantic-settings>=2.5",
     "sitara-schemas",
+    "firebase-admin>=6.5",
+    "motor>=3.6",
+    "redis>=5.0",
 ]
 
 [dependency-groups]
-dev = ["pytest>=8", "httpx>=0.27", "ruff>=0.7", "pyright>=1.1.380"]
+dev = ["pytest>=8", "pytest-asyncio>=0.24", "httpx>=0.27", "ruff>=0.7", "pyright>=1.1.380"]
 
 [tool.uv.sources]
 sitara-schemas = { path = "../../packages/schemas/python", editable = true }
