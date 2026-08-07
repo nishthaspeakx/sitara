@@ -1,0 +1,32 @@
+sequenceDiagram
+    participant U as User (any of 8 languages)
+    participant RT as Realtime service
+    participant P as Pipeline (FastAPI)
+    participant S as Safety ladder
+    participant M as Memory (Vector Search)
+    participant AE as Astrology/Numerology tools
+    participant C as Claude (via abstraction layer)
+    participant V as Voice (TTS router)
+    U->>RT: text / streamed speech
+    RT->>P: transcript + locale
+    P->>P: language + script detection
+    P->>S: safety pre-check (L1 classifier)
+    S-->>P: clear (or constrain L2–L5, astrology framing removed)
+    P->>P: intent routing (structured output)
+    P->>P: required-data check → confidence state
+    par retrieve in parallel
+        P->>M: top-k memories (visibility-gated)
+        M-->>P: consented context
+        P->>AE: fact tool-calls (charts, panchang, numerology)
+        AE-->>P: validated typed facts
+    end
+    P->>P: fact validation (schema, ranges, disputed?)
+    P->>C: persona + locale style guide + facts + memories (prompt-cached)
+    C-->>P: response draft + avatar state tag
+    P->>P: grounding check (every claim cites fact-ID)
+    P->>P: language-quality check (locale, script, register, glossary)
+    P->>S: safety post-check (fear-selling lint)
+    P->>V: TTS render (streamed, tone preset)
+    V-->>RT: audio chunks + timestamps/visemes
+    RT-->>U: text + voice + avatar state events
+    P->>P: transcript store + memory-chip suggestion (consent chip)

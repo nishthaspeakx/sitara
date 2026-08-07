@@ -1,0 +1,14 @@
+flowchart LR
+    A["PR merged to main"] --> B["CI: lint · types · unit ·<br/>golden-set astrology gate ·<br/>ICU/localisation checks ·<br/>dependency + container scan"]
+    B -->|"any gate red"| X["Blocked — no build"]
+    B --> C["Build images + Next.js bundles<br/>Terraform plan"]
+    C --> D["Deploy to staging<br/>seeded data · screenshot-diff<br/>per locale · e2e suites"]
+    D --> E{"Release checks"}
+    E -->|"schema change"| F["Mongo migration job:<br/>expand → migrate → contract<br/>(never breaking reads)"]
+    E --> G["Canary: 5% of traffic<br/>ECS rolling, health-gated"]
+    F --> G
+    G --> H{"SLO + error budget<br/>watch 30 min"}
+    H -->|"burn-rate alarm"| I["Automatic rollback<br/>to previous task set"]
+    H -->|healthy| J["Full rollout<br/>zero-downtime rolling"]
+    J --> K["Feature flags:<br/>locale gates · experiments ·<br/>staged prompt versions"]
+    K --> L["Post-deploy:<br/>Langfuse prompt diff ·<br/>Sentry release health ·<br/>synthetic checks all locales"]

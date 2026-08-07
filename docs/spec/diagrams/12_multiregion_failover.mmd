@@ -1,0 +1,29 @@
+flowchart TD
+    U["Users (India + diaspora)"] --> R53["Route 53<br/>latency + health-checked routing"]
+    R53 --> CDN["CloudFront (global)<br/>static · .riv · cached briefs"]
+    R53 --> AP1["ap-south-1 (primary)<br/>api · realtime · astro · workers"]
+    R53 -.->|"health check fails"| USE["us-east-1 (warm standby)<br/>api · realtime scaled-to-min"]
+    AP1 --> M1[("Atlas primary<br/>ap-south-1")]
+    USE --> M2[("Atlas replica<br/>us-east-1<br/>reads for diaspora")]
+    M1 <-->|"replication"| M2
+    M1 -->|"region loss:<br/>replica promotion"| M2
+    subgraph DR["Disaster recovery"]
+        PITR["Continuous backup<br/>PITR 7 days · RPO ≤15 min"]
+        SNAP["Daily snapshots · 90 days"]
+        GD["Quarterly game-day:<br/>full region-loss drill<br/>RTO ≤4h"]
+    end
+    M1 --> PITR
+    M1 --> SNAP
+    subgraph Degrade["Provider failover (any region)"]
+        CB["Circuit breakers on every adapter"]
+        F1["Voice down → text mode"]
+        F2["DivineAPI down → internal/Prokerala"]
+        F3["Claude down → fallback model,<br/>conservative persona"]
+        F4["All down → cached brief +<br/>in-locale apology"]
+        CB --> F1
+        CB --> F2
+        CB --> F3
+        CB --> F4
+    end
+    AP1 --> CB
+    STATUS["status.sitara.app +<br/>pre-translated incident copy<br/>in all live languages"] -.-> U

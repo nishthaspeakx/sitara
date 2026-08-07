@@ -1,0 +1,40 @@
+flowchart LR
+    subgraph Input["User speaks"]
+        MIC["Web Audio capture<br/>16kHz → WebSocket"]
+    end
+    subgraph STT["Speech-to-text routing"]
+        R1{"Locale router"}
+        SAR["Sarvam Saaras v3<br/>Indic + Hinglish code-mix<br/>(primary)"]
+        DG["Deepgram Nova-3<br/>English (primary)"]
+        AZS["Azure STT<br/>(fallback)"]
+    end
+    subgraph TTS["Tara's voice per language"]
+        R2{"Provider map §3.3"}
+        EL["ElevenLabs anchor clone<br/>EN · Hinglish · Hindi<br/>(Flash realtime / v3 briefs)"]
+        CNV["Azure Custom Neural Voice<br/>cast native artists<br/>GU · PA · MR · TA · TE"]
+        STOCK["Azure stock neural<br/>universal failover"]
+    end
+    subgraph Control["Quality & cost"]
+        DICT["Pronunciation dictionaries<br/>per locale + per-user names"]
+        TONE["7 tone presets<br/>morning · advice · serious ·<br/>celebration · night · safety · light"]
+        METER["Voice-minute metering<br/>fair use + cost alarms"]
+    end
+    MIC --> R1
+    R1 --> SAR
+    R1 --> DG
+    SAR -.->|failure| AZS
+    DG -.->|failure| AZS
+    SAR --> ORC["Conversation<br/>pipeline §9"]
+    DG --> ORC
+    ORC --> R2
+    R2 --> EL
+    R2 --> CNV
+    EL -.->|circuit open| STOCK
+    CNV -.->|CNV pending QA| STOCK
+    DICT --> EL
+    DICT --> CNV
+    TONE --> R2
+    EL --> OUT["Streamed audio +<br/>timestamps/visemes<br/>→ avatar lip-sync"]
+    CNV --> OUT
+    STOCK --> OUT
+    OUT --> METER

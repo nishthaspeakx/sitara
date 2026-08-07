@@ -1,0 +1,1 @@
+Run the golden-set suite (`pytest services/astro/tests/golden -x -q`), report parity %, list every failing case with expected vs actual, and diagnose the first failure down to the calculation step.

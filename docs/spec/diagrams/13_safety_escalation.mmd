@@ -1,0 +1,15 @@
+flowchart TD
+    A["Every user message +<br/>every reply candidate<br/>(all 8 languages, incl. code-switched)"] --> B["L1 · Classifier screen:<br/>self-harm · medical · legal ·<br/>financial-risk · minors · abuse"]
+    B -->|clear| OK["Normal reflective guidance<br/>never deterministic predictions on<br/>health, death, divorce, jobs<br/>+ fear-selling lint per locale"]
+    B -->|flag| C["L2 · Constrained mode:<br/>astrology framing REMOVED<br/>empathetic + factual only<br/>avatar state 11"]
+    C --> D{"Risk class"}
+    D -->|"medical / legal / financial"| E["L3 · Redirect, in-locale:<br/>'This needs a qualified professional'<br/>no chart-based outcome advice"]
+    D -->|"emotional distress"| F["L3 · Supportive mode:<br/>slow, validate, offer<br/>region-correct helplines if wished"]
+    D -->|"acute crisis signal"| G["L4 · Crisis protocol:<br/>country-specific helplines ·<br/>no astrology content at all ·<br/>session flagged"]
+    G --> H["L5 · Human review queue<br/>24h SLA · pattern audit"]
+    E --> I["All L2+ events logged<br/>→ safety dashboard + SLA tracking"]
+    F --> I
+    G --> I
+    OK --> J["Weekly sampled audit:<br/>1% of conversations per language<br/>vs ethics code"]
+    K["Native safety reviewers:<br/>fear-phrasing corpus per language<br/>(fatalism reads differently in<br/>Hindi vs Tamil vs Punjabi)"] -.-> B
+    K -.-> J

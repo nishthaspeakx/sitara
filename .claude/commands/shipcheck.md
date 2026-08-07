@@ -1,0 +1,1 @@
+Run lint, typecheck, tests, i18n scan, and the token-lint; summarise red/green per gate.

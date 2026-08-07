@@ -1,0 +1,1 @@
+Act as an adversarial reviewer of the current diff: correctness, spec compliance (cite §), security (no secrets/PII in logs per §13), i18n, tests. Report findings only.

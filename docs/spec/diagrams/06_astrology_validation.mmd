@@ -1,0 +1,32 @@
+flowchart TD
+    subgraph LA["Layer A — internal deterministic engine"]
+        SE["pyswisseph (Swiss Ephemeris,<br/>commercial licence, Lahiri)"]
+        TZ["Own geocoding + historical<br/>timezone resolver (IANA tzdb)"]
+        SE --> FACTS["Typed facts with IDs:<br/>charts · nakshatra · dasha · transits<br/>value + precision + method + validity"]
+        TZ --> SE
+    end
+    subgraph LB["Layer B — external APIs"]
+        DIV["DivineAPI Ananta/Prakash:<br/>panchang · choghadiya · rahu kaal ·<br/>muhurat finder · regional festivals"]
+        PRO["Prokerala:<br/>independent cross-check oracle<br/>(24h-cache ToS honoured)"]
+    end
+    subgraph LC["Layer C — golden validation set"]
+        GS["10,000 Jyotish-signed cases<br/>DST · midnight · leap years ·<br/>historic timezones · regional calendars"]
+        CI["Runs in CI on every engine change<br/>BLOCKS release under 99.9% parity"]
+        GS --> CI
+    end
+    subgraph LD["Layer D — comparison engine"]
+        CMP["Nightly diff: internal vs DivineAPI vs Prokerala<br/>tolerance: 1 arc-min · 2 min boundaries · 1 day dasha"]
+        CMP -->|"discrepancy"| ALERT["Admin alert + fact flagged 'disputed'<br/>→ majority source served<br/>→ confidence downgraded"]
+    end
+    subgraph LE["Layer E — interpretation"]
+        TPL["Per-locale template sentences<br/>with fact slots"]
+        LLM["LLM composes from validated<br/>fact-IDs ONLY (cite-or-die lint)"]
+        TPL --> LLM
+    end
+    FACTS --> CMP
+    DIV --> CMP
+    PRO --> CMP
+    FACTS --> LE
+    DIV --> LE
+    CI -.->|gates| FACTS
+    LLM --> OUT["Answer + 'Why this?' +<br/>confidence state (5 levels)"]

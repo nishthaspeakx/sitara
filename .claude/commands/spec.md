@@ -1,0 +1,1 @@
+Given a section number as $ARGUMENTS, read that section of docs/spec/SPEC.md aloud back to me condensed to its binding rules before we start.
