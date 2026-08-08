@@ -1,5 +1,5 @@
 # Sitara Phase 1 — Claude Code Implementation Playbook
-**How to build the entire frozen v3.5 specification, end to end, with Claude Code as your primary engineer.**
+**How to build the entire frozen v3.6 specification, end to end, with Claude Code as your primary engineer.**
 *Companion to `06-phase1-canonical/Sitara_Phase1_Canonical_Spec_v3.md` (the spec). The spec says WHAT; this playbook says HOW, step by step. Version 1.0 · 30 July 2026.*
 
 ---
@@ -70,7 +70,7 @@ You cannot paste a 29,000-word spec into every session. Instead: the root `CLAUD
 
 ### 1.3 The root CLAUDE.md (write this verbatim, then extend)
 ```markdown
-# Sitara — build rules (spec = docs/spec/SPEC.md, FROZEN v3.5)
+# Sitara — build rules (spec = docs/spec/SPEC.md, FROZEN v3.6)
 NEVER change a frozen decision. If a task seems to require it, STOP and say so.
 
 ## Non-negotiables (spec §)

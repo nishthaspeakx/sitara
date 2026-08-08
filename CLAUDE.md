@@ -1,4 +1,4 @@
-# Sitara — build rules (spec = docs/spec/SPEC.md, FROZEN v3.5)
+# Sitara — build rules (spec = docs/spec/SPEC.md, FROZEN v3.6)
 NEVER change a frozen decision. If a task seems to require it, STOP and say so.
 
 ## Non-negotiables (spec §)
