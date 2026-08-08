@@ -18,9 +18,10 @@ NEVER change a frozen decision. If a task seems to require it, STOP and say so.
 - No dark patterns: no countdowns, no guilt copy, close always visible (§29.2)
 - Stories = P1 flag, ring hidden in P0 (§30.6)
 - 18+ age gate at signup (§22.4)
+- Every in-memory fake or stub must pass the same contract test suite as its real implementation — a fake that accepts what the real system rejects is a defect in the fake. When a new validator or schema constraint lands, the fakes' contract tests must tighten with it. (M5: an in-memory store took string ids where §6.4 requires objectId, so every real write failed validation while the whole suite stayed green.)
 
 ## Conventions
 - Python 3.12, FastAPI, Pydantic v2, uv, pytest; TS strict, Next.js 15 App Router, next-intl, Zustand+TanStack Query
 - Tests first for engine/pipeline code; golden-set tests are release-blocking CI
-- Conventional commits; one module per PR; never commit .env
+- Conventional commits; one short-lived branch per milestone (`feat/m5-memory`), merged to main as soon as its shipcheck is green; never commit .env
 - When unsure, read docs/spec/SPEC.md section cited in the task — do not invent
