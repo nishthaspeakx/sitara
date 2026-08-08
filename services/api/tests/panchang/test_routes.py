@@ -32,11 +32,17 @@ def route_settings() -> Settings:
     )
 
 
-def make_client(settings: Settings, transport=None) -> TestClient:  # noqa: ANN001
+def make_client(settings: Settings, transport=None, *, astro=None) -> TestClient:  # noqa: ANN001
     app = create_app(settings)
     app.state.provider_registry = build_registry(
         settings, transport=transport or transport_for("divineapi")
     )
+    # Layer A is pinned OFF unless a test asks for it. `astro_base_url`
+    # defaults to localhost:8003, so leaving it live made these assertions
+    # depend on whether a developer happened to have the astro service
+    # running — the suite passed or failed on ambient state, which is not a
+    # property of the code under test.
+    app.state.astro_panchang_adapter = astro
     return TestClient(app)
 
 
@@ -249,3 +255,31 @@ class TestMuhuratEndpoint:
         count = mongo[route_settings.mongo_db].panchang_cache.count_documents({"kind": "muhurat"})
         mongo.close()
         assert count == 2
+
+
+class TestLayerAMerge:
+    """§32.2/§35.3: Layer A is authoritative on deterministic astronomy and
+    merges with the vendor's calendar layer. Asserted deliberately here rather
+    than depending on whether a dev service happens to be listening."""
+
+    def test_layer_a_joins_the_sources_when_it_can_answer(
+        self, route_settings: Settings
+    ) -> None:
+        from sitara_api.panchang.adapter import AstroPanchangAdapter
+
+        class StubAstro(AstroPanchangAdapter):
+            def __init__(self) -> None:
+                super().__init__("http://astro.invalid", 1.0)
+
+            async def panchang(self, *args, **kwargs):  # noqa: ANN002, ANN003, ANN201
+                return []
+
+        with make_client(route_settings, astro=StubAstro()) as client:
+            response = client.get(
+                "/v1/panchang", params={"date": "2026-08-08", "city": "Mumbai"}
+            )
+
+        # An empty Layer-A answer must not claim to be a source.
+        assert response.status_code == 200
+        assert response.json()["sources"] == ["divineapi"]
+        MongoClient(MONGO_URI).drop_database(route_settings.mongo_db)

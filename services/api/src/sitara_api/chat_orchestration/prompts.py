@@ -14,8 +14,10 @@ PROMPT_VERSION is bumped whenever any block below changes.
 
 from __future__ import annotations
 
+import datetime as dt
 from collections.abc import Sequence
 from dataclasses import dataclass
+from zoneinfo import ZoneInfo
 
 from sitara_schemas.facts import ConfidenceState, FactSnapshot
 
@@ -26,7 +28,7 @@ from sitara_api.chat_orchestration.types import (
 )
 
 #: Bump on ANY edit below — the admin console stages prompt versions (§12).
-PROMPT_VERSION = "m5.1"
+PROMPT_VERSION = "m5.3"
 
 # --------------------------------------------------------------------------
 # Block 1 — persona (§0.6, §0.7). Identical for every user, every locale.
@@ -93,8 +95,18 @@ is not in that block does not exist, no matter how plausible the claim is.
 - Every number, degree, house and clock time you write must appear in the fact \
 you cited. If a fact says the 10th house, you may not write the 7th. If you \
 cannot state a number from a fact, do not state a number.
+- Times: write ONLY what a fact's <clock> line says, exactly as written. It is \
+already in the person's timezone and 12-hour form. Never state a UTC time, and \
+never convert one yourself — the conversion is done for you.
 - Sentences that carry no astrological claim — warmth, questions, a reflection \
 — need no citation. Do not decorate them with one.
+- Naming a tradition term (choghadiya, tithi, rahu kaal, a graha) while \
+describing THIS day, THIS window or THIS person is a claim, and needs a \
+citation even when it states no number. That includes a sentence explaining \
+what the term means: fold the gloss into the same sentence as the cited claim \
+rather than writing it as a separate uncited line. It also includes remarks \
+about what your facts do or do not cover — say those without naming the term, \
+or cite the fact you are describing.
 - If the facts do not support what you were asked, say that plainly and offer \
 what you can. An honest "I can't calculate that yet" is always the better \
 answer.\
@@ -244,15 +256,41 @@ def render_facts(snapshots: Sequence[FactSnapshot]) -> str:
             "calendrical or numerological claim available to you. Do not make one.\n"
             "</facts>"
         )
-    lines = [
-        f"<fact id=\"{snapshot.fact_id}\" kind=\"{snapshot.kind.value}\" "
-        f"source=\"{snapshot.source.value}\">\n"
-        f"{snapshot.value.model_dump_json()}\n"
-        f"</fact>"
-        for snapshot in snapshots
-    ]
+    lines = []
+    for snapshot in snapshots:
+        rendered = _local_times(snapshot)
+        clock = f"\n<clock>{rendered}</clock>" if rendered else ""
+        lines.append(
+            f'<fact id="{snapshot.fact_id}" kind="{snapshot.kind.value}" '
+            f'source="{snapshot.source.value}">\n'
+            f"{snapshot.value.model_dump_json()}{clock}\n"
+            f"</fact>"
+        )
     body = "\n".join(lines)
     return f"<facts>\n{body}\n</facts>"
+
+
+def _local_times(snapshot: FactSnapshot) -> str:
+    """Render a fact's instants in ITS OWN timezone, 12-hour (§2.3).
+
+    Without this the payload offers only UTC ISO strings, and every legal move
+    is blocked: copying the UTC verbatim states a time the user is not in, and
+    converting it makes the model do arithmetic §9 forbids it from doing. So
+    the conversion happens here, once, from the fact — and the model copies a
+    string that is by construction both correct and citable.
+    """
+    tz = ZoneInfo(snapshot.method.tz.tz) if snapshot.method.tz else dt.UTC
+    parts: list[str] = []
+    for field_name, value in snapshot.value.model_dump().items():
+        if isinstance(value, dt.datetime):
+            local = value.astimezone(tz)
+            hour12 = local.hour % 12 or 12
+            meridiem = "am" if local.hour < 12 else "pm"
+            parts.append(f"{field_name}={hour12}:{local.minute:02d} {meridiem}")
+    if not parts:
+        return ""
+    zone = snapshot.method.tz.tz if snapshot.method.tz else "UTC"
+    return f"{' · '.join(parts)} ({zone})"
 
 
 def build_messages(

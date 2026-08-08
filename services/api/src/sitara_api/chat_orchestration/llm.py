@@ -105,8 +105,24 @@ _SAMPLING_REJECTED: tuple[str, ...] = (
 )
 
 
+#: Models with no `effort` control. The parameter is a 400 there, not a
+#: no-op — the same capability-relative problem CC-004 (§37) records for
+#: temperature, and handled the same way: the adapter sends what the pinned
+#: model accepts and records what it could not.
+_EFFORT_UNSUPPORTED: tuple[str, ...] = (
+    "claude-haiku-4-5",
+    "claude-haiku-4",
+    "claude-sonnet-4",
+    "claude-3",
+)
+
+
 def _supports_sampling(model: str) -> bool:
     return not any(model.startswith(prefix) for prefix in _SAMPLING_REJECTED)
+
+
+def _supports_effort(model: str) -> bool:
+    return not any(model.startswith(prefix) for prefix in _EFFORT_UNSUPPORTED)
 
 
 def estimate_tokens(text: str) -> int:
@@ -154,7 +170,7 @@ class AnthropicLLM:
 
         system = self._system_blocks(request.system, request.cacheable_prefix_len)
         output_config: dict[str, Any] = {}
-        if self._effort:
+        if self._effort and _supports_effort(self.model):
             output_config["effort"] = self._effort
         if request.schema is not None:
             output_config["format"] = {"type": "json_schema", "schema": request.schema}
@@ -175,6 +191,9 @@ class AnthropicLLM:
             kwargs["thinking"] = {"type": "disabled"}
 
         applied: dict[str, Any] = {"model": self.model, "thinking": self._thinking}
+        if self._effort and not _supports_effort(self.model):
+            applied["effort_declared"] = self._effort
+            applied["effort_note"] = "model has no effort control"
         if _supports_sampling(self.model):
             kwargs["temperature"] = request.temperature
             applied["temperature"] = request.temperature

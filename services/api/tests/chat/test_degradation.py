@@ -120,3 +120,17 @@ def test_an_unconstrained_turn_caches_the_whole_prefix() -> None:
 
     assert "cache_control" in blocks[-1]
     assert clear.cacheable_prefix_len == len(clear.blocks)
+
+
+def test_effort_is_only_sent_to_models_that_have_it() -> None:
+    """Haiku 4.5 returns 400 for `effort`, not a no-op — so the Haiku-class
+    classification tier §9 pins would fail on EVERY turn. Same
+    capability-relative handling as CC-004's temperature (§37)."""
+    from sitara_api.chat_orchestration.llm import _supports_effort, _supports_sampling
+
+    assert not _supports_effort("claude-haiku-4-5-20251001")
+    assert _supports_effort("claude-sonnet-5")
+    # The two capability questions are independent: Haiku takes temperature
+    # but not effort; Sonnet 5 takes effort but not temperature.
+    assert _supports_sampling("claude-haiku-4-5-20251001")
+    assert not _supports_sampling("claude-sonnet-5")
