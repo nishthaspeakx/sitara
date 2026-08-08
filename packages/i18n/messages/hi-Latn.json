@@ -65,7 +65,8 @@
     },
     "sys": {
       "validation": "Request mein kuch theek nahin tha. Dobara koshish karein.",
-      "internal": "Hamari taraf se kuch gadbad ho gayi. Thodi der mein dobara try karein."
+      "internal": "Hamari taraf se kuch gadbad ho gayi. Thodi der mein dobara try karein.",
+      "unavailable": "Tara abhi wapas aa rahi hain — thodi der mein dobara try karein."
     }
   },
   "numerology": {
@@ -81,5 +82,24 @@
     },
     "disputed_note": "Is timing par hamare sources thode alag hain, isliye main ise general rakh rahi hoon.",
     "place_label": "{city} ki timings"
+  },
+  "chat": {
+    "fallback": {
+      "safe_line": "Us jawab par mujhe poora bharosa nahin hai, isliye main andaza nahin lagaungi. Hamari team ise dekh legi. Tab tak kuch aur poochh lijiye — main yahin hoon."
+    },
+    "safety": {
+      "crisis": "Mujhe batane ke liye shukriya. Is baat ke liye sahi madad main nahin hoon, aur main nahin chahti ki aap ise akele sahein. Aise waqt ke liye trained log hain, aur main aapko abhi unse jod sakti hoon — “Support lein” dabaiye. Main yahin aapke saath hoon."
+    },
+    "data": {
+      "cannot_calculate": "Ise sahi tarah nikalne ke liye mere paas poori jaankari nahin hai, aur main anumaan nahin lagaungi. Kya hum jo kami hai woh poori kar lein?",
+      "missing": {
+        "birth_date": "Iske liye mujhe aapki date of birth chahiye hogi. Profile mein add kar lein?",
+        "birth_place": "Iske liye mujhe aapka janm sthaan chahiye — sheher ka naam kaafi hai. Add kar lein?",
+        "current_location": "Timings jagah ke hisaab se badalti hain. Main kaun sa sheher loon?"
+      }
+    },
+    "budget": {
+      "daily_soft_cap": "Aaj humne kaafi baat kar li — main jaari rakhungi, bas thoda sankshep mein."
+    }
   }
 }

@@ -31,6 +31,24 @@ Bounded-context modules in one process (auth, users/profiles, localisation, astr
 - **Seeds are synthetic only** (§22.12): `@example.invalid` emails, +9199999 phones, `synthetic: true` on every doc; the seeder refuses a non-dev environment or a non-local host.
 - Every document carries `created_at`/`updated_at`/`schema_v` — use `db.documents.stamp()`, the validators enforce it.
 
+## chat_orchestration module (M5, §9) — invariants that must not regress
+- **The stage order in `pipeline.py` IS §9's mandatory pipeline.** `Stage` names every step; `test_stage_order_is_the_spec_order` reads the trace and asserts the sequence. Adding a stage means editing the spec first.
+- **Cite-or-die is mechanical, not prompted.** `grounding.py` rejects (a) an uncited astrological claim, (b) a `[[fact:…]]` id absent from the served payload, (c) a number not in the cited snapshot. The claim lexicon is derived from the `sitara_schemas` enums plus `policy/claim_terms.json`; **strong vs weak matters** — a weak term needs a number beside it, or Tara could never say "I don't have your birth chart yet" without failing her own validator.
+- **Exactly ONE corrective regeneration**, then the safe fallback line + `safety_events` review row (§9, §2.4 rule 8). `ChatSettings` raises if anyone sets it to anything but 1.
+- **L4 never reaches the model** (§22.9) — templated, instant, machine-delivered, queued for human oversight. L2+ removes astrology *at routing*, so no fact tool is even called.
+- **The §22.8 allowlist is applied in code** after the router speaks (`TOOL_ALLOWLIST`), never by asking the model nicely.
+- **A tool that cannot answer declines** (`FactToolUnavailable`) and the turn goes to a template. Granted tools returning nothing → `chat.data.cannot_calculate`; handing the model an empty payload plus a chart question is the shape of a fabrication.
+- **The trace records shapes, not content** (§13): `TurnTrace` hashes text unless `trace_capture_content`, which `build_tracer` refuses outside dev/test. Langfuse-shaped events go through a `TraceSink`.
+- **System blocks are the cached prefix** (§9): persona → citation contract → locale style guide, most-stable first. Nothing per-turn above the breakpoint, or every user's cache dies every turn. Bump `prompts.PROMPT_VERSION` on any edit.
+- **A blank `ANTHROPIC_API_KEY` is "provider down", not a boot failure** — `build_pipeline` returns None and `/v1/chat/turn` serves the §34.4 `SYS_UNAVAILABLE` envelope.
+- **Identifiers become ObjectIds at the store boundary, nowhere else.** §6.4 types `messages.conversation_id`, `guidance_logs.user_id` and `guidance_logs.message_id` as `objectId`; the pipeline carries §33.2's product identity as a string. `store.to_object_id` is the single conversion and refuses a non-`_id` loudly. **`tests/chat/test_store_mongo.py` writes through the real §6.4 validators** — it exists because the in-memory fake once accepted strings the real collection rejected, so the whole suite was green while every real write failed. Do not delete it, and keep `InMemoryMessageStore` minting real ObjectIds.
+- **An outage is not a safety event.** A provider failure serves the fallback line and does NOT queue a human (§8 degradation); only a validator double-failure or an L4 writes `safety_events` (§22.9's 24h SLA). `safety_events.classifier_scores` carries the real L1 labels plus the trigger, CSFLE-encrypted under the `safety` key class.
+- **The cache breakpoint goes after the last STABLE system block**, never simply on the last one — `LLMRequest.cacheable_prefix_len` carries it. Below the breakpoint sits the per-turn safety register; inside it, every L2+ turn would be a cache write instead of a read.
+- **The service renders §9's safety and decline strings itself**, so `packages/i18n/messages` ships in the image and `localisation.verify_catalogs` refuses to boot without them. Discovering a missing catalog when an L4 turn needs the crisis line is the one failure mode worth a startup crash.
+- **The claim lexicon's word boundaries are load-bearing** in both validators: "Tara" inside "tarah" (everyday Hinglish) once failed ordinary replies and burned the single regeneration.
+- **Open §31.3 item — CLOSED as §37 (CC-004):** §9's sampling control is capability-relative. The pipeline declares 0.2/0.7; `llm.py` applies them where the pinned model accepts them and records `temperature_declared` + a trace note where it cannot. Do not quietly delete the declaration.
+- **Release gates:** `uv run python -m sitara_api.release_gates` reports the human-closed §31.7 gates (helpline table, both safety corpora). `/shipcheck` runs it; three are open and block closed beta.
+
 ## Commands (M4)
 - Build/repair schema: `uv run python -m sitara_api.db.migrate --phase expand`
 - Seed dev data: `uv run python -m sitara_api.db.seed --wipe`

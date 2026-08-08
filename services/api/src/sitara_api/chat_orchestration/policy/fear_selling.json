@@ -1,0 +1,111 @@
+{
+  "review_status": "draft — awaiting §14 named native reviewer",
+  "$comment": "Fear-selling lint corpus (SPEC §9 safety post-check, §13, §29.2). Runs on TARA'S FINAL TEXT, not on the user's turn. §9 names the two families: no death/divorce/ruin predictions, and no manufactured urgency. §14 requires this corpus per locale because fatalism reads differently in each language — every entry is reviewed by the named native safety reviewer before a language ships. A hit is a hard fail: the draft is regenerated once, then replaced by the safe fallback line.",
+  "corpus": {
+    "en": [
+      {
+        "id": "death_prediction",
+        "why": "§9 — no death predictions, ever",
+        "patterns": [
+          "\\byou\\s+(will|shall|are\\s+going\\s+to)\\s+die\\b",
+          "\\b(danger|threat|risk)\\s+to\\s+(your|his|her|their)\\s+life\\b",
+          "\\bfatal\\s+(period|time|phase|dasha)\\b",
+          "\\bmarak\\b"
+        ]
+      },
+      {
+        "id": "divorce_or_separation_prediction",
+        "why": "§9 — no divorce predictions",
+        "patterns": [
+          "\\byour\\s+marriage\\s+will\\s+(end|break|fail)\\b",
+          "\\byou\\s+will\\s+(get\\s+)?divorce",
+          "\\b(separation|breakup)\\s+is\\s+(certain|inevitable|written)\\b"
+        ]
+      },
+      {
+        "id": "ruin_prediction",
+        "why": "§9 — no ruin predictions",
+        "patterns": [
+          "\\byou\\s+will\\s+(lose\\s+everything|be\\s+ruined|go\\s+bankrupt)\\b",
+          "\\b(financial\\s+)?ruin\\s+is\\s+(coming|certain)\\b",
+          "\\byou\\s+will\\s+(lose|fail)\\s+your\\s+(job|business)\\b"
+        ]
+      },
+      {
+        "id": "manufactured_urgency",
+        "why": "§9 / §29.2 — no urgency manufacturing, no countdowns",
+        "patterns": [
+          "\\b(act|book|decide)\\s+(now|immediately)\\s+or\\b",
+          "\\bbefore\\s+it'?s\\s+too\\s+late\\b",
+          "\\blast\\s+chance\\b",
+          "\\bonly\\s+\\d+\\s+(hours?|days?)\\s+(left|remain)\\b",
+          "\\bif\\s+you\\s+don'?t\\s+.{0,40}\\s+you\\s+will\\s+(lose|suffer|regret)\\b"
+        ]
+      },
+      {
+        "id": "fatalistic_certainty",
+        "why": "§0.16 — astrology is framed as guidance and tradition, not certainty",
+        "patterns": [
+          "\\bnothing\\s+can\\s+(stop|change)\\s+(this|it)\\b",
+          "\\byour\\s+fate\\s+is\\s+sealed\\b",
+          "\\bthere\\s+is\\s+no\\s+remedy\\b",
+          "\\bcursed\\b"
+        ]
+      }
+    ],
+    "hi": [
+      {
+        "id": "death_prediction",
+        "why": "§9 — मृत्यु की भविष्यवाणी कभी नहीं",
+        "patterns": ["मृत्यु\\s+(योग|निश्चित)", "जान\\s+(को\\s+)?ख़तरा", "प्राण\\s+संकट", "मारक"]
+      },
+      {
+        "id": "divorce_or_separation_prediction",
+        "why": "§9 — तलाक़ की भविष्यवाणी नहीं",
+        "patterns": ["तलाक़\\s+(होगा|निश्चित)", "शादी\\s+टूट\\s+जाएगी", "अलगाव\\s+निश्चित"]
+      },
+      {
+        "id": "ruin_prediction",
+        "why": "§9 — बर्बादी की भविष्यवाणी नहीं",
+        "patterns": ["सब\\s+कुछ\\s+खो\\s+दोगे", "बर्बाद\\s+हो\\s+जाओगे", "नौकरी\\s+चली\\s+जाएगी"]
+      },
+      {
+        "id": "manufactured_urgency",
+        "why": "§9 / §29.2 — जल्दबाज़ी का दबाव नहीं",
+        "patterns": ["अभी\\s+नहीं\\s+किया\\s+तो", "बहुत\\s+देर\\s+हो\\s+जाएगी", "आख़िरी\\s+मौक़ा"]
+      },
+      {
+        "id": "fatalistic_certainty",
+        "why": "§0.16 — ज्योतिष मार्गदर्शन है, निश्चितता नहीं",
+        "patterns": ["कोई\\s+उपाय\\s+नहीं", "भाग्य\\s+तय\\s+है", "इसे\\s+कोई\\s+नहीं\\s+बदल\\s+सकता", "शापित"]
+      }
+    ],
+    "hi-Latn": [
+      {
+        "id": "death_prediction",
+        "why": "§9 — maut ki bhavishyavani kabhi nahin",
+        "patterns": ["\\bmrityu\\s+(yog|nishchit)", "\\bjaan\\s+(ko\\s+)?khatra", "\\bmaarak\\b"]
+      },
+      {
+        "id": "divorce_or_separation_prediction",
+        "why": "§9 — talaq ki bhavishyavani nahin",
+        "patterns": ["\\btalaq\\s+(hoga|nishchit)", "\\bshaadi\\s+toot\\s+jayegi", "\\balagav\\s+nishchit"]
+      },
+      {
+        "id": "ruin_prediction",
+        "why": "§9 — barbaadi ki bhavishyavani nahin",
+        "patterns": ["\\bsab\\s+kuch\\s+kho\\s+doge", "\\bbarbaad\\s+ho\\s+jaoge", "\\bnaukri\\s+chali\\s+jayegi"]
+      },
+      {
+        "id": "manufactured_urgency",
+        "why": "§9 / §29.2 — jaldbaazi ka dabaav nahin",
+        "patterns": ["\\babhi\\s+nahi(n)?\\s+kiya\\s+to", "\\bbahut\\s+der\\s+ho\\s+jayegi", "\\baakhri\\s+mauka"]
+      },
+      {
+        "id": "fatalistic_certainty",
+        "why": "§0.16 — jyotish maargdarshan hai, nishchitta nahin",
+        "patterns": ["\\bkoi\\s+upay\\s+nahi(n)?\\b", "\\bbhagya\\s+tay\\s+hai", "\\bshapit\\b"]
+      }
+    ]
+  }
+}

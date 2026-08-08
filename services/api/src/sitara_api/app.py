@@ -1,4 +1,7 @@
-"""App factory (SPEC §6.3 modular monolith). Modules: auth, numerology, panchang."""
+"""App factory (SPEC §6.3 modular monolith).
+
+Modules: auth, numerology, panchang, chat-orchestration.
+"""
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -8,10 +11,14 @@ from fastapi import FastAPI
 from sitara_api import __version__
 from sitara_api.auth.firebase import FirebaseAdminVerifier
 from sitara_api.auth.router import router as auth_router
+from sitara_api.chat_orchestration import ChatSettings, build_pipeline
+from sitara_api.chat_orchestration.router import router as chat_router
+from sitara_api.chat_orchestration.types import LAUNCH_LOCALES
 from sitara_api.config import Settings
 from sitara_api.db import ensure_indexes, make_mongo, make_redis
 from sitara_api.db.csfle import build_crypto
 from sitara_api.errors import install_error_handlers
+from sitara_api.localisation import verify_catalogs
 from sitara_api.numerology.adapter import AstroNumerologyAdapter
 from sitara_api.numerology.router import router as numerology_router
 from sitara_api.panchang.adapter import AstroPanchangAdapter
@@ -47,6 +54,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             prokerala=app.state.provider_registry.prokerala,
             astro=app.state.astro_panchang_adapter,
         )
+        # §9 chat-orchestration. Built here because the transcript store, the
+        # Trust-Sheet log and the safety queue all need the database.
+        app.state.chat_pipeline = build_pipeline(
+            chat_settings=app.state.chat_settings,
+            environment=settings.environment,
+            db=db,
+            panchang_service=app.state.panchang_service,
+            numerology_adapter=app.state.numerology_adapter,
+            place_resolver=app.state.place_resolver,
+        )
         yield
         if app.state.field_crypto is not None:
             await app.state.field_crypto.close()
@@ -55,6 +72,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(title="sitara-api", version=__version__, lifespan=lifespan)
     app.state.settings = settings
+    app.state.chat_settings = ChatSettings()
+    app.state.chat_pipeline = None
+    # §2.4: the service renders §9's safety and decline strings itself. A
+    # missing catalog must surface here, not when an L4 turn needs the crisis
+    # line.
+    verify_catalogs(LAUNCH_LOCALES)
     app.state.firebase_verifier = FirebaseAdminVerifier(
         project_id=settings.firebase_project_id,
         credentials_path=settings.google_application_credentials,
@@ -72,6 +95,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(auth_router)
     app.include_router(numerology_router)
     app.include_router(panchang_router)
+    app.include_router(chat_router)
 
     @app.get("/healthz")
     def healthz() -> dict[str, str]:

@@ -3,6 +3,10 @@ FROM python:3.12-slim
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 WORKDIR /app
 COPY packages/schemas/python packages/schemas/python
+# The service renders §9's safety and decline strings itself, so the catalogs
+# ship with it — `localisation.verify_catalogs` refuses to boot without them.
+COPY packages/i18n/messages packages/i18n/messages
+COPY packages/i18n/glossary.json packages/i18n/glossary.json
 COPY services/api services/api
 WORKDIR /app/services/api
 RUN uv sync --frozen --no-dev

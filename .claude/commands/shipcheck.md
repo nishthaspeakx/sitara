@@ -1,1 +1,18 @@
-Run lint, typecheck, tests, i18n scan, and the token-lint; summarise red/green per gate.
+Run every gate below and summarise red/green per gate. Report honestly: a gate that cannot be closed by code is still reported, never omitted.
+
+## Automated gates
+1. **Lint** — `cd services/api && uv run ruff check .` (repeat for services/astro, services/realtime)
+2. **Types** — `cd services/api && uv run pyright`
+3. **Tests** — `cd services/api && uv run pytest -q` (repeat per service)
+4. **i18n parity** — `node packages/i18n/scripts/i18n-lint.mjs` (§2.4 — no silent English fallback)
+5. **Token lint** — `pnpm --filter @sitara/tokens lint` if present (§24.2 — no hardcoded hex/px)
+6. **DB drift** — `cd services/api && uv run python -m sitara_api.db.verify` (§6.4, exit 1 on drift)
+
+## Human-closed gates (§31.7)
+7. **Release gates** — `cd services/api && uv run python -m sitara_api.release_gates`
+
+These close only when a named human signs off, so they are reported every run and never silently pass. Currently open, per §37:
+- `safety.helpline_table` (§22.9) — **closed-beta blocker**, status "awaiting human-verified numbers". The L4 auto-response points at the in-app support surface; no helpline number is hardcoded from memory. Closes when `policy/helplines.json` exists with every number verified against its publishing body.
+- `safety.l1_rule_lexicon` and `safety.fear_selling_corpus` (§14) — **closed-beta blockers**, status read from each file's `review_status` field. Close when the named native safety reviewer signs off per locale.
+
+Report each as its own line in the summary with its spec reference and the stage it blocks. Do not describe the build as ship-ready while any of them is open — say which stage is blocked and by what.
