@@ -40,6 +40,10 @@ _INTIMATE_FORMS: dict[str, tuple[str, ...]] = {
 #: presence and is NEVER called an avatar — in any locale, ever (§4.1, §24.3).
 _FORBIDDEN = re.compile(r"\bavatars?\b|अवतार", re.IGNORECASE)
 
+#: See grounding._WORDISH — the danda must stay OUTSIDE the class or a term at
+#: the end of a Devanagari sentence never matches.
+_WORDISH = r"\w\u0900-\u0963\u0966-\u097F"
+
 
 class LanguageQualityValidator:
     def __init__(self, glossary: tuple[str, ...] | None = None) -> None:
@@ -69,7 +73,9 @@ class LanguageQualityValidator:
             )
 
         for form in _INTIMATE_FORMS.get(locale, ()):
-            if re.search(rf"(?<![\wऀ-ॿ]){re.escape(form)}(?![\wऀ-ॿ])", text, re.IGNORECASE):
+            if re.search(
+                rf"(?<![{_WORDISH}]){re.escape(form)}(?![{_WORDISH}])", text, re.IGNORECASE
+            ):
                 failures.append(f"intimate address {form!r} used uninvited (§2.3 honorifics)")
                 break
 
@@ -80,7 +86,7 @@ class LanguageQualityValidator:
             # Whole words only. A substring test reads "Tara" inside "tarah"
             # — everyday Hinglish for "way" — and would fail an ordinary reply,
             # burning §9's single regeneration on a word Tara is allowed to use.
-            pattern = rf"(?<![\wऀ-ॿ]){re.escape(term)}(?![\wऀ-ॿ])"
+            pattern = rf"(?<![{_WORDISH}]){re.escape(term)}(?![{_WORDISH}])"
             if re.search(pattern, text, re.IGNORECASE) and not re.search(pattern, text):
                 failures.append(f"glossary term {term!r} altered (§2.4)")
 

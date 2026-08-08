@@ -16,6 +16,40 @@ The astrology lexicon that decides "claim-bearing" is derived from the
 `sitara_schemas` enums, so the engine cannot grow a graha the validator does
 not know about. `policy/claim_terms.json` adds the connective vocabulary per
 locale.
+
+WHAT COUNTS AS A CLAIM (CL-001, see docs/change-log.md)
+-------------------------------------------------------
+Naming a term is not the same as asserting something. Two sentences the spec
+REQUIRES were failing validation and driving turns into the fallback line:
+§2.3's first-use gloss of a tradition term, and §0.7's honesty about what the
+facts do not cover. Both name a term; neither says anything about this
+person's day.
+
+So a sentence carrying a strong term is a claim UNLESS all five hold:
+
+    no number · no clock value · no second-person reference ·
+    no temporal deixis · no celestial entity asserted to be
+    doing or being anything
+
+Category terms — choghadiya, muhurat, tithi as CONCEPTS — may be glossed
+uncited. A named body (graha, rashi, nakshatra) paired with a state or motion
+verb is always a claim, in every locale.
+
+Residual risks, stated rather than discovered later:
+
+* **Bare tradition statements pass uncited.** "Muhurat selection is an old
+  tradition" is exempt. It describes a practice, not a day. Narrower than it
+  looks — "rahu kaal" is not exempt, because `rahu` is a graha name.
+* **Subjecthood is approximated by co-occurrence.** A celestial name plus a
+  state verb anywhere in the sentence counts, so "Saturn is the graha of
+  discipline" is treated as a claim. That is the safe direction: a false
+  positive costs one regeneration, a false negative ships a fabrication.
+* **The marker lists are per-locale data.** A deictic or copula missing from
+  `claim_terms.json` weakens the rule for that locale only, and silently.
+  They are reviewed with the §14 language pass, like the safety corpora.
+* **Sentence splitting is punctuation-based.** A claim welded to a gloss by a
+  semicolon is judged as one sentence, and the citation requirement applies to
+  the whole of it — strict, not lax.
 """
 
 from __future__ import annotations
@@ -48,11 +82,28 @@ _CLOCK_RE = re.compile(r"\b(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(am|pm)?\b", re.IGNO
 _NUMBER_RE = re.compile(r"\d+(?:\.\d+)?")
 _DEVANAGARI_DIGITS = str.maketrans("०१२३४५६७८९", "0123456789")
 
+#: What counts as "inside a word" for term matching. NOT `\w`: Devanagari
+#: vowel signs and the virama are combining marks Python excludes from `\w`,
+#: so `\bवक्री\b` never fires. NOT the whole Devanagari block either — it
+#: contains the danda । (U+0964) and double danda ॥ (U+0965), which END
+#: sentences; including them made every term inert at a sentence's close.
+_WORDISH = r"\w\u0900-\u0963\u0966-\u097F"
+
 #: Day-division names worth gating on. `choghadiya_day`/`choghadiya_night`
 #: are covered by the plain locale term, and the generic quality words
 #: ("general", "neutral") are excluded on purpose — they would flag ordinary
 #: English sentences and make the validator useless by crying wolf.
 _TIMING_TERMS: tuple[str, ...] = ("rahu kaal", "yamaganda", "gulikai", "abhijit")
+
+
+@dataclass(frozen=True)
+class _Markers:
+    """The four things that turn a term-bearing sentence into a claim."""
+
+    celestial: re.Pattern[str]
+    state_motion: re.Pattern[str]
+    second_person: re.Pattern[str]
+    temporal: re.Pattern[str]
 
 
 @dataclass(frozen=True)
@@ -73,6 +124,7 @@ class GroundingValidator:
         self._source = terms or config.claim_terms()
         self._lexicons: dict[str, tuple[re.Pattern[str], re.Pattern[str]]] = {}
         self._ordinals: dict[str, re.Pattern[str] | None] = {}
+        self._markers_by_locale: dict[str, _Markers] = {}
 
     def check(
         self, text: str, facts: ValidatedFacts | Sequence[FactSnapshot], locale: str
@@ -133,22 +185,64 @@ class GroundingValidator:
     # -- claim detection ---------------------------------------------------
 
     def _is_claim(self, sentence: str, locale: str) -> bool:
-        """Strong term ⇒ claim. Weak term ⇒ claim only alongside a number.
+        """Is this sentence an astrological CLAIM, needing a fact-ID?
 
-        The asymmetry is the point. "Saturn is in your 10th" must be caught;
-        "I don't have your birth chart yet" must not be, or the one sentence
-        §5.3 most wants Tara to be able to say would fail validation and loop
-        into the fallback line.
+        The exemption (change-log 2026-08-08 · CL-001) exists because two
+        sentences the spec REQUIRES were failing: §2.3's first-use gloss of a
+        tradition term, and Tara's honesty about what her facts do not cover.
+        Both name a term without asserting anything about this person's day.
+
+        A sentence carrying a strong term is exempt only when ALL FIVE hold:
+        no number · no clock · no second-person reference · no temporal
+        deixis · no celestial entity asserted to be doing or being anything.
+        Category terms may be glossed; a named body never goes uncited.
         """
         lowered = sentence.lower()
+        normalised = lowered.translate(_DEVANAGARI_DIGITS)
         strong, weak = self._lexicon(locale)
-        if strong.search(lowered):
-            return True
+
+        # An ordinal house is a claim on sight — "your 8th house" is the
+        # classic fabrication and needs no other evidence.
         ordinal = self._ordinal_pattern(locale)
         if ordinal and ordinal.search(lowered):
             return True
-        has_number = _NUMBER_RE.search(lowered.translate(_DEVANAGARI_DIGITS))
-        return bool(weak.search(lowered) and has_number)
+
+        has_number = bool(_NUMBER_RE.search(normalised))
+        if weak.search(lowered) and has_number:
+            return True
+        if not strong.search(lowered):
+            return False
+
+        # -- strong term present: the five exemption conditions -------------
+        if has_number or _CLOCK_RE.search(normalised):
+            return True
+        markers = self._markers(locale)
+        if markers.second_person.search(lowered) or markers.temporal.search(lowered):
+            return True
+        if markers.celestial.search(lowered) and markers.state_motion.search(lowered):
+            return True
+        return False
+
+    def _markers(self, locale: str) -> _Markers:
+        key = self._key(locale)
+        if key not in self._markers_by_locale:
+            source = self._source
+
+            def alt(section: str, *, derived: frozenset[str] = frozenset()) -> re.Pattern[str]:
+                block = source.get(section, {})
+                # English always joins the net: §2.3 keeps English loanwords in
+                # Hinglish, and an English clause inside a Hindi reply asserts
+                # just as hard as a Devanagari one.
+                terms = set(block.get(key, ())) | set(block.get("en", ())) | set(derived)
+                return _alternation(terms, min_length=2)
+
+            self._markers_by_locale[key] = _Markers(
+                celestial=alt("celestial", derived=_celestial_terms()),
+                state_motion=alt("state_motion"),
+                second_person=alt("second_person"),
+                temporal=alt("temporal_deixis"),
+            )
+        return self._markers_by_locale[key]
 
     def _key(self, locale: str) -> str:
         return locale if locale in self._source["terms"] else "en"
@@ -161,7 +255,18 @@ class GroundingValidator:
             # English astrology vocabulary shows up inside a Hinglish reply by
             # design (§2.3 keeps loanwords), so English is always in the net.
             english = self._source["terms"].get("en", {})
-            strong = set(entry.get("strong", ())) | set(english.get("strong", ())) | _schema_terms()
+            # A named body is at least as strong a signal as a tradition term.
+            # Without this the Devanagari and Hinglish graha/rashi names are
+            # absent from the strong set — the English ones arrive via
+            # `_schema_terms` — and "चंद्रमा मीन राशि में है" reaches the
+            # exemption test without ever tripping the strong gate.
+            celestial = set(self._source.get("celestial", {}).get(key, ()))
+            strong = (
+                set(entry.get("strong", ()))
+                | set(english.get("strong", ()))
+                | _schema_terms()
+                | celestial
+            )
             weak = set(entry.get("weak", ())) | set(english.get("weak", ()))
             self._lexicons[key] = (_alternation(strong), _alternation(weak))
         return self._lexicons[key]
@@ -174,13 +279,38 @@ class GroundingValidator:
         return self._ordinals[key]
 
 
-def _alternation(terms: Iterable[str]) -> re.Pattern[str]:
+def _alternation(terms: Iterable[str], *, min_length: int = 3) -> re.Pattern[str]:
     """Longest-first so "moon sign" wins over "moon". Never matches nothing:
-    an empty set compiles to a pattern that cannot fire."""
-    ordered = sorted((t for t in terms if len(t) >= 3), key=len, reverse=True)
+    an empty set compiles to a pattern that cannot fire.
+
+    `min_length` drops to 2 for the marker sets — Hindi carries real signal in
+    two characters ("है", "आज"), and dropping them would exempt exactly the
+    sentences the rule is meant to catch.
+    """
+    ordered = sorted((t for t in terms if len(t) >= min_length), key=len, reverse=True)
     if not ordered:
         return re.compile(r"(?!x)x")
-    return re.compile(r"\b(?:" + "|".join(re.escape(t) for t in ordered) + r")\b", re.IGNORECASE)
+    body = "|".join(re.escape(t) for t in ordered)
+    # NOT \b. Devanagari vowel signs and the virama are combining marks, which
+    # Python does not count as word characters, so `\bवक्री\b` can never match
+    # — the trailing ी ends the "word" before the boundary is tested. Every
+    # Devanagari term in these lexicons was silently inert until this changed.
+    return re.compile(
+        rf"(?<![{_WORDISH}])(?:{body})(?![{_WORDISH}])", re.IGNORECASE
+    )
+
+
+@lru_cache(maxsize=1)
+def _celestial_terms() -> frozenset[str]:
+    """Named bodies and points, from the engine's own enums.
+
+    Grahas, rashis and nakshatras only — a choghadiya or a paksha is a WINDOW,
+    not a body, and glossing one is exactly what the exemption permits.
+    """
+    names: set[str] = set()
+    for enum in (Graha, Rashi, Nakshatra):
+        names |= {member.value.replace("_", " ") for member in enum}
+    return frozenset(names)
 
 
 @lru_cache(maxsize=1)
