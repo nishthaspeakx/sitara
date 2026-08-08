@@ -44,10 +44,10 @@ _FORBIDDEN = re.compile(r"\bavatars?\b|अवतार", re.IGNORECASE)
 
 
 class LanguageQualityValidator:
-    def __init__(self, glossary: tuple[str, ...] | None = None) -> None:
+    def __init__(self, glossary: tuple[tuple[str, tuple[str, ...]], ...] | None = None) -> None:
         self._glossary = glossary if glossary is not None else config.glossary_terms()
 
-    def check(self, text: str, locale: str) -> LanguageQualityVerdict:
+    def check(self, text: str, locale: str) -> LanguageQualityVerdict:  # noqa: C901
         failures: list[str] = []
 
         if locale not in LAUNCH_LOCALES:
@@ -78,15 +78,21 @@ class LanguageQualityValidator:
         if _FORBIDDEN.search(text):
             failures.append("Tara is a photographic presence, never an 'avatar' (glossary)")
 
-        for term in self._glossary:
-            # Case matters only for the PROPER NOUNS. glossary.json's rule for
-            # the domain terms is "kept native in all locales" — that is about
-            # translation, not capitalisation, and flagging a sentence-initial
-            # "Nakshatra" as an altered term failed ordinary replies.
-            if not term[:1].isupper():
-                continue
-            pattern = textutil.bounded(term)
-            if re.search(pattern, text, re.IGNORECASE) and not re.search(pattern, text):
-                failures.append(f"glossary term {term!r} altered (§2.4)")
+        for term, forbidden in self._glossary:
+            # §2.4's rule is that these terms are KEPT NATIVE — about
+            # TRANSLATION, not capitalisation. Comparing case only ever caught
+            # a sentence-initial "Nakshatra", which is not a violation; what is
+            # one is an English rendering standing in for the term.
+            for rendering in forbidden:
+                if re.search(textutil.bounded(rendering), text, re.IGNORECASE):
+                    failures.append(
+                        f"glossary term {term!r} rendered as {rendering!r} — "
+                        f"kept native in all locales (§2.4)"
+                    )
+            # Case still matters for the proper nouns, and only those.
+            if term[:1].isupper():
+                pattern = textutil.bounded(term)
+                if re.search(pattern, text, re.IGNORECASE) and not re.search(pattern, text):
+                    failures.append(f"glossary term {term!r} altered (§2.4)")
 
         return LanguageQualityVerdict(ok=not failures, failures=tuple(failures))

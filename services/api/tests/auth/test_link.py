@@ -37,8 +37,14 @@ def test_link_same_identity_is_idempotent(client: TestClient, verifier: FakeVeri
 def test_duplicate_provider_conflict_returns_choose_flow(
     client: TestClient, verifier: FakeVerifier
 ) -> None:
-    # User B owns the google identity...
-    verifier.add("tok-b", uid="fb-uid-b", provider="google", email="b@example.com")
+    # User B owns the google identity. The phone is required at SIGN-UP now:
+    # §37.2 will not run the §22.4 gate without a corroboratable country, so a
+    # google identity with no phone cannot create an account — see
+    # test_a_signup_with_no_corroboratable_country_is_refused.
+    verifier.add(
+        "tok-b", uid="fb-uid-b", provider="google",
+        email="b@example.com", phone="+911234500055",
+    )
     exchange(client, "tok-b")
     client.cookies.clear()
 

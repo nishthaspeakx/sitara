@@ -52,7 +52,8 @@
       "apple_unavailable": "Apple sign-in isn't available yet — please use phone or Google.",
       "forbidden": "You don't have access to that.",
       "step_up_required": "For your safety, please verify it's you before linking.",
-      "no_pending_conflict": "There's nothing to resolve right now."
+      "no_pending_conflict": "There's nothing to resolve right now.",
+      "zone_unverified": "I couldn't confirm where you're signing up from, and I need that to check a couple of things. Please try again in a moment."
     },
     "astro": {
       "insufficient_birth_data": "I don't have enough information to calculate this accurately — shall we complete it?",

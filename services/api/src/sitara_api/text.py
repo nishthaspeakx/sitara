@@ -106,7 +106,10 @@ def is_inert(pattern: str) -> bool:
     """
     probe = _probe_string(pattern)
     if not probe:
-        return False
+        # A pattern the prober cannot reduce to any literal is a FINDING, not
+        # a pass: it is exactly the shape a dead rule takes, and the sweep is
+        # worthless if it waves through what it cannot understand.
+        return True
     try:
         compiled = re.compile(pattern, re.IGNORECASE)
     except re.error:
@@ -150,8 +153,6 @@ def _first_member(match: re.Match[str]) -> str:
     negated, body = match.group(1), match.group(2)
     if negated or not body:
         return "a"
-    if body.startswith("\\d"):
-        return "5"
     return body[0] if body[0] not in "-^" else (body[1] if len(body) > 1 else "a")
 
 

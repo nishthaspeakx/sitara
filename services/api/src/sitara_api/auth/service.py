@@ -5,14 +5,18 @@ never authentication truth. Linking needs step-up (§22.5, stub in M1); a
 duplicate-provider link raises the §32.12 choose-flow, never a silent merge.
 """
 
+import logging
 from datetime import UTC, date, datetime
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from bson import ObjectId
 from sitara_schemas import ErrorCode
 
 from sitara_api.auth.firebase import FirebaseVerifier, InvalidFirebaseToken, VerifiedIdentity
 from sitara_api.auth.throttle import OtpThrottle
+from sitara_api.auth.zones import ZoneDecision, ZoneUndeterminable
+from sitara_api.auth.zones import resolve as resolve_zone
 from sitara_api.config import Settings
 from sitara_api.db import MongoDb
 from sitara_api.errors import ApiError
@@ -21,31 +25,11 @@ MINIMUM_AGE_YEARS = 18  # §22.4 FOUNDER DECISION — 18+ only, hard gate
 LOCALES = ("en", "hi-Latn", "hi")  # §2.4 launch set
 
 
+logger = logging.getLogger(__name__)
+
+
 def _now() -> datetime:
     return datetime.now(UTC)
-
-
-#: §22.4's gate is a birthday, and a birthday is a LOCAL-calendar fact.
-#: Evaluated in UTC, someone who turned 18 this morning in Kolkata is 17 for
-#: the first 5½ hours of their birthday and is refused an account (§36.4).
-DEFAULT_AGE_TIMEZONE = "Asia/Kolkata"
-
-
-def local_today(timezone_name: str | None) -> tuple[date, str]:
-    """Today's date in the user's own timezone, and the zone actually used.
-
-    An unknown zone falls back to the launch market's rather than to UTC:
-    UTC is the one choice guaranteed to be wrong for every user we have.
-    """
-    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
-
-    name = timezone_name or DEFAULT_AGE_TIMEZONE
-    try:
-        zone = ZoneInfo(name)
-    except (ZoneInfoNotFoundError, ValueError):
-        name = DEFAULT_AGE_TIMEZONE
-        zone = ZoneInfo(name)
-    return _now().astimezone(zone).date(), name
 
 
 def _age_years(dob: date, today: date) -> int:
@@ -82,33 +66,42 @@ class AuthService:
         await self._throttle.record_success(throttle_key)
         return identity
 
-    async def _audit_age_check(
-        self, uid: str, age: int, zone_used: str, today_local: date
-    ) -> None:
-        """§12 audit row for the §22.4 decision.
+    async def _audit_age_check(self, uid: str, outcome: str, decision: ZoneDecision) -> None:
+        """§12 audit row for the §22.4 decision — written BEFORE the decision.
 
-        The timezone is the whole point: an age gate that refuses someone is a
-        legal act, and the same date of birth is 17 or 18 depending on the zone
-        the check ran in (§36.4). `actor` is the Firebase uid rather than a
-        product id — at this moment there is no user record yet.
+        NO AUDIT, NO DECISION. The write precedes the outcome deliberately: a
+        gate that refuses (or admits) without a record is an unaccountable
+        legal act, so a failed write returns a retryable SYS_UNAVAILABLE and
+        the caller tries again. It never results in an unaudited admission,
+        and it never results in an unaudited refusal (§37.2).
+
+        §13: nothing derived from the date of birth is stored. `audit_logs` is
+        NOT a CSFLE collection, and an exact age is a birth-detail derivative;
+        the outcome, the zone set and its provenance answer "why was this
+        refused?" without putting one in a seven-year append-only log.
         """
+        from pymongo.errors import PyMongoError
+
         from sitara_api.db.documents import stamp
 
-        await self._db.audit_logs.insert_one(
-            stamp(
-                {
-                    "actor": f"firebase:{uid}",
-                    "action": "auth.age_gate",
-                    "target": f"age={age};min={MINIMUM_AGE_YEARS}",
-                    "before_hash": None,
-                    "after_hash": None,
-                    "ip": None,
-                    "ts": _now(),
-                    "timezone": zone_used,
-                    "local_date": today_local.isoformat(),
-                }
+        try:
+            await self._db.audit_logs.insert_one(
+                stamp(
+                    {
+                        "actor": f"firebase:{uid}",
+                        "action": "auth.age_gate",
+                        "target": f"outcome={outcome};min={MINIMUM_AGE_YEARS}",
+                        "before_hash": None,
+                        "after_hash": None,
+                        "ip": None,
+                        "ts": _now(),
+                        "zone_decision": decision.as_audit(),
+                    }
+                )
             )
-        )
+        except PyMongoError:
+            logger.warning("age-gate audit write failed — refusing to decide unaudited")
+            raise ApiError(ErrorCode.SYS_UNAVAILABLE, "errors.sys.unavailable") from None
 
     async def exchange(
         self,
@@ -117,6 +110,7 @@ class AuthService:
         date_of_birth: date | None,
         locale: str | None,
         timezone_name: str | None = None,
+        ip_country: str | None = None,
     ) -> tuple[dict[str, Any], bool]:
         """One-time §34.5 exchange. Returns (user doc, is_new_user)."""
         identity = await self._verify_or_throttle(id_token, throttle_key)
@@ -143,13 +137,31 @@ class AuthService:
         # New sign-up: §22.4 hard age gate, before any record exists.
         if date_of_birth is None:
             raise ApiError(ErrorCode.SYS_VALIDATION, "errors.auth.dob_required")
-        # §36.4: the §22.4 gate runs against the user's LOCAL calendar date,
-        # never UTC. The zone used is recorded on the audit row, because "why
-        # was this account refused?" is unanswerable without it.
-        today_local, zone_used = local_today(timezone_name)
+        # §37.2: the gate runs in the user's LOCAL calendar, in a CORROBORATED
+        # zone — never UTC, and never a zone the caller simply asserted. Age is
+        # evaluated in the westernmost plausible zone, so it is the smallest
+        # age the evidence permits.
+        now_utc = _now()
+        try:
+            decision = resolve_zone(
+                phone=identity.phone,
+                ip_country=ip_country,
+                declared=timezone_name,
+                now=now_utc,
+            )
+        except ZoneUndeterminable:
+            # Fail closed. No corroborated calendar means no age check, and an
+            # unchecked §22.4 gate is not a gate.
+            logger.info("age gate refused: no corroborated timezone")
+            raise ApiError(ErrorCode.SYS_UNAVAILABLE, "errors.auth.zone_unverified") from None
+
+        today_local = now_utc.astimezone(ZoneInfo(decision.evaluated_in)).date()
         age = _age_years(date_of_birth, today_local)
-        await self._audit_age_check(identity.uid, age, zone_used, today_local)
-        if age < MINIMUM_AGE_YEARS:
+        passed = age >= MINIMUM_AGE_YEARS
+        await self._audit_age_check(
+            identity.uid, "passed" if passed else "refused", decision
+        )
+        if not passed:
             raise ApiError(ErrorCode.AUTH_UNDERAGE)
 
         now = _now()

@@ -55,6 +55,14 @@ def build_validator(spec: CollectionSpec) -> dict[str, Any]:
         "required": list(spec.all_required),
         "properties": properties,
     }
+    if spec.strict:
+        # An undeclared field is refused at write time, not tolerated and
+        # discovered years later in a legal record. `_id` must be declared
+        # explicitly: `additionalProperties: false` counts it like any other
+        # field, and omitting it rejects EVERY write with a message that says
+        # nothing about which field was wrong.
+        properties.setdefault("_id", {"bsonType": "objectId"})
+        schema["additionalProperties"] = False
 
     validator: dict[str, Any] = {"$jsonSchema": schema}
     if spec.forbidden:

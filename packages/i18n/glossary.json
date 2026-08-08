@@ -1,10 +1,93 @@
 {
   "$comment": "Glossary seed (SPEC §2.4) — canonical terms the language-quality validator lints against. Grows with the localisation pipeline (M12). Tara is never called an avatar.",
   "terms": [
-    { "term": "Tara", "rule": "never translated, never 'avatar' — 'Tara · AI guide' disclosure is permanent" },
-    { "term": "Sitara", "rule": "product name, never translated" },
-    { "term": "panchang", "rule": "domain term, kept native in all locales" },
-    { "term": "nakshatra", "rule": "domain term, kept native in all locales" },
-    { "term": "muhurat", "rule": "domain term, kept native in all locales" }
-  ]
+    {
+      "term": "Tara",
+      "rule": "never translated, never 'avatar' — 'Tara · AI guide' disclosure is permanent",
+      "forbidden_renderings": {
+        "en": [
+          "avatar",
+          "assistant persona",
+          "the bot"
+        ],
+        "hi": [
+          "अवतार"
+        ],
+        "hi-Latn": [
+          "avatar"
+        ]
+      }
+    },
+    {
+      "term": "Sitara",
+      "rule": "product name, never translated",
+      "forbidden_renderings": {
+        "en": [
+          "the star app"
+        ],
+        "hi": [],
+        "hi-Latn": []
+      }
+    },
+    {
+      "term": "panchang",
+      "rule": "domain term, kept native in all locales",
+      "forbidden_renderings": {
+        "en": [
+          "almanac",
+          "hindu calendar",
+          "vedic calendar"
+        ],
+        "hi": [
+          "पंचाङ्ग-पत्र",
+          "कैलेंडर"
+        ],
+        "hi-Latn": [
+          "almanac",
+          "hindu calendar"
+        ]
+      }
+    },
+    {
+      "term": "nakshatra",
+      "rule": "domain term, kept native in all locales",
+      "forbidden_renderings": {
+        "en": [
+          "constellation",
+          "star sign",
+          "lunar mansion",
+          "birth star"
+        ],
+        "hi": [
+          "तारामंडल",
+          "राशिचक्र"
+        ],
+        "hi-Latn": [
+          "constellation",
+          "star sign",
+          "lunar mansion"
+        ]
+      }
+    },
+    {
+      "term": "muhurat",
+      "rule": "domain term, kept native in all locales",
+      "forbidden_renderings": {
+        "en": [
+          "auspicious moment",
+          "lucky hour",
+          "propitious time"
+        ],
+        "hi": [
+          "शुभ घड़ी"
+        ],
+        "hi-Latn": [
+          "auspicious moment",
+          "lucky hour"
+        ]
+      }
+    }
+  ],
+  "review_status": "draft — forbidden-rendering lists awaiting the §14 named native reviewer",
+  "$forbidden_comment": "§2.4's rule is that these terms are KEPT NATIVE — it is about translation, not capitalisation. Each term therefore carries the renderings that must never replace it, per locale. Case is enforced only for the proper nouns (Tara, Sitara). Lists are drafts until the §14 native reviewer signs off, same as the safety corpora."
 }

@@ -96,7 +96,7 @@ def exchange(
     if device_name is not None:
         body["device_name"] = device_name
     if timezone is not None:
-        # §36.4: the age gate needs the user's zone, not the server's.
+        # §37.2: the age gate needs the user's zone, not the server's.
         body["timezone"] = timezone
     return client.post("/auth/session", json=body)
 
@@ -110,13 +110,14 @@ def assert_envelope(body: dict, code: str, retryable: bool) -> None:
 
 
 def years_ago(years: int, plus_days: int = 0) -> str:
+    # Match the gate: §37.2 evaluates in the corroborated zone of the test
+    # phone numbers (all +91), so a helper using the machine's local date
+    # disagrees with it for several hours each day.
+    from datetime import datetime as _dt
     from datetime import timedelta
+    from zoneinfo import ZoneInfo as _ZoneInfo
 
-    # Match the gate: it evaluates in the launch market's zone (§36.4), so a
-    # helper using the machine's local date disagrees for hours each day.
-    from sitara_api.auth.service import local_today
-
-    today, _ = local_today(None)
+    today = _dt.now(_ZoneInfo("Asia/Kolkata")).date()
     try:
         d = today.replace(year=today.year - years)
     except ValueError:  # Feb 29

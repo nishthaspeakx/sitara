@@ -19,6 +19,7 @@ from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 POLICY_DIR = Path(__file__).parent / "policy"
+GLOSSARY_PATH = Path(__file__).resolve().parents[5] / "packages" / "i18n" / "glossary.json"
 
 
 class ChatSettings(BaseSettings):
@@ -139,14 +140,28 @@ def claim_terms() -> dict[str, Any]:
     return _load("claim_terms.json")
 
 
-def glossary_terms() -> tuple[str, ...]:
-    """Canonical terms from packages/i18n/glossary.json (§2.4).
+def glossary_terms(locale: str = "en") -> tuple[tuple[str, tuple[str, ...]], ...]:
+    """(term, forbidden renderings) from packages/i18n/glossary.json (§2.4).
 
     Read from the shared package rather than copied, so a glossary edit
-    reaches the language-quality validator without a second review.
+    reaches the language-quality validator without a second review. English
+    renderings are always included: an English gloss standing in for a native
+    term is the violation regardless of the reply's locale.
     """
-    path = Path(__file__).resolve().parents[5] / "packages" / "i18n" / "glossary.json"
+    path = GLOSSARY_PATH
     if not path.exists():  # deployed images ship the service, not the monorepo
-        return ("Tara", "Sitara")
+        return (("Tara", ()), ("Sitara", ()))
     data = json.loads(path.read_text(encoding="utf-8"))
-    return tuple(term["term"] for term in data.get("terms", []))
+    rows: list[tuple[str, tuple[str, ...]]] = []
+    for term in data.get("terms", []):
+        blocked = term.get("forbidden_renderings", {})
+        renderings = {*blocked.get(locale, ()), *blocked.get("en", ())}
+        rows.append((term["term"], tuple(sorted(renderings))))
+    return tuple(rows)
+
+
+def glossary_review_status() -> str:
+    if not GLOSSARY_PATH.exists():
+        return "missing — glossary.json not found"
+    data = json.loads(GLOSSARY_PATH.read_text(encoding="utf-8"))
+    return data.get("review_status", "missing — no review_status field")

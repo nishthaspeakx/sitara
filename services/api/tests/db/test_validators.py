@@ -9,6 +9,7 @@ import pytest
 from bson import ObjectId
 from pymongo.errors import WriteError
 
+from sitara_api.db import registry
 from sitara_api.db.documents import stamp
 from sitara_api.db.registry import BY_NAME
 from sitara_api.db.validators import build_validator
@@ -134,3 +135,58 @@ class TestEncryptedFieldTypes:
     def test_unencrypted_fields_do_not_accept_bindata(self) -> None:
         schema = build_validator(BY_NAME["users"])["$jsonSchema"]
         assert "binData" not in schema["properties"]["locale"]["bsonType"]
+
+
+class TestStrictCollections:
+    """§37.2 — an append-only legal log refuses undeclared fields.
+
+    A field nobody declared is a field nobody reviewed for §13 content, and
+    that is precisely how an exact age (a birth-detail derivative) reached
+    `audit_logs`, which carries no CSFLE marks and keeps rows for seven years.
+    """
+
+    def test_audit_logs_is_declared_strict(self) -> None:
+        assert registry.BY_NAME["audit_logs"].strict
+
+    def test_a_strict_collection_refuses_undeclared_fields_in_its_schema(self) -> None:
+        schema = _schema_of(registry.BY_NAME["audit_logs"])
+
+        assert schema["additionalProperties"] is False
+
+    def test_a_non_strict_collection_still_allows_them(self) -> None:
+        """Strictness is opt-in: most collections grow fields between spec
+        revisions and should not fail a write to say so."""
+        schema = _schema_of(registry.BY_NAME["messages"])
+
+        assert "additionalProperties" not in schema
+
+    def test_every_field_the_age_gate_writes_is_declared(self) -> None:
+        """The structural check the review asked for: what the writer emits
+        and what the registry declares cannot drift apart silently."""
+        declared = set(registry.BY_NAME["audit_logs"].all_fields)
+        written = {
+            "actor", "action", "target", "before_hash", "after_hash", "ip", "ts",
+            "zone_decision", "created_at", "updated_at", "schema_v",
+        }
+
+        assert written <= declared, f"undeclared: {sorted(written - declared)}"
+
+
+def _schema_of(spec) -> dict:  # noqa: ANN001
+    validator = build_validator(spec)
+    if "$jsonSchema" in validator:
+        return validator["$jsonSchema"]
+    return validator["$and"][0]["$jsonSchema"]
+
+
+def test_a_strict_collection_declares_id_or_rejects_every_write() -> None:
+    """`additionalProperties: false` counts `_id` like any other field.
+
+    Omitting it makes the collection refuse EVERY insert with an error that
+    names no field — which is how this first showed up: 18 tests failing with
+    a 503 from the age gate's audit-write path.
+    """
+    schema = _schema_of(registry.BY_NAME["audit_logs"])
+
+    assert schema["additionalProperties"] is False
+    assert schema["properties"]["_id"]["bsonType"] == "objectId"

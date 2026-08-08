@@ -58,6 +58,12 @@ class Gate:
         return not self.status.lower().startswith(_REVIEWED_PREFIX)
 
 
+def _glossary_review_status() -> str:
+    from sitara_api.chat_orchestration.config import glossary_review_status
+
+    return glossary_review_status()
+
+
 def _policy_review_status(filename: str) -> str:
     path = POLICY_DIR / filename
     if not path.exists():
@@ -109,6 +115,30 @@ def gates() -> tuple[Gate, ...]:
                 "(validator correct) or the local-clock rendering missed (validator wrong). "
                 "Deliberately unpatched: fixing the wrong one would either mask a real "
                 "fabrication or loosen §5.3 on a guess."
+            ),
+        ),
+        Gate(
+            id="auth.zone_corroboration_coverage",
+            spec_ref="§37.2 / §22.4",
+            blocks=Stage.CLOSED_BETA,
+            status="open — fails closed outside the mapped calling codes",
+            detail=(
+                "The §22.4 age gate needs a corroborated timezone and derives it from the "
+                "E.164 phone country. A sign-up with no phone (Google) or an unmapped calling "
+                "code cannot be age-checked and is REFUSED as retryable. Closes when geo-IP "
+                "corroboration is wired or the coverage table reaches every market that can "
+                "reach the app."
+            ),
+        ),
+        Gate(
+            id="i18n.glossary_forbidden_renderings",
+            spec_ref="§2.4 / §14",
+            blocks=Stage.CLOSED_BETA,
+            status=_glossary_review_status(),
+            detail=(
+                "§2.4 keeps the glossary terms native in all locales. The per-locale lists of "
+                "forbidden renderings are what enforce it; they are drafts until the §14 named "
+                "native reviewer signs off, same as the safety corpora."
             ),
         ),
         Gate(

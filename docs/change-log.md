@@ -132,3 +132,40 @@ rejected as numeric mismatches on sentences that DID cite a fact; whether that
 is per-sentence misattribution (validator right) or a rendering gap (validator
 wrong) is not yet demonstrated, so it is deliberately unpatched and carried in
 `release_gates` as `chat.numeric_mismatch_attribution`.
+
+---
+
+## CL-006 — review findings from the CL-002..005 diff
+**Date:** 9 August 2026 · **Approved:** Founder · **Raised by:** `/review`
+
+Eight findings; all actioned. The first two were introduced by CL-001..005
+and are the reason this log exists separately from the spec.
+
+1. **Age-gate bypass (blocker).** The client-declared timezone was used
+   unverified, so `Pacific/Kiritimati` bought a day. Now corroborated —
+   see §37.2, restated. Fixing a false-negative had opened a false-positive,
+   which is the worse direction for a hard gate.
+2. **Exact age in a plaintext seven-year log.** Removed; the row records the
+   outcome, the zone set and its provenance. `db.redact_age_targets` rewrites
+   rows already written — it does not delete them, because destroying an
+   append-only audit record to fix its contents is a worse violation than the
+   one being fixed.
+3. **Six dangling citations** to a §36 subsection that does not exist. Fixed to §37.2, and
+   `tests/spec/test_citations_resolve.py` now fails on any citation that does
+   not resolve. It immediately found six MORE, pre-existing: §10's journey
+   stages are cited with a HYPHEN in the spec (`10-6`), and four files wrote
+   the dotted form, which resolves to nothing.
+4. **`audit_logs` is now STRICT** (`additionalProperties: false`) with its
+   full field set declared. An undeclared field on an append-only legal record
+   is a field nobody reviewed for §13 content — which is exactly how `age=`
+   got there.
+5. **Glossary enforcement replaced.** The old check compared CASE, which never
+   enforced §2.4's "kept native" rule and did flag a sentence-initial
+   "Nakshatra". Each term now carries per-locale forbidden renderings
+   ("almanac", "birth star"), drafts pending the §14 reviewer.
+6. **"No audit, no decision"** is now the documented policy: the write
+   precedes the outcome, and a failed write returns retryable
+   SYS_UNAVAILABLE rather than an unaudited admission OR refusal.
+7. **`is_inert` treats an empty probe as a finding**, not a pass — a sweep
+   that waves through what it cannot parse is not a sweep.
+8. Dead branch removed.

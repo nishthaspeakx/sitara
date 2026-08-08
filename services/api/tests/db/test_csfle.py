@@ -200,7 +200,7 @@ class TestAlgorithmChoice:
     async def test_a_user_without_an_email_is_still_allowed(
         self, db, crypto: FieldCrypto
     ) -> None:
-        """India's default signup is phone OTP (§10.4). Several users with no
+        """India's default signup is phone OTP (§10-4). Several users with no
         email must not collide on the unique index."""
         spec = BY_NAME["users"]
         for uid in ("p1", "p2", "p3"):

@@ -52,7 +52,8 @@
       "apple_unavailable": "Apple sign-in abhi available nahin hai — phone ya Google use karein.",
       "forbidden": "Aapko iski access nahin hai.",
       "step_up_required": "Aapki suraksha ke liye, link karne se pehle apni pehchaan verify karein.",
-      "no_pending_conflict": "Abhi kuch resolve karne ke liye nahin hai."
+      "no_pending_conflict": "Abhi kuch resolve karne ke liye nahin hai.",
+      "zone_unverified": "Aap kahan se sign up kar rahi hain, yeh confirm nahin ho paya, aur kuch check karne ke liye yeh zaroori hai. Thodi der mein dobara koshish karein."
     },
     "astro": {
       "insufficient_birth_data": "Ise sahi se calculate karne ke liye mere paas poori jaankari nahin hai — kya hum ise poora kar lein?",

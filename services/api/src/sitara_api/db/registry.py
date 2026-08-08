@@ -125,6 +125,10 @@ class CollectionSpec:
     dark: bool = False
     #: Fields that must NEVER appear. Enforced by the validator, not by comment.
     forbidden: tuple[str, ...] = ()
+    #: Reject UNDECLARED fields outright (`additionalProperties: false`).
+    #: For append-only legal records, where a field nobody declared is a field
+    #: nobody reviewed — §37.2's age-gate row is why this exists.
+    strict: bool = False
     notes: str = ""
 
     @property
@@ -268,7 +272,7 @@ SPECS: tuple[CollectionSpec, ...] = (
     CollectionSpec(
         name="family_members",
         spec_ref="§6.4",
-        purpose="Context only in Phase 1 — no family accounts (§10.19).",
+        purpose="Context only in Phase 1 — no family accounts (§10-19).",
         retention="with owner",
         shard_key="hashed(owner_user_id)",
         fields={
@@ -575,7 +579,7 @@ SPECS: tuple[CollectionSpec, ...] = (
     CollectionSpec(
         name="night_reflections",
         spec_ref="§6.4",
-        purpose="3 prompts + day summary. No streaks, no guilt (§10.17).",
+        purpose="3 prompts + day summary. No streaks, no guilt (§10-17).",
         retention="with user",
         shard_key="hashed(user_id)",
         fields={
@@ -743,6 +747,10 @@ SPECS: tuple[CollectionSpec, ...] = (
         purpose="Human sensitive actions, append-only (§12).",
         retention="7 years, append-only",
         shard_key="ts",
+        # STRICT. An append-only legal log keeps rows for seven years; a field
+        # nobody declared is a field nobody reviewed for §13 content, and
+        # `age=` reached this collection exactly that way (§37.2).
+        strict=True,
         fields={
             "actor": STR,
             "action": STR,
@@ -751,6 +759,12 @@ SPECS: tuple[CollectionSpec, ...] = (
             "after_hash": [STR, "null"],
             "ip": [STR, "null"],
             "ts": DT,
+            # §37.2: the corroborated zone set behind an age-gate decision.
+            # Zones and provenance only — nothing derived from a birth date.
+            "zone_decision": [OBJ, "null"],
+            # §13: set by db.redact_age_targets when a legacy `age=` target was
+            # rewritten. The row is amended in place, never deleted.
+            "redacted_reason": [STR, "null"],
         },
         required=("actor", "action", "target", "ts"),
         indexes=(
@@ -782,7 +796,7 @@ SPECS: tuple[CollectionSpec, ...] = (
     CollectionSpec(
         name="pronunciation_dictionaries",
         spec_ref="§6.4",
-        purpose="Per-locale term → phonetic, with an audio preview (§10.11).",
+        purpose="Per-locale term → phonetic, with an audio preview (§10-11).",
         retention="permanent",
         shard_key=None,
         fields={

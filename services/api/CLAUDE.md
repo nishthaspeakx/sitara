@@ -62,9 +62,22 @@ Bounded-context modules in one process (auth, users/profiles, localisation, astr
 - **`make_mongo` sets `tz_aware=True`** — BSON stores UTC but the default codec returns NAIVE datetimes, and mixing them raises TypeError mid-arithmetic. Decay hit this; panchang's cache had a local workaround for the same hazard.
 - **`populate_by_name=True` on every settings class carrying a `validation_alias`** — an alias REPLACES the field name, so `Settings(cohere_api_key=...)` silently yields None otherwise. It did, in `ChatSettings`, for a whole milestone.
 
+## auth age gate (§22.4 / §37.2) — invariants that must not regress
+- **The gate never runs in UTC, and never in a zone the CALLER chose.** The zone set is corroborated from the E.164 country of the Firebase-verified phone (× request-IP country when available); a declared zone is honoured only if it is already in that set. Age is evaluated in the **westernmost** member — the smallest age the evidence permits.
+- **It fails closed.** No corroborated set → retryable `SYS_UNAVAILABLE` (`errors.auth.zone_unverified`), never a guess. **This blocks sign-ups with no phone number (Google) today** — tracked as `auth.zone_corroboration_coverage`.
+- **No audit, no decision.** The audit write PRECEDES the outcome; a failed write returns retryable SYS_UNAVAILABLE rather than an unaudited admission *or* refusal.
+- **Never persist anything derived from a date of birth.** `audit_logs` has no §6.4 encryption marks and retains 7 years. The row holds outcome + zone set + provenance. `db.redact_age_targets` rewrites legacy `age=` rows in place — it never deletes them (append-only).
+- **`audit_logs` is STRICT** (`additionalProperties: false`). A strict collection must declare `_id` explicitly or it rejects every write with an error naming no field.
+
+## text/script invariants (CL-003)
+- **Never `\b` on text that can contain Devanagari** — vowel signs and the virama are combining marks Python excludes from `\w`, so `\bवक्री\b` matches nothing. Use `sitara_api.text.bounded`/`alternation`. The danda `।` must stay OUTSIDE the word class or terms at a sentence's end never match.
+- **`tests/chat/test_script_boundaries.py` asserts no safety pattern is inert** — 120 patterns, parametrised. It guards itself with a test that `is_inert` still flags `\bवक्री\b`. An empty probe is a FINDING, not a pass.
+- **Every §-citation must resolve** — `tests/spec/test_citations_resolve.py` fails on a dangling one. §10's journey stages are cited `§10-6`, with a hyphen.
+
 ## Commands (M5-P6b)
 - Nightly decay: `uv run python -m sitara_api.memory.decay --dry-run` (§32.4 consolidation)
 - Record the §32.5 recall vectors: `COHERE_API_KEY=... uv run python -m tests.memory.crosslingual.record`
+- Redact legacy age targets (§13): `uv run python -m sitara_api.db.redact_age_targets --dry-run`
 
 ## Commands (M4)
 - Build/repair schema: `uv run python -m sitara_api.db.migrate --phase expand`

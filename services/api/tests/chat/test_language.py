@@ -58,7 +58,7 @@ def test_hindi_reply_may_carry_a_few_english_loanwords() -> None:
 
 
 def _check(text: str, locale: str):  # noqa: ANN202
-    return LanguageQualityValidator(glossary=("Tara", "Sitara")).check(text, locale)
+    return LanguageQualityValidator(glossary=(("Tara", ()), ("Sitara", ()))).check(text, locale)
 
 
 def test_english_reply_to_a_hindi_account_fails() -> None:

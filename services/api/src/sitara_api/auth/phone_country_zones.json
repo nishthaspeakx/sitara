@@ -1,0 +1,282 @@
+{
+  "$comment": "Calling code → ISO country → IANA zones, for §37.2's corroborated age-gate zone set. Longest calling-code prefix wins. An UNMAPPED code is not guessed at: resolution fails and the sign-up is refused as retryable, which is the intended direction for a hard legal gate. Coverage gaps are closed with data, tracked by the auth.zone_corroboration_coverage release gate.",
+  "review_status": "draft — coverage limited to the launch market and §13's named diaspora markets",
+  "calling_codes": {
+    "91": {
+      "country": "IN",
+      "zones": [
+        "Asia/Kolkata"
+      ]
+    },
+    "977": {
+      "country": "NP",
+      "zones": [
+        "Asia/Kathmandu"
+      ]
+    },
+    "94": {
+      "country": "LK",
+      "zones": [
+        "Asia/Colombo"
+      ]
+    },
+    "880": {
+      "country": "BD",
+      "zones": [
+        "Asia/Dhaka"
+      ]
+    },
+    "92": {
+      "country": "PK",
+      "zones": [
+        "Asia/Karachi"
+      ]
+    },
+    "1": {
+      "country": "US",
+      "zones": [
+        "Pacific/Honolulu",
+        "America/Anchorage",
+        "America/Los_Angeles",
+        "America/Denver",
+        "America/Phoenix",
+        "America/Chicago",
+        "America/New_York",
+        "America/Halifax",
+        "America/St_Johns",
+        "America/Toronto",
+        "America/Vancouver",
+        "America/Edmonton",
+        "America/Winnipeg"
+      ]
+    },
+    "44": {
+      "country": "GB",
+      "zones": [
+        "Europe/London"
+      ]
+    },
+    "353": {
+      "country": "IE",
+      "zones": [
+        "Europe/Dublin"
+      ]
+    },
+    "971": {
+      "country": "AE",
+      "zones": [
+        "Asia/Dubai"
+      ]
+    },
+    "966": {
+      "country": "SA",
+      "zones": [
+        "Asia/Riyadh"
+      ]
+    },
+    "974": {
+      "country": "QA",
+      "zones": [
+        "Asia/Qatar"
+      ]
+    },
+    "965": {
+      "country": "KW",
+      "zones": [
+        "Asia/Kuwait"
+      ]
+    },
+    "968": {
+      "country": "OM",
+      "zones": [
+        "Asia/Muscat"
+      ]
+    },
+    "973": {
+      "country": "BH",
+      "zones": [
+        "Asia/Bahrain"
+      ]
+    },
+    "65": {
+      "country": "SG",
+      "zones": [
+        "Asia/Singapore"
+      ]
+    },
+    "60": {
+      "country": "MY",
+      "zones": [
+        "Asia/Kuala_Lumpur"
+      ]
+    },
+    "852": {
+      "country": "HK",
+      "zones": [
+        "Asia/Hong_Kong"
+      ]
+    },
+    "61": {
+      "country": "AU",
+      "zones": [
+        "Australia/Perth",
+        "Australia/Darwin",
+        "Australia/Adelaide",
+        "Australia/Brisbane",
+        "Australia/Sydney",
+        "Australia/Melbourne",
+        "Australia/Hobart"
+      ]
+    },
+    "64": {
+      "country": "NZ",
+      "zones": [
+        "Pacific/Auckland",
+        "Pacific/Chatham"
+      ]
+    },
+    "49": {
+      "country": "DE",
+      "zones": [
+        "Europe/Berlin"
+      ]
+    },
+    "33": {
+      "country": "FR",
+      "zones": [
+        "Europe/Paris"
+      ]
+    },
+    "31": {
+      "country": "NL",
+      "zones": [
+        "Europe/Amsterdam"
+      ]
+    },
+    "41": {
+      "country": "CH",
+      "zones": [
+        "Europe/Zurich"
+      ]
+    },
+    "39": {
+      "country": "IT",
+      "zones": [
+        "Europe/Rome"
+      ]
+    },
+    "34": {
+      "country": "ES",
+      "zones": [
+        "Europe/Madrid",
+        "Atlantic/Canary"
+      ]
+    },
+    "32": {
+      "country": "BE",
+      "zones": [
+        "Europe/Brussels"
+      ]
+    },
+    "43": {
+      "country": "AT",
+      "zones": [
+        "Europe/Vienna"
+      ]
+    },
+    "46": {
+      "country": "SE",
+      "zones": [
+        "Europe/Stockholm"
+      ]
+    },
+    "47": {
+      "country": "NO",
+      "zones": [
+        "Europe/Oslo"
+      ]
+    },
+    "45": {
+      "country": "DK",
+      "zones": [
+        "Europe/Copenhagen"
+      ]
+    },
+    "358": {
+      "country": "FI",
+      "zones": [
+        "Europe/Helsinki"
+      ]
+    },
+    "351": {
+      "country": "PT",
+      "zones": [
+        "Europe/Lisbon",
+        "Atlantic/Azores"
+      ]
+    },
+    "48": {
+      "country": "PL",
+      "zones": [
+        "Europe/Warsaw"
+      ]
+    },
+    "27": {
+      "country": "ZA",
+      "zones": [
+        "Africa/Johannesburg"
+      ]
+    },
+    "254": {
+      "country": "KE",
+      "zones": [
+        "Africa/Nairobi"
+      ]
+    },
+    "972": {
+      "country": "IL",
+      "zones": [
+        "Asia/Jerusalem"
+      ]
+    },
+    "81": {
+      "country": "JP",
+      "zones": [
+        "Asia/Tokyo"
+      ]
+    },
+    "82": {
+      "country": "KR",
+      "zones": [
+        "Asia/Seoul"
+      ]
+    },
+    "66": {
+      "country": "TH",
+      "zones": [
+        "Asia/Bangkok"
+      ]
+    },
+    "63": {
+      "country": "PH",
+      "zones": [
+        "Asia/Manila"
+      ]
+    },
+    "62": {
+      "country": "ID",
+      "zones": [
+        "Asia/Jakarta",
+        "Asia/Makassar",
+        "Asia/Jayapura"
+      ]
+    },
+    "86": {
+      "country": "CN",
+      "zones": [
+        "Asia/Shanghai",
+        "Asia/Urumqi"
+      ]
+    }
+  }
+}

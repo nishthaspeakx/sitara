@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import re
 
 import pytest
@@ -81,7 +82,7 @@ class TestCoverage:
         assert "IN" in regions and len(regions) > 1
 
     def test_every_birth_time_accuracy_is_covered(self) -> None:
-        """§10.6 drives the confidence system, so all four states need a fixture."""
+        """§10-6 drives the confidence system, so all four states need a fixture."""
         assert {p.time_accuracy for p in PERSONAS} == {
             "exact",
             "plus_minus_30",
@@ -131,3 +132,48 @@ class TestWrites:
         await wipe(db)
         remaining = await db.goals.find({}).to_list(length=10)
         assert [g["text"] for g in remaining] == ["hand-made fixture"]
+
+
+class TestAgeTargetRedaction:
+    """§13 / §37.2 — `age=` targets are rewritten, never deleted."""
+
+    def test_an_age_target_becomes_its_outcome(self) -> None:
+        from sitara_api.db.redact_age_targets import redacted_target
+
+        assert redacted_target("age=17;min=18") == "outcome=refused;min=18"
+        assert redacted_target("age=30;min=18") == "outcome=passed;min=18"
+
+    def test_a_row_already_in_the_new_shape_is_left_alone(self) -> None:
+        from sitara_api.db.redact_age_targets import redacted_target
+
+        assert redacted_target("outcome=passed;min=18") is None
+        assert redacted_target("") is None
+
+    @pytest.mark.asyncio
+    async def test_the_row_survives_redaction(self, db) -> None:  # noqa: ANN001
+        """§6.4 marks audit_logs append-only. Destroying a record to fix its
+        contents would be a worse violation than the one being fixed."""
+        from sitara_api.db.documents import stamp
+        from sitara_api.db.redact_age_targets import run
+
+        await db.audit_logs.insert_one(
+            stamp(
+                {
+                    "actor": "firebase:x",
+                    "action": "auth.age_gate",
+                    "target": "age=17;min=18",
+                    "before_hash": None,
+                    "after_hash": None,
+                    "ip": None,
+                    "ts": dt.datetime.now(dt.UTC),
+                }
+            )
+        )
+
+        scanned, redacted = await run(db)
+        row = await db.audit_logs.find_one({"action": "auth.age_gate"})
+
+        assert (scanned, redacted) == (1, 1)
+        assert row is not None
+        assert row["target"] == "outcome=refused;min=18"
+        assert row["redacted_reason"] == "§13:age_derivative"

@@ -18,7 +18,7 @@ in a dev database can tell the two apart immediately.
 
 The personas exist to exercise the product's real variation, not to be
 realistic people: three locales, both corridors (metro India and diaspora), the
-range of §10.6 birth-time accuracies, memory consent granted and withheld, and
+range of §10-6 birth-time accuracies, memory consent granted and withheld, and
 trial against paid.
 """
 
@@ -74,7 +74,7 @@ class Persona:
     timezone: str
     birth_date: str
     birth_time: str | None
-    time_accuracy: str  # §10.6: exact | plus_minus_30 | day_part | unknown
+    time_accuracy: str  # §10-6: exact | plus_minus_30 | day_part | unknown
     place_label: str
     place_lat: float
     place_lon: float
@@ -283,7 +283,7 @@ async def seed(db: MongoDb, now: dt.datetime | None = None) -> dict[str, int]:
             {
                 "_id": ObjectId(),
                 "user_id": user_id,
-                "persona": {"interest_level": "curious"},  # §10.8
+                "persona": {"interest_level": "curious"},  # §10-8
                 "priorities": list(persona.priorities),
                 "honorific_prefs": {"register": "warm"},
                 "name_pronunciation": {"override": None},
