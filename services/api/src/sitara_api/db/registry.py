@@ -184,6 +184,12 @@ SPECS: tuple[CollectionSpec, ...] = (
                 cite="§33.2 — the nightly contact-replica reconciliation looks users up by phone",
             ),
         ),
+        # Deterministic is not only about §33.2's lookup — it is what makes
+        # §6.4's `uniq email` survive encryption. Randomized ciphertext differs
+        # for every write, so the unique index above would still exist and
+        # enforce nothing. Changing either of these to randomized silently
+        # removes an invariant; a test in test_registry_matches_spec.py refuses
+        # a unique index over a randomized field for exactly that reason.
         encrypted=(
             EncryptedField("email", deterministic=True, key_class="contact"),
             EncryptedField("phone", deterministic=True, key_class="contact"),

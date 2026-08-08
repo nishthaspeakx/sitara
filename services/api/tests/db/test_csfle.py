@@ -9,6 +9,7 @@ import pytest
 import pytest_asyncio
 from bson import Binary, ObjectId
 from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo.errors import DuplicateKeyError
 
 from sitara_api.config import Settings
 from sitara_api.db.csfle import (
@@ -141,6 +142,79 @@ class TestAlgorithmChoice:
         term = await crypto.encrypt_value("contact", "asha@example.invalid", deterministic=True)
         found = await db.users.find_one({"email": term})
         assert found is not None
+
+    async def test_a_duplicate_email_is_actually_rejected(self, db, crypto: FieldCrypto) -> None:
+        """§6.4's `uniq email` has to survive encryption. Deterministic
+        ciphertext is what makes the unique index bite — under randomized
+        encryption the same address would encrypt differently each time and the
+        index would exist while enforcing nothing."""
+        spec = BY_NAME["users"]
+
+        def account(uid: str) -> dict:
+            return stamp(
+                {
+                    "_id": ObjectId(),
+                    "firebase_uid": uid,
+                    "locale": "hi",
+                    "status": "active",
+                    "email": "asha@example.invalid",
+                },
+                now=NOW,
+            )
+
+        first = await crypto.encrypt_document(spec, account("u1"))
+        second = await crypto.encrypt_document(spec, account("u2"))
+        assert first["email"] == second["email"]  # deterministic, by design
+
+        await db.users.insert_one(first)
+        with pytest.raises(DuplicateKeyError):
+            await db.users.insert_one(second)
+
+    async def test_the_partial_filter_still_covers_encrypted_rows(
+        self, db, crypto: FieldCrypto
+    ) -> None:
+        """M1's filter was `$type: "string"`, which matches no ciphertext at
+        all — the index would have gone hollow the day CSFLE was switched on.
+        `$exists` is what keeps it covering encrypted rows."""
+        live = {doc["name"]: doc async for doc in db.users.list_indexes()}
+        assert live["email_1"]["partialFilterExpression"] == {"email": {"$exists": True}}
+
+        spec = BY_NAME["users"]
+        sealed = await crypto.encrypt_document(
+            spec,
+            stamp(
+                {
+                    "_id": ObjectId(),
+                    "firebase_uid": "u1",
+                    "locale": "hi",
+                    "status": "active",
+                    "email": "meera@example.invalid",
+                },
+                now=NOW,
+            ),
+        )
+        await db.users.insert_one(sealed)
+        covered = await db.users.count_documents({"email": {"$exists": True}})
+        assert covered == 1
+
+    async def test_a_user_without_an_email_is_still_allowed(
+        self, db, crypto: FieldCrypto
+    ) -> None:
+        """India's default signup is phone OTP (§10.4). Several users with no
+        email must not collide on the unique index."""
+        spec = BY_NAME["users"]
+        for uid in ("p1", "p2", "p3"):
+            await db.users.insert_one(
+                await crypto.encrypt_document(
+                    spec,
+                    stamp(
+                        {"_id": ObjectId(), "firebase_uid": uid, "locale": "hi",
+                         "status": "active"},
+                        now=NOW,
+                    ),
+                )
+            )
+        assert await db.users.count_documents({}) == 3
 
     async def test_randomized_fields_are_not_equality_queryable(
         self, db, crypto: FieldCrypto

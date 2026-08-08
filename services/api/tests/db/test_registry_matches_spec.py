@@ -195,6 +195,41 @@ def test_no_facts_collection_exists() -> None:
     assert "facts" not in registry.BY_NAME
 
 
+def test_a_unique_index_never_covers_a_randomized_field() -> None:
+    """Randomized CSFLE gives the same plaintext a different ciphertext every
+    time, so a unique index over it enforces nothing while still existing —
+    a hollow index that reads as a guarantee. Uniqueness on an encrypted field
+    is only real if that field is deterministic."""
+    for spec in registry.SPECS:
+        encrypted = {e.path: e for e in spec.encrypted}
+        for index in spec.indexes:
+            if not index.unique:
+                continue
+            for key in index.key_names:
+                field = encrypted.get(key)
+                assert field is None or field.deterministic, (
+                    f"{spec.name}: unique index {index.key_names} covers {key!r}, which is "
+                    "randomized-encrypted — the index cannot enforce uniqueness"
+                )
+
+
+def test_a_partial_filter_over_an_encrypted_field_matches_ciphertext() -> None:
+    """The companion trap: `$type: "string"` stops matching the moment CSFLE
+    turns the field into binData, and the unique index silently covers nothing.
+    An encrypted field's partial filter must be type-agnostic."""
+    for spec in registry.SPECS:
+        for index in spec.indexes:
+            if not index.partial:
+                continue
+            for key, condition in index.partial.items():
+                if key not in spec.encrypted_paths:
+                    continue
+                assert isinstance(condition, dict) and "$type" not in condition, (
+                    f"{spec.name}: the partial filter on encrypted field {key!r} tests "
+                    "$type, which never matches ciphertext"
+                )
+
+
 def test_memory_embedding_is_not_encrypted() -> None:
     """§6.4 marks memories `field-level: content`. Encrypting the embedding as
     well would silently disable §32.5 vector retrieval — you cannot cosine-search
