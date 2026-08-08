@@ -42,6 +42,7 @@ def build_pipeline(
     numerology_adapter: Any = None,
     place_resolver: Any = None,
     llm: LLMClient | None = None,
+    memory_retriever: Any = None,
 ) -> ChatPipeline | None:
     """Wire the pipeline once, at app start. None when chat cannot run.
 
@@ -76,7 +77,10 @@ def build_pipeline(
         ),
         grounding=GroundingValidator(),
         langquality=LanguageQualityValidator(),
-        memory_retriever=NullMemoryRetriever(),
+        # M5-P6b: the real §32.5 retriever. `NullMemoryRetriever` remains the
+        # fallback for a deployment with no embedding provider — answering
+        # without remembered context is a degradation, not an outage.
+        memory_retriever=memory_retriever or NullMemoryRetriever(),
         memory_suggester=NullMemorySuggester(),
         store=MongoMessageStore(db),
         review_queue=MongoReviewQueue(db),

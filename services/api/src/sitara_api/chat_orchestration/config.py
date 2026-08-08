@@ -24,8 +24,15 @@ POLICY_DIR = Path(__file__).parent / "policy"
 class ChatSettings(BaseSettings):
     """Env-overridable, prefix `CHAT_` except where the vendor names the key."""
 
+        # populate_by_name: a `validation_alias` REPLACES the field name, so
+        # `Settings(anthropic_api_key=...)` would silently produce None while
+        # looking like it worked. Both spellings must bind.
     model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="ignore", env_prefix="CHAT_"
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        env_prefix="CHAT_",
+        populate_by_name=True,
     )
 
     # --- model routing (§9) ----------------------------------------------

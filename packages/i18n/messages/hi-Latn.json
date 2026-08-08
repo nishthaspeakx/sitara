@@ -67,6 +67,11 @@
       "validation": "Request mein kuch theek nahin tha. Dobara koshish karein.",
       "internal": "Hamari taraf se kuch gadbad ho gayi. Thodi der mein dobara try karein.",
       "unavailable": "Tara abhi wapas aa rahi hain — thodi der mein dobara try karein."
+    },
+    "memory": {
+      "reconfirm_wording": "Ise rakhne se pehle, kya main shabd aapse ek baar check kar loon? Jaisa aap kahengi, waisa hi yaad rakhna chahti hoon.",
+      "medical_declined": "Symptoms ya diagnosis se judi baatein main nahin rakhti — woh aapke aur doctor ke beech hai. Aap apna dhyan kaise rakhti hain, woh yaad rakh sakti hoon.",
+      "not_found": "Woh yaad mujhe nahin mil rahi — shayad pehle hi delete ho chuki hai."
     }
   },
   "numerology": {

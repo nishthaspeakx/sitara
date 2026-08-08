@@ -18,7 +18,12 @@ Redis = aioredis.Redis
 
 
 def make_mongo(settings: Settings) -> tuple[MongoClient, MongoDb]:
-    client: MongoClient = AsyncIOMotorClient(settings.mongodb_uri)
+    # tz_aware: BSON stores UTC but the default codec hands back NAIVE
+    # datetimes, so `read_back - datetime.now(dt.UTC)` raises TypeError. That
+    # is a runtime crash waiting in every module that does date arithmetic on
+    # a stored value — §32.4's decay hit it, and panchang's cache already
+    # carried a local workaround for the same hazard. Fixed at the source.
+    client: MongoClient = AsyncIOMotorClient(settings.mongodb_uri, tz_aware=True)
     return client, client[settings.mongo_db]
 
 

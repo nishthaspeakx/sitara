@@ -67,6 +67,11 @@
       "validation": "Something in the request wasn't right. Please try again.",
       "internal": "Something went wrong on our side. Please try again in a moment.",
       "unavailable": "Tara will be right back — please try again in a moment."
+    },
+    "memory": {
+      "reconfirm_wording": "Before I keep this, may I check the wording with you? I'd rather remember it the way you'd say it.",
+      "medical_declined": "I don't keep notes about symptoms or diagnoses — that's for you and a doctor. I can remember how you're looking after yourself, if you'd like.",
+      "not_found": "I can't find that memory — it may already be deleted."
     }
   },
   "numerology": {

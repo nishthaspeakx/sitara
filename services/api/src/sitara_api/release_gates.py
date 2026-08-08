@@ -30,6 +30,13 @@ POLICY_DIR = Path(__file__).parent / "chat_orchestration" / "policy"
 #: inventing facts binds hardest where the fact is a number in a crisis.
 HELPLINE_TABLE = Path(__file__).parent / "chat_orchestration" / "policy" / "helplines.json"
 
+#: §32.5's cross-lingual recall gate. The vectors are recorded from the real
+#: provider; without them the ≥0.85 claim is unproven and must be reported as
+#: such rather than skipped quietly in a green suite.
+CROSSLINGUAL_VECTORS = (
+    Path(__file__).resolve().parents[2] / "tests" / "memory" / "crosslingual" / "vectors.json"
+)
+
 _REVIEWED_PREFIX = "reviewed"
 
 
@@ -73,6 +80,21 @@ def gates() -> tuple[Gate, ...]:
                 "The L4 auto-response points at the in-app support surface. Region-specific "
                 "helpline numbers are facts and are never hardcoded from memory; the table "
                 "closes this gate once every number is verified against its publishing body."
+            ),
+        ),
+        Gate(
+            id="memory.crosslingual_recall",
+            spec_ref="§32.5",
+            blocks=Stage.CLOSED_BETA,
+            status=(
+                "reviewed"
+                if CROSSLINGUAL_VECTORS.exists()
+                else "awaiting recorded provider vectors"
+            ),
+            detail=(
+                "§32.5 claims cross-lingual recall ≥0.85 on embed-multilingual-v3. Only real "
+                "vectors can support that; the 50-pair starter set and harness exist, and the "
+                "gate stays open until vectors.json is recorded with a Cohere key."
             ),
         ),
         Gate(

@@ -19,6 +19,8 @@ from sitara_api.db import ensure_indexes, make_mongo, make_redis
 from sitara_api.db.csfle import build_crypto
 from sitara_api.errors import install_error_handlers
 from sitara_api.localisation import verify_catalogs
+from sitara_api.memory import MemorySettings, build_memory_service
+from sitara_api.memory.router import router as memory_router
 from sitara_api.numerology.adapter import AstroNumerologyAdapter
 from sitara_api.numerology.router import router as numerology_router
 from sitara_api.panchang.adapter import AstroPanchangAdapter
@@ -54,6 +56,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             prokerala=app.state.provider_registry.prokerala,
             astro=app.state.astro_panchang_adapter,
         )
+        # §32.4/§32.5 memory. Built before the pipeline, which retrieves
+        # through it.
+        app.state.memory_service = await build_memory_service(
+            db=db,
+            settings=app.state.memory_settings,
+            environment=settings.environment,
+        )
         # §9 chat-orchestration. Built here because the transcript store, the
         # Trust-Sheet log and the safety queue all need the database.
         app.state.chat_pipeline = build_pipeline(
@@ -63,6 +72,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             panchang_service=app.state.panchang_service,
             numerology_adapter=app.state.numerology_adapter,
             place_resolver=app.state.place_resolver,
+            memory_retriever=app.state.memory_service,
         )
         yield
         if app.state.field_crypto is not None:
@@ -73,7 +83,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(title="sitara-api", version=__version__, lifespan=lifespan)
     app.state.settings = settings
     app.state.chat_settings = ChatSettings()
+    app.state.memory_settings = MemorySettings()
     app.state.chat_pipeline = None
+    app.state.memory_service = None
     # §2.4: the service renders §9's safety and decline strings itself. A
     # missing catalog must surface here, not when an L4 turn needs the crisis
     # line.
@@ -96,6 +108,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(numerology_router)
     app.include_router(panchang_router)
     app.include_router(chat_router)
+    app.include_router(memory_router)
 
     @app.get("/healthz")
     def healthz() -> dict[str, str]:
