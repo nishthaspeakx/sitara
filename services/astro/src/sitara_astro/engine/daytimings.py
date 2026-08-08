@@ -25,6 +25,8 @@ from sitara_astro.engine.inputs import Place
 from sitara_astro.engine.riseset import SolarDay, sun_day
 
 DAY_PARTS = 8
+DAY_STEP = 1  # the day sequence walks the ring forward
+NIGHT_STEP = -2  # the night sequence does NOT — see _choghadiya_run
 MUHURTAS_PER_DAY = 15  # abhijit is the 8th of fifteen
 
 # The seven-name cycle. Both day and night sequences walk this ring; only the
@@ -107,12 +109,20 @@ def _abhijit(day: SolarDay) -> DayTiming:
 
 
 def _choghadiya_run(
-    start: datetime, span: timedelta, first_index: int, kind: DayTimingKind
+    start: datetime, span: timedelta, first_index: int, kind: DayTimingKind, step: int
 ) -> list[DayTiming]:
+    """`step` walks the seven-name ring: +1 by day, −2 by night.
+
+    The night sequence is NOT the day sequence entered at a different point —
+    it advances by −2. Verified three ways: against published almanac tables
+    for Sunday, Monday and Thursday, and against a live Prokerala response for
+    Thursday 2026-01-01, which returns Amrit·Char·Rog·Kaal·Labh·Udveg·Shubh.
+    Walking +2 or +1 reproduces none of them.
+    """
     edges = _boundaries(start, span, DAY_PARTS)
     run: list[DayTiming] = []
     for i in range(DAY_PARTS):
-        name = CHOGHADIYA_CYCLE[(first_index + i) % len(CHOGHADIYA_CYCLE)]
+        name = CHOGHADIYA_CYCLE[(first_index + step * i) % len(CHOGHADIYA_CYCLE)]
         run.append(
             DayTiming(
                 timing=kind,
@@ -141,11 +151,16 @@ def day_timings(local_date: date, place: Place) -> list[DayTiming]:
         _band(day, DayTimingKind.GULIKAI, _GULIKAI_PART[weekday], TimingQuality.INAUSPICIOUS),
         _abhijit(day),
     ]
-    # Day sequence enters the ring at weekday*3; night five steps further on.
+    # Day sequence enters the ring at weekday*3 and walks forward; night enters
+    # five steps further on and walks BACKWARD by two (see _choghadiya_run).
     timings += _choghadiya_run(
-        day.sunrise, day.day_length, (weekday * 3) % 7, DayTimingKind.CHOGHADIYA_DAY
+        day.sunrise, day.day_length, (weekday * 3) % 7, DayTimingKind.CHOGHADIYA_DAY, DAY_STEP
     )
     timings += _choghadiya_run(
-        day.sunset, day.night_length, (weekday * 3 + 5) % 7, DayTimingKind.CHOGHADIYA_NIGHT
+        day.sunset,
+        day.night_length,
+        (weekday * 3 + 5) % 7,
+        DayTimingKind.CHOGHADIYA_NIGHT,
+        NIGHT_STEP,
     )
     return timings

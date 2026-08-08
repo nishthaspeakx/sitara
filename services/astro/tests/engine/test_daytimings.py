@@ -46,6 +46,12 @@ def of_kind(timings, kind: DayTimingKind):
     return [t for t in timings if t.timing is kind]
 
 
+def _name(part) -> str:  # noqa: ANN001
+    """Choghadiya parts always carry a name — the model enforces it."""
+    assert part.choghadiya is not None
+    return part.choghadiya.value
+
+
 def assert_same_instant(actual, expected) -> None:
     """These assertions are about WHICH eighth of the day a band occupies, not
     about microsecond arithmetic; a second of slack keeps them honest without
@@ -215,6 +221,21 @@ class TestChoghadiyaSequence:
             assert part.choghadiya is CHOGHADIYA_CYCLE[(offset + i) % 7]
             assert part.part_index == i + 1
 
+    # The FULL published night sequence, not just its opener. Asserting only
+    # the first part is what let a real ordering bug through: the night run
+    # walks the ring by -2, and a +1 walk still produces the right first and
+    # last entries. Cross-checked against a live Prokerala response for
+    # Thursday 2026-01-01 (Amrit·Char·Rog·Kaal·Labh·Udveg·Shubh).
+    NIGHT_SEQUENCES = {
+        "sunday": ["shubh", "amrit", "char", "rog", "kaal", "labh", "udveg", "shubh"],
+        "monday": ["char", "rog", "kaal", "labh", "udveg", "shubh", "amrit", "char"],
+        "tuesday": ["kaal", "labh", "udveg", "shubh", "amrit", "char", "rog", "kaal"],
+        "wednesday": ["udveg", "shubh", "amrit", "char", "rog", "kaal", "labh", "udveg"],
+        "thursday": ["amrit", "char", "rog", "kaal", "labh", "udveg", "shubh", "amrit"],
+        "friday": ["rog", "kaal", "labh", "udveg", "shubh", "amrit", "char", "rog"],
+        "saturday": ["labh", "udveg", "shubh", "amrit", "char", "rog", "kaal", "labh"],
+    }
+
     @pytest.mark.parametrize("day_name", list(NIGHT_START))
     def test_night_sequence_starts_correctly(self, day_name: str) -> None:
         _, timings = timings_for(day_name)
@@ -222,6 +243,25 @@ class TestChoghadiyaSequence:
             of_kind(timings, DayTimingKind.CHOGHADIYA_NIGHT), key=lambda t: t.starts_utc
         )
         assert parts[0].choghadiya is self.NIGHT_START[day_name]
+
+    @pytest.mark.parametrize("day_name", list(NIGHT_SEQUENCES))
+    def test_full_night_sequence_matches_published_tables(self, day_name: str) -> None:
+        _, timings = timings_for(day_name)
+        parts = sorted(
+            of_kind(timings, DayTimingKind.CHOGHADIYA_NIGHT), key=lambda t: t.starts_utc
+        )
+        assert [_name(p) for p in parts] == self.NIGHT_SEQUENCES[day_name]
+
+    DAY_SEQUENCES = {
+        "sunday": ["udveg", "char", "labh", "amrit", "kaal", "shubh", "rog", "udveg"],
+        "thursday": ["shubh", "rog", "udveg", "char", "labh", "amrit", "kaal", "shubh"],
+    }
+
+    @pytest.mark.parametrize("day_name", list(DAY_SEQUENCES))
+    def test_full_day_sequence_matches_published_tables(self, day_name: str) -> None:
+        _, timings = timings_for(day_name)
+        parts = sorted(of_kind(timings, DayTimingKind.CHOGHADIYA_DAY), key=lambda t: t.starts_utc)
+        assert [_name(p) for p in parts] == self.DAY_SEQUENCES[day_name]
 
     def test_the_eighth_part_repeats_the_first(self) -> None:
         """Eight parts over a seven-name cycle — the day closes on its opener."""
