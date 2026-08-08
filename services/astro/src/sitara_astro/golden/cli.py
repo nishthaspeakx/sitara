@@ -5,8 +5,9 @@
     report [--gate]        parity report; --gate exits non-zero below threshold
     list                   case inventory with fill state
 
-Two suites share this one CLI, routed by case-id prefix: astrology (GC-, §5.5
-≥99.9%) and numerology (NC-, §5.5 = 100%, because it is exact arithmetic).
+Three suites share this one CLI, routed by case-id prefix: astrology (GC-, §5.5
+≥99.9%), numerology (NC-, §5.5 = 100%, because it is exact arithmetic) and
+panchang (PC-, ≥99.9% with the §5.5 ≤2 min boundary tolerance).
 
 Safety property: `import` can only ever write *expected values*. Nothing but
 `verify` — which demands a named human and a source — can set a case verified.
@@ -38,6 +39,12 @@ from sitara_astro.golden.numerology_case import missing_required as numerology_m
 from sitara_astro.golden.numerology_case import save_case as save_numerology
 from sitara_astro.golden.numerology_case import set_field as set_numerology_field
 from sitara_astro.golden.numerology_parity import build_report as build_numerology_report
+from sitara_astro.golden.panchang_case import REPO_PANCHANG_DIR
+from sitara_astro.golden.panchang_case import load_all as load_panchang
+from sitara_astro.golden.panchang_case import missing_required as panchang_missing
+from sitara_astro.golden.panchang_case import save_case as save_panchang
+from sitara_astro.golden.panchang_case import set_field as set_panchang_field
+from sitara_astro.golden.panchang_parity import build_report as build_panchang_report
 from sitara_astro.golden.parity import build_report as build_astrology_report
 
 REQUIRED_CSV_COLUMNS = {"case_id", "field", "value"}
@@ -63,6 +70,8 @@ SUITES: tuple[Suite, ...] = (
           missing_required, build_astrology_report),
     Suite("numerology", "NC-", REPO_NUMEROLOGY_DIR, load_numerology, save_numerology,
           set_numerology_field, numerology_missing, build_numerology_report),
+    Suite("panchang", "PC-", REPO_PANCHANG_DIR, load_panchang, save_panchang,
+          set_panchang_field, panchang_missing, build_panchang_report),
 )
 
 
@@ -70,7 +79,7 @@ def suite_for(case_id: str) -> Suite:
     for suite in SUITES:
         if case_id.startswith(suite.prefix):
             return suite
-    raise KeyError(f"case id {case_id!r} matches no suite (expected GC-… or NC-…)")
+    raise KeyError(f"case id {case_id!r} matches no suite (expected GC-…, NC-… or PC-…)")
 
 
 def targets(args: argparse.Namespace) -> list[tuple[Suite, Path]]:

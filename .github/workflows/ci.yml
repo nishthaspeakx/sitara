@@ -81,7 +81,8 @@ jobs:
           python-version: "3.12"
       - run: uv sync
       - run: uv run pytest tests/golden tests/numerology -q -rs
-      # Prints both parity tables and FAILS the build below either threshold:
-      # astrology ≥99.9%, numerology = 100% (§5.5).
+      # Prints all three parity tables and FAILS the build below any threshold:
+      # astrology ≥99.9%, numerology = 100%, panchang ≥99.9% (§5.5).
+      # Each suite is dormant until its first verified case, then arms itself.
       - name: parity gate (§5.5)
         run: uv run python -m sitara_astro.golden report --gate
