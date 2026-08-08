@@ -8,6 +8,7 @@ across cities or timezones (§30.2 acceptance).
 import datetime as dt
 
 import pytest
+from bson import ObjectId
 from sitara_schemas.cache_keys import lat_band, muhurat_key, panchang_key, transits_key
 from sitara_schemas.facts import MuhuratType, Tradition
 
@@ -217,11 +218,12 @@ class TestDisputedFlag:
         """§32.2: the fact keeps serving from DivineAPI, but flagged so
         guidance built on it downgrades confidence (§5.4)."""
         await store(cache)
-        assert await cache.mark_disputed(key_for(), adjudication_id="adj-1") is True
+        adjudication_id = ObjectId()
+        assert await cache.mark_disputed(key_for(), adjudication_id=adjudication_id) is True
         doc = await cache.get(key_for())
         assert doc is not None
         assert doc["disputed"] is True
-        assert doc["adjudication_id"] == "adj-1"
+        assert doc["adjudication_id"] == adjudication_id
         # Still served — a dispute downgrades confidence, it does not withdraw
         # the fact.
         assert doc["payload"]["tithi_index"] == 12

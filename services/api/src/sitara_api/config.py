@@ -7,10 +7,32 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
+    # dev | test | staging | production. Gates the §22.12 hygiene rules: the
+    # local KMS provider and the synthetic seeder both refuse to run outside
+    # dev/test, so production PII can never be created by a dev tool and a
+    # dev master key can never protect production data.
+    environment: str = "dev"
+
     port: int = 8001
     mongodb_uri: str = "mongodb://localhost:27018/sitara"
     mongo_db: str = "sitara"
     redis_url: str = "redis://localhost:6379/0"
+
+    # --- §13 / §6.4 client-side field-level encryption -------------------
+    # Off by default so a bare `create_app()` still boots without a key; the
+    # compose stack and every deployed environment turn it on. Explicit
+    # (not automatic) CSFLE — automatic schemaMap encryption is an
+    # Enterprise/Atlas-only feature and dev runs Community mongo.
+    csfle_enabled: bool = False
+    csfle_kms_provider: str = "local"  # local (dev only) | aws
+    csfle_key_vault_namespace: str = "__keyvault.datakeys"
+    csfle_local_master_key_path: str | None = None
+    csfle_aws_kms_key_arn: str | None = None
+    csfle_aws_region: str = "ap-south-1"
+
+    # §30.6: Stories are a P1 gated experiment. The collections exist from M4
+    # (dark-launched per §25.7); nothing reads or writes them until this flips.
+    stories_enabled: bool = False
 
     # Firebase Admin SDK (§34.5 — server-side ID-token verification only).
     google_application_credentials: str | None = None

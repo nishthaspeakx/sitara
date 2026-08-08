@@ -19,3 +19,19 @@ Bounded-context modules in one process (auth, users/profiles, localisation, astr
 ## Commands
 - Run: `uv run uvicorn sitara_api.main:app --port 8001 --reload`
 - Test: `uv run pytest -q` · Lint: `uv run ruff check .` · Types: `uv run pyright`
+
+## db module (M4, §6.4) — invariants that must not regress
+- **`db/registry.py` is the only declaration of database shape.** `ensure_schema`, `verify`, `csfle` and the migration runner all read it. Never create a collection or index anywhere else.
+- **`tests/db/test_registry_matches_spec.py` parses §6.4 out of `docs/spec/SPEC.md`** and fails on any divergence — retention, shard key, encryption marks, index list. Edit the spec or the registry and the other must follow. Do not weaken this test.
+- **Every index beyond §6.4's cell carries a `cite`;** every collection outside the table cites the section that mandates it (§22.5, §25.7, §14-deploy). Undeclared = drift = `verify` exits 1.
+- **TTL indexes exist only where §6.4 says "TTL"** (panchang_cache 90d, transit_cache 400d, notifications 180d, story_views 90d per §25.7). Prose retention ("8 years (tax)", "7 years, append-only") is a job's problem — a TTL index there deletes records the spec says to keep, and `verify` fails on it. See §36.2.
+- **`transit_cache` uniq is `(date, band, engine_semver)`** — §6.4's `(date, band)` extended per §7.2's key grammar; recorded as §36.1, and a test keeps the extension sourced.
+- **CSFLE is explicit, never automatic** (automatic is Atlas/Enterprise-only; dev is Community). Local KMS refuses outside dev/test; deterministic only for the §33.2 contact replicas. `memories.embedding` stays in the clear — you cannot vector-search ciphertext.
+- **`voice_sessions` and `call_sessions` structurally reject any audio field** (§13/§33.1). The validator does it, not a convention.
+- **Seeds are synthetic only** (§22.12): `@example.invalid` emails, +9199999 phones, `synthetic: true` on every doc; the seeder refuses a non-dev environment or a non-local host.
+- Every document carries `created_at`/`updated_at`/`schema_v` — use `db.documents.stamp()`, the validators enforce it.
+
+## Commands (M4)
+- Build/repair schema: `uv run python -m sitara_api.db.migrate --phase expand`
+- Seed dev data: `uv run python -m sitara_api.db.seed --wipe`
+- **Verify against §6.4: `uv run python -m sitara_api.db.verify`** (exit 1 on drift)

@@ -26,6 +26,7 @@ from typing import Any
 from sitara_schemas.cache_keys import panchang_key
 from sitara_schemas.facts import FactKind, FactSource, Tradition
 
+from sitara_api.db.documents import stamp
 from sitara_api.panchang.adjudicate import (
     BOUNDARY_TOLERANCE,
     Adjudication,
@@ -231,9 +232,9 @@ class ComparisonJob:
             return
 
         document = outcome.adjudication.to_document()
-        document["created_at"] = dt.datetime.now(dt.UTC)
         document["place_label"] = item.place.label
         document["local_date"] = item.local_date.isoformat()
+        stamp(document)
         result = await self._db.fact_adjudications.insert_one(document)
         # §32.2: the fact keeps serving from DivineAPI, flagged so guidance
         # built on it downgrades its confidence (§5.4).

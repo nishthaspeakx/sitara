@@ -13,6 +13,7 @@ dependencies = [
     "motor>=3.6",
     "redis>=5.0",
     "httpx>=0.27",
+    "pymongo[encryption]>=4.17.0",
 ]
 
 [dependency-groups]

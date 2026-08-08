@@ -10,11 +10,12 @@ from sitara_api.auth.firebase import FirebaseAdminVerifier
 from sitara_api.auth.router import router as auth_router
 from sitara_api.config import Settings
 from sitara_api.db import ensure_indexes, make_mongo, make_redis
+from sitara_api.db.csfle import build_crypto
 from sitara_api.errors import install_error_handlers
 from sitara_api.numerology.adapter import AstroNumerologyAdapter
 from sitara_api.numerology.router import router as numerology_router
 from sitara_api.panchang.adapter import AstroPanchangAdapter
-from sitara_api.panchang.cache import PanchangCache, ensure_panchang_indexes
+from sitara_api.panchang.cache import PanchangCache
 from sitara_api.panchang.places import default_resolver
 from sitara_api.panchang.registry import build_registry
 from sitara_api.panchang.router import router as panchang_router
@@ -30,7 +31,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.db = db
         app.state.redis = make_redis(settings)
         await ensure_indexes(db)
-        await ensure_panchang_indexes(db)
+        # §13 CSFLE. Returns None only in dev with encryption switched off;
+        # anywhere else a missing key is an error, not a silent plaintext fallback.
+        app.state.field_crypto = await build_crypto(client, settings)
         # The §7.2 caches need the database, so the panchang service is built
         # here rather than at import time.
         app.state.panchang_cache = PanchangCache(
@@ -45,6 +48,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             astro=app.state.astro_panchang_adapter,
         )
         yield
+        if app.state.field_crypto is not None:
+            await app.state.field_crypto.close()
         client.close()
         await app.state.redis.aclose()
 

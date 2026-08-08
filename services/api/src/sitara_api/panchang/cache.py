@@ -22,11 +22,11 @@ though the §7.2 key also names a provider.
 import datetime as dt
 from typing import Any
 
-from pymongo import ASCENDING
 from sitara_schemas.cache_keys import geohash, is_global_key
 from sitara_schemas.facts import Tradition
 
 from sitara_api.db import MongoDb
+from sitara_api.db.documents import stamp
 from sitara_api.panchang.providers.base import ProviderName, ResolvedPlace
 
 PANCHANG_TTL_DAYS = 90  # §7.2
@@ -114,13 +114,20 @@ class PanchangCache:
             "cached_at": now,
             "expires_at": now + dt.timedelta(days=self._ttl[kind]),
         }
+        # §6.4 requires created_at/updated_at/schema_v on every document; the
+        # collection validator enforces it.
+        stamp(document, now=now)
         await self._db.panchang_cache.replace_one({"_id": key}, document, upsert=True)
         return document
 
     async def mark_disputed(self, key: str, adjudication_id: Any = None) -> bool:
         """§32.2: a disputed fact keeps serving from DivineAPI but is flagged,
         so guidance built on it downgrades its confidence state (§5.4)."""
-        update: dict[str, Any] = {"disputed": True, "disputed_at": _utcnow()}
+        update: dict[str, Any] = {
+            "disputed": True,
+            "disputed_at": _utcnow(),
+            "updated_at": _utcnow(),
+        }
         if adjudication_id is not None:
             update["adjudication_id"] = adjudication_id
         result = await self._db.panchang_cache.update_one({"_id": key}, {"$set": update})
@@ -162,6 +169,7 @@ class TransitCache:
             "cached_at": now,
             "expires_at": now + dt.timedelta(days=self._ttl_days),
         }
+        stamp(document, now=now)
         await self._db.transit_cache.replace_one({"_id": key}, document, upsert=True)
         return document
 
@@ -169,32 +177,3 @@ class TransitCache:
 def _ensure_utc(value: dt.datetime) -> dt.datetime:
     """Motor returns naive UTC datetimes by default."""
     return value if value.tzinfo is not None else value.replace(tzinfo=dt.UTC)
-
-
-async def ensure_panchang_indexes(db: MongoDb) -> None:
-    """§6.4 index set for the two cache collections.
-
-    The uniq index is scoped to `kind: "panchang"` because muhurat and festival
-    rows share the collection under different §7.2 key grammars; §6.4's
-    constraint is about panchang days and applies exactly there.
-    """
-    await db.panchang_cache.create_index(
-        [("date", ASCENDING), ("geo", ASCENDING), ("tradition", ASCENDING)],
-        unique=True,
-        partialFilterExpression={"kind": CACHE_KIND_PANCHANG},
-        name="uniq_date_geo_tradition_panchang",
-    )
-    await db.panchang_cache.create_index([("provider", ASCENDING)])
-    await db.panchang_cache.create_index([("disputed", ASCENDING)])
-    await db.panchang_cache.create_index("expires_at", expireAfterSeconds=0)
-
-    await db.transit_cache.create_index(
-        [("date", ASCENDING), ("band", ASCENDING), ("engine_semver", ASCENDING)],
-        unique=True,
-        name="uniq_date_band_engine",
-    )
-    await db.transit_cache.create_index("expires_at", expireAfterSeconds=0)
-
-    # §32.2 adjudication queue — the §12 admin dashboard reads this.
-    await db.fact_adjudications.create_index([("status", ASCENDING), ("created_at", ASCENDING)])
-    await db.fact_adjudications.create_index([("fact_key", ASCENDING)])

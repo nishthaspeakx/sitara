@@ -13,6 +13,7 @@ written to the cache.
 import datetime as dt
 
 import pytest
+from bson import ObjectId
 from sitara_schemas import ErrorCode
 from sitara_schemas.facts import ConfidenceState, FactSource, Tradition
 
@@ -274,7 +275,7 @@ class TestCacheShortCircuitsTheLadder:
             cache, divineapi=provider("divineapi", transport_for("divineapi"))
         ).panchang(ON, MUMBAI, Tradition.AMANTA)
         key = panchang_key(ON, MUMBAI.lat, MUMBAI.lon, Tradition.AMANTA, "divineapi")
-        await cache.mark_disputed(key, adjudication_id="adj-7")
+        await cache.mark_disputed(key, adjudication_id=ObjectId())
 
         result = await service(cache).panchang(ON, MUMBAI, Tradition.AMANTA)
         assert result.disputed is True

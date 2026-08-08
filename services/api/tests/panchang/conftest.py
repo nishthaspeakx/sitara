@@ -14,7 +14,8 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo import MongoClient
 
 from sitara_api.config import Settings
-from sitara_api.panchang.cache import PanchangCache, TransitCache, ensure_panchang_indexes
+from sitara_api.db import ensure_indexes
+from sitara_api.panchang.cache import PanchangCache, TransitCache
 from sitara_api.panchang.providers.base import ResolvedPlace
 
 MONGO_URI = "mongodb://localhost:27018"  # compose mongo — NEVER machine-local
@@ -37,7 +38,7 @@ def settings() -> Settings:
 async def db(settings: Settings) -> AsyncIterator:
     client: AsyncIOMotorClient = AsyncIOMotorClient(MONGO_URI)
     database = client[settings.mongo_db]
-    await ensure_panchang_indexes(database)
+    await ensure_indexes(database)
     yield database
     await client.drop_database(settings.mongo_db)
     client.close()
