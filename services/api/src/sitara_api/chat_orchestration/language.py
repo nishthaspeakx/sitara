@@ -18,11 +18,15 @@ from __future__ import annotations
 import re
 import unicodedata
 
+from sitara_api import text as textutil
 from sitara_api.chat_orchestration.types import LAUNCH_LOCALES, DetectedLanguage, Script
 
-_DEVANAGARI = re.compile(r"[ऀ-ॿ]")
 _LATIN_LETTER = re.compile(r"[A-Za-z]")
-_WORD = re.compile(r"[A-Za-zऀ-ॿ]+")
+
+# Script detection and tokenising go through sitara_api.text: the Devanagari
+# block contains the danda ।, so a naive [ऀ-ॿ] reads an English sentence with
+# a stray danda as Devanagari and tokenises "हैं।" as one word — which no
+# marker lexicon can then match.
 
 #: Hinglish function words — the grammar of the sentence, not its nouns.
 #: Nouns are unreliable here on purpose: "meeting", "budget" and "salary" are
@@ -71,11 +75,11 @@ def detect(text: str, account_locale: str) -> DetectedLanguage:
 
 
 def detect_script(text: str) -> Script:
-    has_devanagari = bool(_DEVANAGARI.search(text))
+    has_deva = textutil.has_devanagari(text)
     has_latin = bool(_LATIN_LETTER.search(text))
-    if has_devanagari and has_latin:
+    if has_deva and has_latin:
         return Script.MIXED
-    if has_devanagari:
+    if has_deva:
         return Script.DEVANAGARI
     if has_latin:
         return Script.LATIN
@@ -92,7 +96,7 @@ def _detect_locale(text: str, script: Script) -> str:
         return "hi"
     if script is Script.UNKNOWN:
         return ""
-    words = [w.lower() for w in _WORD.findall(text)]
+    words = textutil.tokenize(text)
     meaningful = [w for w in words if w not in _LOCALE_NEUTRAL]
     if not meaningful:
         return ""
@@ -109,7 +113,7 @@ def _confidence(text: str, script: Script, detected: str) -> float:
         return 0.0
     if script in (Script.DEVANAGARI, Script.MIXED):
         return 0.95
-    words = [w.lower() for w in _WORD.findall(text)]
+    words = textutil.tokenize(text)
     if not words:
         return 0.0
     hits = sum(1 for w in words if w in _HINGLISH_MARKERS)
@@ -135,9 +139,9 @@ def contains_wrong_script(text: str, locale: str) -> bool:
         # Hindi may carry a few Latin loanwords; a majority-Latin reply is the
         # failure. §2.3 caps Hindi at ≤10% English tokens.
         latin = len(_LATIN_LETTER.findall(stripped))
-        deva = len(_DEVANAGARI.findall(stripped))
+        deva = len(re.findall(f'[{textutil.DEVANAGARI_LETTERS}]', stripped))
         return deva == 0 or latin > deva
-    return bool(_DEVANAGARI.search(stripped))
+    return textutil.has_devanagari(stripped)
 
 
 def _strip_neutral(text: str) -> str:

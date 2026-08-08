@@ -179,7 +179,110 @@ class TestResidualRisk:
         as designed. It says what a practice IS, not what today holds. If this
         ever needs to be a claim, that is a rule change, not a bug fix.
 
-        Note "rahu kaal" would NOT be exempt: `rahu` is a graha name, so the
-        celestial clause fires. The hole is narrower than it first looks."""
+        CL-002b widened this slightly: "rahu kaal" is now separated from the
+        graha `rahu`, so a bare statement about that WINDOW is exempt too. A
+        statement about the NODE is not."""
         assert not is_claim(claims, "Muhurat selection is an old tradition.", "en")
-        assert is_claim(claims, "Rahu kaal is generally considered inauspicious.", "en")
+        assert not is_claim(claims, "Rahu kaal is generally considered inauspicious.", "en")
+        assert is_claim(claims, "Rahu is considered a shadow node.", "en")
+
+
+class TestAbsenceExemption:
+    """CL-002 — stating that a fact is MISSING is not a claim.
+
+    §5.3 forbids inventing facts, not admitting to lacking one. The exemption
+    is guarded: a sentence that also asserts something keeps its citation
+    duty, which is what the adversarial cases below hold.
+    """
+
+    @pytest.mark.parametrize(
+        ("locale", "sentence"),
+        [
+            ("en", "I don't have rahu kaal for today."),
+            ("hi", "अभी मेरे पास आज का पंचांग डेटा नहीं है।"),
+            ("hi-Latn", "Rahu kaal ya muhurat ki koi fact mere paas nahin hai abhi."),
+            ("hi-Latn", "Abhi mere paas aaj ke din ka panchang data nahi hai."),
+        ],
+    )
+    def test_a_pure_absence_sentence_needs_no_citation(
+        self, claims: GroundingValidator, locale: str, sentence: str
+    ) -> None:
+        """These are verbatim from the 20-turn hi/hi-Latn reproduction. Each
+        carries a deictic — Hindi and Hinglish put "अभी"/"abhi" in absence
+        sentences far more naturally than English does — and none can be
+        rewritten to pass, because there is no fact to cite."""
+        assert not is_claim(claims, sentence, locale)
+
+    @pytest.mark.parametrize(
+        ("locale", "sentence"),
+        [
+            ("en", "I don't have rahu kaal, but Saturn is in your 10th house."),
+            ("hi", "मेरे पास राहु काल का डेटा नहीं है, लेकिन शनि आपके दसवें भाव में है।"),
+            (
+                "hi-Latn",
+                "Mere paas rahu kaal ka data nahin hai, lekin Shani aapke 10th house mein hai.",
+            ),
+        ],
+    )
+    def test_absence_plus_a_celestial_assertion_is_still_a_claim(
+        self, claims: GroundingValidator, locale: str, sentence: str
+    ) -> None:
+        """The adversarial case. Admitting to one gap does not license an
+        uncited assertion in the same breath."""
+        assert is_claim(claims, sentence, locale)
+
+    @pytest.mark.parametrize(
+        ("locale", "sentence"),
+        [
+            ("en", "I don't have the full day, but the amrit window runs to 12:26 am."),
+            ("hi-Latn", "Poora din nahin hai mere paas, par amrit 12:26 am tak hai."),
+        ],
+    )
+    def test_absence_plus_a_number_is_still_a_claim(
+        self, claims: GroundingValidator, locale: str, sentence: str
+    ) -> None:
+        assert is_claim(claims, sentence, locale)
+
+    def test_a_graha_bearing_compound_does_not_defeat_the_exemption(
+        self, claims: GroundingValidator
+    ) -> None:
+        """"Rahu kaal" names a WINDOW. Without separating the compound, the
+        celestial guard fires on the token `rahu` and a pure absence sentence
+        about a time window reads as an assertion about the node."""
+        assert not is_claim(claims, "I don't have rahu kaal for today.", "en")
+        assert is_claim(claims, "Rahu is in your 8th house.", "en")
+
+
+class TestDateExpressions:
+    """CL-002b — a calendar date is not an astrological number."""
+
+    @pytest.mark.parametrize(
+        ("locale", "sentence"),
+        [
+            ("en", "Looking at the panchang for 9 August 2026."),
+            ("en", "The panchang for 2026-08-09."),
+            ("hi-Latn", "Aaj, 9 August 2026 ka panchang dekhte hain."),
+        ],
+    )
+    def test_a_full_date_does_not_make_a_category_term_a_claim(
+        self, claims: GroundingValidator, locale: str, sentence: str
+    ) -> None:
+        assert not is_claim(claims, sentence, locale)
+
+    @pytest.mark.parametrize(
+        ("locale", "sentence"),
+        [
+            ("en", "Saturn sits in your 4th house."),
+            ("hi", "शनि आपके चौथे भाव में है।"),
+            ("hi-Latn", "Shani aapke 4th house mein hai."),
+        ],
+    )
+    def test_a_bare_ordinal_is_never_a_date(
+        self, claims: GroundingValidator, locale: str, sentence: str
+    ) -> None:
+        """The narrow half of the ruling: only numbers INSIDE a full date
+        expression are excluded."""
+        assert is_claim(claims, sentence, locale)
+
+    def test_a_plain_count_still_triggers(self, claims: GroundingValidator) -> None:
+        assert is_claim(claims, "The panchang shows 3 favourable windows.", "en")

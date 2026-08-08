@@ -69,8 +69,11 @@ class ChatSettings(BaseSettings):
     summary_trigger_tokens: int = 6_000
     #: Turns kept verbatim after a summary rolls; older ones become summary.
     history_keep_turns: int = 6
-    #: "per-turn hard cap"
-    max_output_tokens_turn: int = 1_024
+    #: "per-turn hard cap". Raised to 2048 after the M5 locale reproduction:
+    #: Hinglish replies carry both scripts' worth of tokens and were being cut
+    #: off mid-sentence, which cost the turn its §9 regeneration on brevity
+    #: rather than on anything real.
+    max_output_tokens_turn: int = 2_048
     max_output_tokens_classification: int = 512
     max_output_tokens_summary: int = 512
     #: "per-user daily soft cap with graceful in-locale notice" — a notice,

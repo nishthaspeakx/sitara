@@ -28,7 +28,7 @@ from sitara_api.chat_orchestration.types import (
 )
 
 #: Bump on ANY edit below — the admin console stages prompt versions (§12).
-PROMPT_VERSION = "m5.3"
+PROMPT_VERSION = "m5.4"
 
 # --------------------------------------------------------------------------
 # Block 1 — persona (§0.6, §0.7). Identical for every user, every locale.
@@ -138,6 +138,8 @@ STYLE — हिन्दी (Devanagari).
 """,
     "hi-Latn": """\
 STYLE — Hinglish (Latin script).
+LATIN SCRIPT ONLY. Ek bhi Devanagari akshar mat likhein — na tithi ke naam \
+mein, na nakshatra ke, na kisi quote mein. "nakshatra", not "नक्षत्र".
 Roman script mein likhein, Hindi-English mix jo Dilli-Mumbai ki rozmarra baat \
 jaisa lage. English tokens roughly 40–60% — natural, forced nahin.
 Sambodhan hamesha "aap" — kabhi "tu" ya "tum" nahin, jab tak vyakti khud na kahe.

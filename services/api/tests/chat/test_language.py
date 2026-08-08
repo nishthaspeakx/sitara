@@ -120,3 +120,34 @@ def test_a_short_reply_is_not_convicted_of_drift() -> None:
     verdict = _check("Bilkul.", "hi-Latn")
 
     assert verdict.ok, verdict.failures
+
+
+def test_a_capitalised_domain_term_is_not_an_altered_glossary_term() -> None:
+    """glossary.json's rule for the domain terms is "kept native in all
+    locales" — about translation, not capitalisation. Flagging a
+    sentence-initial "Nakshatra" failed ordinary replies (CL-005)."""
+    validator = LanguageQualityValidator()
+
+    for text in (
+        "Nakshatra ke hisaab se aaj ka din shaant hai.",
+        "Aaj Panchang dekhte hain.",
+        "Muhurat ke liye shaam achhi hai.",
+    ):
+        assert validator.check(text, "hi-Latn").ok, text
+
+
+def test_the_proper_nouns_are_still_case_sensitive() -> None:
+    """Tara and Sitara are brand names, not domain vocabulary."""
+    verdict = LanguageQualityValidator().check("Main tara hoon, aapki guide.", "hi-Latn")
+
+    assert not verdict.ok
+    assert any("Tara" in failure for failure in verdict.failures)
+
+
+def test_devanagari_in_a_hinglish_reply_is_still_a_script_failure() -> None:
+    """§2.3: Hinglish is Latin script. The validator was right about this one
+    — the fix is in the prompt, not here."""
+    verdict = LanguageQualityValidator().check("Aaj ka नक्षत्र rohini hai.", "hi-Latn")
+
+    assert not verdict.ok
+    assert any("script" in failure for failure in verdict.failures)

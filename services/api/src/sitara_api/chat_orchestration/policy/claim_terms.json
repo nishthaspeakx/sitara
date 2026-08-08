@@ -367,5 +367,85 @@
       "tonight",
       "now"
     ]
+  },
+  "absence": {
+    "$comment": "CL-002. Stating that a fact is MISSING cannot be a fabrication — §5.3 forbids inventing facts, not admitting to lacking one. Guarded: the exemption applies only to a PURE absence sentence. A celestial state assertion or a number beside a strong term in the same sentence keeps it a claim, so 'mere paas rahu kaal ka data nahin hai, lekin Shani aapke 10th house mein hai' is still rejected.",
+    "en": [
+      "don't have",
+      "do not have",
+      "dont have",
+      "haven't got",
+      "have not got",
+      "i lack",
+      "isn't available",
+      "is not available",
+      "aren't available",
+      "are not available",
+      "no data",
+      "not in my facts",
+      "nothing on",
+      "can't see any",
+      "cannot see any",
+      "wasn't given",
+      "was not given",
+      "didn't get",
+      "did not get"
+    ],
+    "hi": [
+      "नहीं है",
+      "नहीं हैं",
+      "नहीं मिला",
+      "नहीं मिली",
+      "उपलब्ध नहीं",
+      "मेरे पास नहीं",
+      "जानकारी नहीं",
+      "डेटा नहीं",
+      "पता नहीं"
+    ],
+    "hi-Latn": [
+      "nahin hai",
+      "nahi hai",
+      "nahin hain",
+      "nahi hain",
+      "nahin mila",
+      "nahi mila",
+      "available nahin",
+      "available nahi",
+      "mere paas nahin",
+      "mere paas nahi",
+      "jaankari nahin",
+      "data nahin",
+      "data nahi",
+      "pata nahin"
+    ]
+  },
+  "date_expression_patterns": {
+    "$comment": "CL-002b. A calendar date is not an astrological number. Only a number INSIDE one of these is excluded from the weak+number trigger; a bare ordinal never is, so '4th house' and 'चौथे भाव' still fire.",
+    "en": "\\b(\\d{1,2}\\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)\\s+\\d{4}|(?:january|february|march|april|may|june|july|august|september|october|november|december)\\s+\\d{1,2},?\\s+\\d{4}|\\d{4}-\\d{2}-\\d{2}|\\d{1,2}/\\d{1,2}/\\d{2,4})\\b",
+    "hi": "(\\d{1,2}\\s*(?:जनवरी|फ़रवरी|फरवरी|मार्च|अप्रैल|मई|जून|जुलाई|अगस्त|सितंबर|अक्टूबर|नवंबर|दिसंबर)\\s*\\d{4}|\\d{4}-\\d{2}-\\d{2})",
+    "hi-Latn": "\\b(\\d{1,2}\\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|janvari|farvari|march|aprail|jun|julai|agast|sitambar|aktubar|navambar|disambar)\\s+\\d{4}|\\d{4}-\\d{2}-\\d{2})\\b"
+  },
+  "celestial_compounds": {
+    "$comment": "Tradition terms that merely CONTAIN a graha token. 'Rahu kaal' names a time window, not the node — so the celestial guard must not fire on it, or 'rahu kaal ka data nahin hai' reads as an assertion about Rahu. Blanked out before the celestial test; the bare graha name still matches everywhere else.",
+    "en": [
+      "rahu kaal",
+      "rahu kalam",
+      "rahu kala",
+      "ketu kaal",
+      "guru purnima"
+    ],
+    "hi": [
+      "राहु काल",
+      "राहुकाल",
+      "केतु काल",
+      "गुरु पूर्णिमा"
+    ],
+    "hi-Latn": [
+      "rahu kaal",
+      "rahu kalam",
+      "rahukaal",
+      "ketu kaal",
+      "guru purnima"
+    ]
   }
 }

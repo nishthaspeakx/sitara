@@ -5,7 +5,6 @@ external boundary in this module (§6.3 adapter rule).
 
 import uuid
 from collections.abc import Iterator
-from datetime import date
 
 import pytest
 import redis as redis_sync
@@ -89,12 +88,16 @@ def exchange(
     dob: str | None = ADULT_DOB,
     locale: str = "en",
     device_name: str | None = None,
+    timezone: str | None = None,
 ):
     body: dict[str, object] = {"id_token": token, "locale": locale}
     if dob is not None:
         body["date_of_birth"] = dob
     if device_name is not None:
         body["device_name"] = device_name
+    if timezone is not None:
+        # §36.4: the age gate needs the user's zone, not the server's.
+        body["timezone"] = timezone
     return client.post("/auth/session", json=body)
 
 
@@ -109,7 +112,11 @@ def assert_envelope(body: dict, code: str, retryable: bool) -> None:
 def years_ago(years: int, plus_days: int = 0) -> str:
     from datetime import timedelta
 
-    today = date.today()
+    # Match the gate: it evaluates in the launch market's zone (§36.4), so a
+    # helper using the machine's local date disagrees for hours each day.
+    from sitara_api.auth.service import local_today
+
+    today, _ = local_today(None)
     try:
         d = today.replace(year=today.year - years)
     except ValueError:  # Feb 29

@@ -15,6 +15,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from sitara_api import text as textutil
 from sitara_api.chat_orchestration import config, language
 from sitara_api.chat_orchestration.types import LAUNCH_LOCALES
 
@@ -40,9 +41,6 @@ _INTIMATE_FORMS: dict[str, tuple[str, ...]] = {
 #: presence and is NEVER called an avatar — in any locale, ever (§4.1, §24.3).
 _FORBIDDEN = re.compile(r"\bavatars?\b|अवतार", re.IGNORECASE)
 
-#: See grounding._WORDISH — the danda must stay OUTSIDE the class or a term at
-#: the end of a Devanagari sentence never matches.
-_WORDISH = r"\w\u0900-\u0963\u0966-\u097F"
 
 
 class LanguageQualityValidator:
@@ -73,9 +71,7 @@ class LanguageQualityValidator:
             )
 
         for form in _INTIMATE_FORMS.get(locale, ()):
-            if re.search(
-                rf"(?<![{_WORDISH}]){re.escape(form)}(?![{_WORDISH}])", text, re.IGNORECASE
-            ):
+            if re.search(textutil.bounded(form), text, re.IGNORECASE):
                 failures.append(f"intimate address {form!r} used uninvited (§2.3 honorifics)")
                 break
 
@@ -83,10 +79,13 @@ class LanguageQualityValidator:
             failures.append("Tara is a photographic presence, never an 'avatar' (glossary)")
 
         for term in self._glossary:
-            # Whole words only. A substring test reads "Tara" inside "tarah"
-            # — everyday Hinglish for "way" — and would fail an ordinary reply,
-            # burning §9's single regeneration on a word Tara is allowed to use.
-            pattern = rf"(?<![{_WORDISH}]){re.escape(term)}(?![{_WORDISH}])"
+            # Case matters only for the PROPER NOUNS. glossary.json's rule for
+            # the domain terms is "kept native in all locales" — that is about
+            # translation, not capitalisation, and flagging a sentence-initial
+            # "Nakshatra" as an altered term failed ordinary replies.
+            if not term[:1].isupper():
+                continue
+            pattern = textutil.bounded(term)
             if re.search(pattern, text, re.IGNORECASE) and not re.search(pattern, text):
                 failures.append(f"glossary term {term!r} altered (§2.4)")
 

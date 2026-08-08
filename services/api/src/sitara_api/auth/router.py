@@ -27,6 +27,11 @@ class ExchangeRequest(BaseModel):
     id_token: str
     date_of_birth: date | None = None
     locale: str | None = None
+    #: IANA zone from the client. §22.4's age gate is a birthday, and a
+    #: birthday is a local-calendar fact (§36.4) — evaluated in UTC, an
+    #: 18-year-old in Kolkata is refused for the first 5½ hours of the day.
+    #: Absent or unknown falls back to the launch market's zone, never UTC.
+    timezone: str | None = None
     device_name: str | None = None
 
 
@@ -100,7 +105,11 @@ async def exchange_session(
 ) -> dict[str, Any]:
     service = _auth_service(request, verifier)
     user, is_new = await service.exchange(
-        body.id_token, _throttle_key(request), body.date_of_birth, body.locale
+        body.id_token,
+        _throttle_key(request),
+        body.date_of_birth,
+        body.locale,
+        body.timezone,
     )
     minted = await _session_service(request).create(user["_id"], body.device_name)
     _set_cookies(response, minted, _settings(request))

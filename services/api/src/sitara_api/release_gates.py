@@ -98,6 +98,20 @@ def gates() -> tuple[Gate, ...]:
             ),
         ),
         Gate(
+            id="chat.numeric_mismatch_attribution",
+            spec_ref="§5.3 step 9",
+            blocks=Stage.CLOSED_BETA,
+            status="open — cause not yet demonstrated",
+            detail=(
+                "Two clock values were rejected as numeric mismatches in the M5 hi-Latn "
+                "reproduction ('12:53', '12:26 pm') on sentences that DID cite a fact. Not yet "
+                "shown whether the model quoted a time from a fact other than the one it cited "
+                "(validator correct) or the local-clock rendering missed (validator wrong). "
+                "Deliberately unpatched: fixing the wrong one would either mask a real "
+                "fabrication or loosen §5.3 on a guess."
+            ),
+        ),
+        Gate(
             id="safety.l1_rule_lexicon",
             spec_ref="§14 language QA / §9",
             blocks=Stage.CLOSED_BETA,

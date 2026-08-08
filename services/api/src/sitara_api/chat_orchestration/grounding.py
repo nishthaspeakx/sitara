@@ -71,23 +71,17 @@ from sitara_schemas.facts import (
     Rashi,
 )
 
+from sitara_api import text as textutil
 from sitara_api.chat_orchestration import config
 from sitara_api.chat_orchestration.types import ValidatedFacts
 
 #: The citation grammar. Nothing else is a citation.
 CITATION_RE = re.compile(r"\[\[\s*(fact:[^\]\s]+)\s*\]\]")
 
-_SENTENCE_SPLIT = re.compile(r"(?<=[.!?।])\s+")
 _CLOCK_RE = re.compile(r"\b(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(am|pm)?\b", re.IGNORECASE)
 _NUMBER_RE = re.compile(r"\d+(?:\.\d+)?")
-_DEVANAGARI_DIGITS = str.maketrans("०१२३४५६७८९", "0123456789")
+_DEVANAGARI_DIGITS = textutil.DEVANAGARI_DIGITS
 
-#: What counts as "inside a word" for term matching. NOT `\w`: Devanagari
-#: vowel signs and the virama are combining marks Python excludes from `\w`,
-#: so `\bवक्री\b` never fires. NOT the whole Devanagari block either — it
-#: contains the danda । (U+0964) and double danda ॥ (U+0965), which END
-#: sentences; including them made every term inert at a sentence's close.
-_WORDISH = r"\w\u0900-\u0963\u0966-\u097F"
 
 #: Day-division names worth gating on. `choghadiya_day`/`choghadiya_night`
 #: are covered by the plain locale term, and the generic quality words
@@ -104,6 +98,8 @@ class _Markers:
     state_motion: re.Pattern[str]
     second_person: re.Pattern[str]
     temporal: re.Pattern[str]
+    absence: re.Pattern[str]
+    celestial_compounds: re.Pattern[str]
 
 
 @dataclass(frozen=True)
@@ -125,6 +121,7 @@ class GroundingValidator:
         self._lexicons: dict[str, tuple[re.Pattern[str], re.Pattern[str]]] = {}
         self._ordinals: dict[str, re.Pattern[str] | None] = {}
         self._markers_by_locale: dict[str, _Markers] = {}
+        self._dates: dict[str, re.Pattern[str] | None] = {}
 
     def check(
         self, text: str, facts: ValidatedFacts | Sequence[FactSnapshot], locale: str
@@ -207,21 +204,56 @@ class GroundingValidator:
         if ordinal and ordinal.search(lowered):
             return True
 
-        has_number = bool(_NUMBER_RE.search(normalised))
+        markers = self._markers(locale)
+        # CL-002b: a calendar date is not an astrological number. Blank out
+        # full date expressions before counting — but only those. A bare
+        # ordinal is never a date, so "4th house" still fires below.
+        without_dates = self._strip_dates(normalised, locale)
+        has_number = bool(_NUMBER_RE.search(without_dates))
+        has_clock = bool(_CLOCK_RE.search(without_dates))
+
         if weak.search(lowered) and has_number:
             return True
         if not strong.search(lowered):
             return False
 
-        # -- strong term present: the five exemption conditions -------------
-        if has_number or _CLOCK_RE.search(normalised):
+        # -- strong term present ---------------------------------------------
+        # The two guards on the absence exemption come FIRST, so a sentence
+        # that admits to lacking one fact while asserting another is still a
+        # claim: "I don't have rahu kaal, but Saturn is in your 10th" must
+        # fail on the second clause.
+        # "Rahu kaal" names a WINDOW, not the node. Blank the compounds out
+        # before the celestial test, or "rahu kaal ka data nahin hai" reads as
+        # an assertion about Rahu and the absence exemption never applies.
+        celestial_probe = markers.celestial_compounds.sub(" ", lowered)
+        if markers.celestial.search(celestial_probe) and markers.state_motion.search(lowered):
             return True
-        markers = self._markers(locale)
+        if has_number or has_clock:
+            return True
+
+        # CL-002: a PURE absence-of-fact sentence is not a claim. Stating that
+        # a fact is MISSING cannot be a fabrication — §5.3 forbids inventing
+        # facts, not admitting to lacking one. This sits above the deixis test
+        # on purpose: Hindi and Hinglish put "अभी"/"abhi" in these sentences
+        # far more naturally than English does, and gating on that made Tara
+        # unable to say what she did not know in two of three locales.
+        if markers.absence.search(lowered):
+            return False
+
         if markers.second_person.search(lowered) or markers.temporal.search(lowered):
             return True
-        if markers.celestial.search(lowered) and markers.state_motion.search(lowered):
-            return True
         return False
+
+    def _strip_dates(self, text: str, locale: str) -> str:
+        pattern = self._date_pattern(locale)
+        return pattern.sub(" ", text) if pattern else text
+
+    def _date_pattern(self, locale: str) -> re.Pattern[str] | None:
+        key = self._key(locale)
+        if key not in self._dates:
+            raw = self._source.get("date_expression_patterns", {}).get(key)
+            self._dates[key] = re.compile(raw, re.IGNORECASE) if raw else None
+        return self._dates[key]
 
     def _markers(self, locale: str) -> _Markers:
         key = self._key(locale)
@@ -241,6 +273,8 @@ class GroundingValidator:
                 state_motion=alt("state_motion"),
                 second_person=alt("second_person"),
                 temporal=alt("temporal_deixis"),
+                absence=alt("absence"),
+                celestial_compounds=alt("celestial_compounds"),
             )
         return self._markers_by_locale[key]
 
@@ -280,24 +314,13 @@ class GroundingValidator:
 
 
 def _alternation(terms: Iterable[str], *, min_length: int = 3) -> re.Pattern[str]:
-    """Longest-first so "moon sign" wins over "moon". Never matches nothing:
-    an empty set compiles to a pattern that cannot fire.
+    """Whole-word alternation via the shared, script-aware helper.
 
     `min_length` drops to 2 for the marker sets — Hindi carries real signal in
     two characters ("है", "आज"), and dropping them would exempt exactly the
     sentences the rule is meant to catch.
     """
-    ordered = sorted((t for t in terms if len(t) >= min_length), key=len, reverse=True)
-    if not ordered:
-        return re.compile(r"(?!x)x")
-    body = "|".join(re.escape(t) for t in ordered)
-    # NOT \b. Devanagari vowel signs and the virama are combining marks, which
-    # Python does not count as word characters, so `\bवक्री\b` can never match
-    # — the trailing ी ends the "word" before the boundary is tested. Every
-    # Devanagari term in these lexicons was silently inert until this changed.
-    return re.compile(
-        rf"(?<![{_WORDISH}])(?:{body})(?![{_WORDISH}])", re.IGNORECASE
-    )
+    return textutil.alternation(terms, min_length=min_length)
 
 
 @lru_cache(maxsize=1)
@@ -476,9 +499,7 @@ def strip_citations(text: str) -> str:
 
 
 def _sentences(text: str) -> Iterable[str]:
-    for chunk in _SENTENCE_SPLIT.split(text.strip()):
-        if chunk.strip():
-            yield chunk.strip()
+    return textutil.sentences(text)
 
 
 def _clip(text: str, limit: int = 80) -> str:

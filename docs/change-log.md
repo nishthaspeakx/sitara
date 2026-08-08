@@ -67,3 +67,68 @@ regression tests, both of which had made the rule weaker than it read:
    at U+0966.
 
 Both made the validator stricter, not looser.
+
+---
+
+## CL-002 — absence-of-fact exemption, and calendar dates
+**Date:** 9 August 2026 · **Approved:** Founder · **Raised by:** the 20-turn
+hi/hi-Latn reproduction · **Touches:** §5.3 step 9, §2.4
+
+**What changed.** Two narrow additions to CL-001's claim test.
+
+*(a) Absence.* A sentence stating that a fact is MISSING is not a claim.
+§5.3 forbids inventing facts, not admitting to lacking one, and no rewrite can
+make such a sentence pass — there is nothing to cite. Guarded on two sides: a
+celestial-entity state assertion, or a number beside a strong term, in the same
+sentence keeps the citation duty. `"I don't have rahu kaal, but Saturn is in
+your 10th house"` is still rejected, in all three locales.
+
+*(b) Dates.* A number inside a full date expression ("9 August 2026",
+`2026-08-09`, "9 अगस्त 2026") no longer triggers the weak-term+number rule. A
+bare ordinal never counts as a date, so "4th house" and "चौथे भाव" still fire.
+
+**Why.** 22 of 24 grounding rejections in the hi/hi-Latn reproduction were
+Tara saying she lacked a fact. Hindi and Hinglish place "अभी"/"abhi" in those
+sentences far more naturally than English does, so CL-001's deixis clause
+caught them and the turn burned its regeneration and served the fallback line.
+
+**Also.** "Rahu kaal" is now separated from the graha `rahu` — it names a
+window, not the node — so a bare statement about that window is exempt while
+one about the node is not.
+
+---
+
+## CL-003 — one script-aware boundary helper (`sitara_api.text`)
+**Date:** 9 August 2026 · **Approved:** Founder (sweep requested) ·
+**Touches:** §9 L1 lexicon, §9 post-check, §2.3, §2.4
+
+**What changed.** Every hand-rolled word boundary moved to `sitara_api.text`.
+`\b` cannot delimit Devanagari — vowel signs and the virama are combining
+marks Python excludes from `\w` — and the danda `।` sits inside the Devanagari
+block, so a block-wide lookaround treats it as word-internal and no term at a
+sentence's end matches.
+
+**What the sweep found.** `test_script_boundaries.py` now asserts that **no
+pattern in either safety corpus is inert** (120 patterns, parametrised
+individually). Result: the L1 lexicon and the fear-selling corpus were NOT
+affected — their Devanagari entries are bare substrings, not `\b`-delimited.
+The defect was confined to the claim lexicons, the glossary/honorific lint and
+language detection, all now fixed and covered. Two collateral fixes:
+`detect_script` no longer reads a stray danda as Devanagari, and `tokenize`
+no longer produces "हैं।" as one token.
+
+The sweep guards itself: a test asserts `is_inert` still flags
+`\bवक्री\b`, so it cannot pass vacuously if the detector rots.
+
+---
+
+## CL-004 — per-turn output cap raised to 2048
+**Date:** 9 August 2026 · **Approved:** Founder · **Touches:** §9 token budgets
+
+Hinglish replies were hitting §9's per-turn hard cap and being cut off
+mid-sentence, spending the one corrective regeneration on brevity. §9 fixes
+that a cap exists, not its value. **Open and tracked:** two clock values were
+rejected as numeric mismatches on sentences that DID cite a fact; whether that
+is per-sentence misattribution (validator right) or a rendering gap (validator
+wrong) is not yet demonstrated, so it is deliberately unpatched and carried in
+`release_gates` as `chat.numeric_mismatch_attribution`.

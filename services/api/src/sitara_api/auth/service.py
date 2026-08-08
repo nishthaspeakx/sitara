@@ -25,6 +25,29 @@ def _now() -> datetime:
     return datetime.now(UTC)
 
 
+#: §22.4's gate is a birthday, and a birthday is a LOCAL-calendar fact.
+#: Evaluated in UTC, someone who turned 18 this morning in Kolkata is 17 for
+#: the first 5½ hours of their birthday and is refused an account (§36.4).
+DEFAULT_AGE_TIMEZONE = "Asia/Kolkata"
+
+
+def local_today(timezone_name: str | None) -> tuple[date, str]:
+    """Today's date in the user's own timezone, and the zone actually used.
+
+    An unknown zone falls back to the launch market's rather than to UTC:
+    UTC is the one choice guaranteed to be wrong for every user we have.
+    """
+    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+    name = timezone_name or DEFAULT_AGE_TIMEZONE
+    try:
+        zone = ZoneInfo(name)
+    except (ZoneInfoNotFoundError, ValueError):
+        name = DEFAULT_AGE_TIMEZONE
+        zone = ZoneInfo(name)
+    return _now().astimezone(zone).date(), name
+
+
 def _age_years(dob: date, today: date) -> int:
     years = today.year - dob.year
     if (today.month, today.day) < (dob.month, dob.day):
@@ -59,12 +82,41 @@ class AuthService:
         await self._throttle.record_success(throttle_key)
         return identity
 
+    async def _audit_age_check(
+        self, uid: str, age: int, zone_used: str, today_local: date
+    ) -> None:
+        """§12 audit row for the §22.4 decision.
+
+        The timezone is the whole point: an age gate that refuses someone is a
+        legal act, and the same date of birth is 17 or 18 depending on the zone
+        the check ran in (§36.4). `actor` is the Firebase uid rather than a
+        product id — at this moment there is no user record yet.
+        """
+        from sitara_api.db.documents import stamp
+
+        await self._db.audit_logs.insert_one(
+            stamp(
+                {
+                    "actor": f"firebase:{uid}",
+                    "action": "auth.age_gate",
+                    "target": f"age={age};min={MINIMUM_AGE_YEARS}",
+                    "before_hash": None,
+                    "after_hash": None,
+                    "ip": None,
+                    "ts": _now(),
+                    "timezone": zone_used,
+                    "local_date": today_local.isoformat(),
+                }
+            )
+        )
+
     async def exchange(
         self,
         id_token: str,
         throttle_key: str,
         date_of_birth: date | None,
         locale: str | None,
+        timezone_name: str | None = None,
     ) -> tuple[dict[str, Any], bool]:
         """One-time §34.5 exchange. Returns (user doc, is_new_user)."""
         identity = await self._verify_or_throttle(id_token, throttle_key)
@@ -91,7 +143,13 @@ class AuthService:
         # New sign-up: §22.4 hard age gate, before any record exists.
         if date_of_birth is None:
             raise ApiError(ErrorCode.SYS_VALIDATION, "errors.auth.dob_required")
-        if _age_years(date_of_birth, _now().date()) < MINIMUM_AGE_YEARS:
+        # §36.4: the §22.4 gate runs against the user's LOCAL calendar date,
+        # never UTC. The zone used is recorded on the audit row, because "why
+        # was this account refused?" is unanswerable without it.
+        today_local, zone_used = local_today(timezone_name)
+        age = _age_years(date_of_birth, today_local)
+        await self._audit_age_check(identity.uid, age, zone_used, today_local)
+        if age < MINIMUM_AGE_YEARS:
             raise ApiError(ErrorCode.AUTH_UNDERAGE)
 
         now = _now()
