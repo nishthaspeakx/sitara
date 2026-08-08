@@ -49,6 +49,23 @@ Bounded-context modules in one process (auth, users/profiles, localisation, astr
 - **Open §31.3 item — CLOSED as §37 (CC-004):** §9's sampling control is capability-relative. The pipeline declares 0.2/0.7; `llm.py` applies them where the pinned model accepts them and records `temperature_declared` + a trace note where it cannot. Do not quietly delete the declaration.
 - **Release gates:** `uv run python -m sitara_api.release_gates` reports the human-closed §31.7 gates (helpline table, both safety corpora). `/shipcheck` runs it; three are open and block closed beta.
 
+## memory module (M5-P6b, §32.4/§32.5/§30.5) — invariants that must not regress
+- **`memory/taxonomy.py` is the ONE home for the 11 types**, their consent rules, gates and decay policy. `chat_orchestration.types` re-exports; it never redeclares. `tests/memory/test_taxonomy.py` parses §32.4 out of `docs/spec/SPEC.md` and fails on drift — same discipline as `test_registry_matches_spec.py`.
+- **No chip, no memory.** `MemoryStore.create` takes a `ConsentRecord` in its signature — there is no path that stores content without one — and refuses a type 7–9 memory whose wording was not re-confirmed (§32.4). Symptoms/diagnoses are declined at classification, in code as well as in the model.
+- **Delete is hard delete, embedding included** (diagram 8). No tombstone. §30.5's scoped effects are separate verbs, not flags: journal-entry deletion has a checkbox (`delete_memories`), conversation deletion marks `source_state: removed` and the memory SURVIVES — consent did not expire with the thread.
+- **Decay never deletes.** §32.4 retains "until user deletes". Below `RETRIEVAL_FLOOR` a memory goes quiet and stays in the vault; the nightly job writes scores only.
+- **Retrieval recomputes decay from the clock**, never trusting the stored `decay_score` — the job writes that value and may be hours stale. `updated_at` is the reinforcement stamp: an edited memory is young again.
+- **The exact-search fallback is not a toy** — same cosine, same vectors, same ranking as Atlas, so a query ranks identically on a laptop. It is capped at 500 rows and LOGS when it truncates.
+- **Vectors from two models never mix** (§32.5): `embedding_model` is stamped on every row and both search paths skip foreign spaces. The re-embedding batch job is what reconciles them.
+- **§32.5's recall gate needs REAL vectors.** The deterministic embedder hashes tokens and is not cross-lingual; `test_crosslingual.py` demonstrates it cannot pass, then skips unless `tests/memory/crosslingual/vectors.json` exists. Record with `COHERE_API_KEY=... uv run python -m tests.memory.crosslingual.record`. Never soften the gate to make it green.
+- **OpenAI fallback must send `dimensions: 1024`** — text-embedding-3-large is natively 3072-d and §6.4's index is 1024-d. `Embedding.__post_init__` refuses any other width.
+- **`make_mongo` sets `tz_aware=True`** — BSON stores UTC but the default codec returns NAIVE datetimes, and mixing them raises TypeError mid-arithmetic. Decay hit this; panchang's cache had a local workaround for the same hazard.
+- **`populate_by_name=True` on every settings class carrying a `validation_alias`** — an alias REPLACES the field name, so `Settings(cohere_api_key=...)` silently yields None otherwise. It did, in `ChatSettings`, for a whole milestone.
+
+## Commands (M5-P6b)
+- Nightly decay: `uv run python -m sitara_api.memory.decay --dry-run` (§32.4 consolidation)
+- Record the §32.5 recall vectors: `COHERE_API_KEY=... uv run python -m tests.memory.crosslingual.record`
+
 ## Commands (M4)
 - Build/repair schema: `uv run python -m sitara_api.db.migrate --phase expand`
 - Seed dev data: `uv run python -m sitara_api.db.seed --wipe`

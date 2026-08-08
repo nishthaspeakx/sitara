@@ -1,0 +1,310 @@
+{
+  "$comment": "§32.5 cross-lingual recall starter set. 50 HI↔EN pairs across the 11 §32.4 types. Each pair is ONE memory written twice; the gate stores the Hindi side and queries with the English side, and passes at recall@1 ≥ 0.85. §32.5's full gate is 500 pairs across HI↔EN↔TA at the W3 bake-off — this is the starter set that keeps the harness honest until then.",
+  "gate": {
+    "recall_at_k": 1,
+    "threshold": 0.85,
+    "spec_ref": "§32.5"
+  },
+  "pairs": [
+    {
+      "id": "p01",
+      "type": "person",
+      "hi": "मेरी बहन का नाम प्रिया है और वह बेंगलुरु में रहती है",
+      "en": "My sister is called Priya and she lives in Bangalore"
+    },
+    {
+      "id": "p02",
+      "type": "person",
+      "hi": "मेरे पति सुबह जल्दी उठते हैं",
+      "en": "My husband wakes up early in the morning"
+    },
+    {
+      "id": "p03",
+      "type": "person",
+      "hi": "मेरी माँ को बागवानी बहुत पसंद है",
+      "en": "My mother loves gardening"
+    },
+    {
+      "id": "p04",
+      "type": "person",
+      "hi": "मेरा सबसे अच्छा दोस्त अरुण स्कूल से है",
+      "en": "My closest friend Arun is from school"
+    },
+    {
+      "id": "p05",
+      "type": "person",
+      "hi": "मेरे ससुर जयपुर में रहते हैं",
+      "en": "My father-in-law lives in Jaipur"
+    },
+    {
+      "id": "p06",
+      "type": "significant_event",
+      "hi": "पिछले साल मैंने नौकरी बदली थी",
+      "en": "I changed jobs last year"
+    },
+    {
+      "id": "p07",
+      "type": "significant_event",
+      "hi": "हम 2019 में मुंबई शिफ्ट हुए थे",
+      "en": "We moved to Mumbai in 2019"
+    },
+    {
+      "id": "p08",
+      "type": "significant_event",
+      "hi": "मेरे पिता की तबीयत पिछली सर्दियों में बिगड़ी थी",
+      "en": "My father had a difficult winter last year"
+    },
+    {
+      "id": "p09",
+      "type": "significant_event",
+      "hi": "मैंने पिछले महीने अपना पहला घर खरीदा",
+      "en": "I bought my first home last month"
+    },
+    {
+      "id": "p10",
+      "type": "significant_event",
+      "hi": "मेरी शादी दिसंबर में हुई थी",
+      "en": "I got married in December"
+    },
+    {
+      "id": "p11",
+      "type": "date_anniversary",
+      "hi": "हमारी शादी की सालगिरह 14 फरवरी को है",
+      "en": "Our wedding anniversary is on 14 February"
+    },
+    {
+      "id": "p12",
+      "type": "date_anniversary",
+      "hi": "मेरी बेटी का जन्मदिन 3 अगस्त को आता है",
+      "en": "My daughter's birthday falls on 3 August"
+    },
+    {
+      "id": "p13",
+      "type": "date_anniversary",
+      "hi": "हर साल दिवाली पर हम गाँव जाते हैं",
+      "en": "Every year we go to the village for Diwali"
+    },
+    {
+      "id": "p14",
+      "type": "date_anniversary",
+      "hi": "माँ की पुण्यतिथि जुलाई में है",
+      "en": "My mother's death anniversary is in July"
+    },
+    {
+      "id": "p15",
+      "type": "date_anniversary",
+      "hi": "मेरा जन्मदिन 22 सितंबर को है",
+      "en": "My birthday is on 22 September"
+    },
+    {
+      "id": "p16",
+      "type": "preference",
+      "hi": "मुझे सुबह की चाय बिना चीनी पसंद है",
+      "en": "I like my morning tea without sugar"
+    },
+    {
+      "id": "p17",
+      "type": "preference",
+      "hi": "मैं लंबे संदेश नहीं, छोटे जवाब पसंद करती हूँ",
+      "en": "I prefer short replies, not long messages"
+    },
+    {
+      "id": "p18",
+      "type": "preference",
+      "hi": "मुझे रात को जल्दी सोना अच्छा लगता है",
+      "en": "I like sleeping early at night"
+    },
+    {
+      "id": "p19",
+      "type": "preference",
+      "hi": "मैं शाकाहारी खाना ही खाती हूँ",
+      "en": "I only eat vegetarian food"
+    },
+    {
+      "id": "p20",
+      "type": "preference",
+      "hi": "मुझे भीड़ वाली जगहें पसंद नहीं",
+      "en": "I don't enjoy crowded places"
+    },
+    {
+      "id": "p21",
+      "type": "goal_intention",
+      "hi": "मैं इस साल तमिल सीखना चाहती हूँ",
+      "en": "I want to learn Tamil this year"
+    },
+    {
+      "id": "p22",
+      "type": "goal_intention",
+      "hi": "मैं अपना खुद का व्यवसाय शुरू करना चाहती हूँ",
+      "en": "I want to start my own business"
+    },
+    {
+      "id": "p23",
+      "type": "goal_intention",
+      "hi": "मैं रोज़ टहलने जाना चाहती हूँ",
+      "en": "I want to go walking every day"
+    },
+    {
+      "id": "p24",
+      "type": "goal_intention",
+      "hi": "मुझे इस साल घर की बचत बढ़ानी है",
+      "en": "I want to save more for a house this year"
+    },
+    {
+      "id": "p25",
+      "type": "goal_intention",
+      "hi": "मैं अपनी माँ के साथ ज़्यादा समय बिताना चाहती हूँ",
+      "en": "I want to spend more time with my mother"
+    },
+    {
+      "id": "p26",
+      "type": "decision_context",
+      "hi": "मैं सोच रही हूँ कि नौकरी बदलूँ या नहीं",
+      "en": "I am weighing whether to change jobs or not"
+    },
+    {
+      "id": "p27",
+      "type": "decision_context",
+      "hi": "हम दूसरे शहर जाने पर विचार कर रहे हैं",
+      "en": "We are considering moving to another city"
+    },
+    {
+      "id": "p28",
+      "type": "decision_context",
+      "hi": "मैं तय नहीं कर पा रही कि पढ़ाई जारी रखूँ",
+      "en": "I can't decide whether to continue studying"
+    },
+    {
+      "id": "p29",
+      "type": "decision_context",
+      "hi": "हम घर खरीदें या किराए पर रहें, यह सवाल है",
+      "en": "The question is whether to buy a house or keep renting"
+    },
+    {
+      "id": "p30",
+      "type": "decision_context",
+      "hi": "मैं सोच रही हूँ कि यह प्रस्ताव स्वीकार करूँ",
+      "en": "I am thinking about accepting the offer"
+    },
+    {
+      "id": "p31",
+      "type": "mood_pattern",
+      "hi": "सोमवार को मैं अक्सर बेचैन रहती हूँ",
+      "en": "I often feel restless on Mondays"
+    },
+    {
+      "id": "p32",
+      "type": "mood_pattern",
+      "hi": "बारिश के मौसम में मेरा मन उदास हो जाता है",
+      "en": "My mood dips during the rainy season"
+    },
+    {
+      "id": "p33",
+      "type": "mood_pattern",
+      "hi": "देर रात मुझे चिंता ज़्यादा होती है",
+      "en": "My worries get heavier late at night"
+    },
+    {
+      "id": "p34",
+      "type": "mood_pattern",
+      "hi": "परिवार से मिलने के बाद मैं हल्का महसूस करती हूँ",
+      "en": "I feel lighter after seeing family"
+    },
+    {
+      "id": "p35",
+      "type": "mood_pattern",
+      "hi": "काम के दबाव में मैं चुप हो जाती हूँ",
+      "en": "I go quiet when work pressure builds"
+    },
+    {
+      "id": "p36",
+      "type": "health_adjacent",
+      "hi": "मैं हफ्ते में तीन बार योग करती हूँ",
+      "en": "I do yoga three times a week"
+    },
+    {
+      "id": "p37",
+      "type": "health_adjacent",
+      "hi": "मुझे नींद कम आती है",
+      "en": "I don't get much sleep"
+    },
+    {
+      "id": "p38",
+      "type": "health_adjacent",
+      "hi": "मैं रोज़ सुबह पैदल चलती हूँ",
+      "en": "I walk every morning"
+    },
+    {
+      "id": "p39",
+      "type": "health_adjacent",
+      "hi": "मैं दिन में बहुत कम पानी पीती हूँ",
+      "en": "I drink very little water during the day"
+    },
+    {
+      "id": "p40",
+      "type": "health_adjacent",
+      "hi": "मैंने चीनी कम कर दी है",
+      "en": "I have cut down on sugar"
+    },
+    {
+      "id": "p41",
+      "type": "work_finance",
+      "hi": "मैं एक स्टार्टअप में डिज़ाइनर हूँ",
+      "en": "I work as a designer at a startup"
+    },
+    {
+      "id": "p42",
+      "type": "work_finance",
+      "hi": "मेरा वेतन हर महीने की पहली तारीख को आता है",
+      "en": "My salary arrives on the first of every month"
+    },
+    {
+      "id": "p43",
+      "type": "work_finance",
+      "hi": "मैं घर से काम करती हूँ",
+      "en": "I work from home"
+    },
+    {
+      "id": "p44",
+      "type": "work_finance",
+      "hi": "मेरे ऊपर एक शिक्षा ऋण है",
+      "en": "I have an education loan to repay"
+    },
+    {
+      "id": "p45",
+      "type": "work_finance",
+      "hi": "मेरी टीम में छह लोग हैं",
+      "en": "There are six people on my team"
+    },
+    {
+      "id": "p46",
+      "type": "spiritual_practice",
+      "hi": "मैं हर मंगलवार को व्रत रखती हूँ",
+      "en": "I fast every Tuesday"
+    },
+    {
+      "id": "p47",
+      "type": "spiritual_practice",
+      "hi": "मैं रोज़ सुबह हनुमान चालीसा पढ़ती हूँ",
+      "en": "I read the Hanuman Chalisa every morning"
+    },
+    {
+      "id": "p48",
+      "type": "spiritual_practice",
+      "hi": "हम हर पूर्णिमा पर पूजा करते हैं",
+      "en": "We do a pooja on every full moon"
+    },
+    {
+      "id": "p49",
+      "type": "pronunciation_identity",
+      "hi": "मेरा नाम निष्ठा है, निष्ठा नहीं निशा",
+      "en": "My name is Nishtha, not Nisha"
+    },
+    {
+      "id": "p50",
+      "type": "pronunciation_identity",
+      "hi": "मुझे दीदी कहकर बुलाया जाता है",
+      "en": "People call me didi"
+    }
+  ]
+}

@@ -267,30 +267,18 @@ class ValidatedFacts:
 # --------------------------------------------------------------------------
 
 
-class MemoryType(StrEnum):
-    """The canonical 11 (§32.4). Vault filters use exactly these labels."""
+# The taxonomy and its gates belong to the memory module (§6.3), which owns
+# them. Re-exported here so P6a's call sites keep working — two copies of an
+# 11-member closed set is how a twelfth member appears.
+from sitara_api.memory import taxonomy as _taxonomy  # noqa: E402
 
-    PERSON = "person"
-    SIGNIFICANT_EVENT = "significant_event"
-    DATE_ANNIVERSARY = "date_anniversary"
-    PREFERENCE = "preference"
-    GOAL_INTENTION = "goal_intention"
-    DECISION_CONTEXT = "decision_context"
-    MOOD_PATTERN = "mood_pattern"
-    HEALTH_ADJACENT = "health_adjacent"
-    WORK_FINANCE = "work_finance"
-    SPIRITUAL_PRACTICE = "spiritual_practice"
-    PRONUNCIATION_IDENTITY = "pronunciation_identity"
-
-
+MemoryType = _taxonomy.MemoryType
 #: §32.4: types 7–9 are retrieved only in matching conversational context.
-CONTEXT_GATED_MEMORY: frozenset[MemoryType] = frozenset(
-    {MemoryType.MOOD_PATTERN, MemoryType.HEALTH_ADJACENT, MemoryType.WORK_FINANCE}
-)
+CONTEXT_GATED_MEMORY = _taxonomy.CONTEXT_GATED
 #: §32.4: type 8 never surfaces in a celebratory or casual turn.
-NEVER_IN_CASUAL: frozenset[MemoryType] = frozenset({MemoryType.HEALTH_ADJACENT})
+NEVER_IN_CASUAL = _taxonomy.NEVER_IN_CASUAL
 #: §32.4: type 11 is always available.
-ALWAYS_AVAILABLE_MEMORY: frozenset[MemoryType] = frozenset({MemoryType.PRONUNCIATION_IDENTITY})
+ALWAYS_AVAILABLE_MEMORY = _taxonomy.ALWAYS_AVAILABLE
 
 
 @dataclass(frozen=True)
