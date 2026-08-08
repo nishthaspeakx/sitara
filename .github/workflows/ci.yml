@@ -67,9 +67,22 @@ jobs:
       - run: git diff --exit-code -- packages/schemas
 
   golden-set:
-    # Placeholder until M2 lands the harness; becomes RELEASE-BLOCKING then (§5.5).
-    name: golden-set (placeholder — blocking from M2)
+    # RELEASE-BLOCKING (§5.5): parity gate arms on the first verified case;
+    # structure tests run on every case regardless of status.
+    name: golden-set (blocking)
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/astro
     steps:
       - uses: actions/checkout@v4
-      - run: echo "golden-set harness lands in M2; this job then runs pytest services/astro/tests/golden and FAILS under 99.9% parity on verified cases"
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+      - run: uv sync
+      - run: uv run pytest tests/golden tests/numerology -q -rs
+      # Prints all three parity tables and FAILS the build below any threshold:
+      # astrology ≥99.9%, numerology = 100%, panchang ≥99.9% (§5.5).
+      # Each suite is dormant until its first verified case, then arms itself.
+      - name: parity gate (§5.5)
+        run: uv run python -m sitara_astro.golden report --gate

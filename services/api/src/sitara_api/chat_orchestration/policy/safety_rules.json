@@ -1,0 +1,180 @@
+{
+  "review_status": "draft — awaiting §14 named native reviewer",
+  "$comment": "L1 pre-check rule lexicon (SPEC §9, diagram 13). Owned by the safety specialist (§16), reviewed per locale by the named native safety reviewer (§14). Patterns are case-insensitive Python regex matched against the user's turn. Scores are evidence, not verdicts: the pipeline takes max(rule, classifier) per category and compares against the thresholds in ChatSettings. This lexicon exists so a crisis is caught even when the classifier is unavailable — it is the fail-safe rung, deliberately high-recall.",
+  "rules": {
+    "en": [
+      {
+        "risk_class": "acute_crisis",
+        "score": 0.95,
+        "patterns": [
+          "\\b(kill|hurt|harm)\\s+myself\\b",
+          "\\b(end|ending)\\s+(my|this)\\s+life\\b",
+          "\\bdon'?t\\s+want\\s+to\\s+(live|be\\s+here)\\b",
+          "\\bsuicid(e|al)\\b",
+          "\\bno\\s+reason\\s+to\\s+(live|go\\s+on)\\b"
+        ]
+      },
+      {
+        "risk_class": "self_harm",
+        "score": 0.7,
+        "patterns": [
+          "\\bcutting\\s+myself\\b",
+          "\\bself[-\\s]?harm\\b",
+          "\\bhurting\\s+myself\\b"
+        ]
+      },
+      {
+        "risk_class": "emotional_distress",
+        "score": 0.6,
+        "patterns": [
+          "\\bcan'?t\\s+(cope|take\\s+(it|this)\\s+any\\s?more)\\b",
+          "\\b(hopeless|worthless|so\\s+alone)\\b",
+          "\\bbreaking\\s+down\\b",
+          "\\bcrying\\s+(all|every)\\s+(day|night)\\b"
+        ]
+      },
+      {
+        "risk_class": "medical",
+        "score": 0.7,
+        "patterns": [
+          "\\b(diagnos(is|ed|e)|symptom|tumou?r|cancer|pregnan(t|cy))\\b",
+          "\\b(should|shall)\\s+i\\s+(stop|start|take)\\s+.{0,20}(medicine|medication|tablets?|pills?|dose)\\b",
+          "\\bwill\\s+i\\s+(recover|survive|get\\s+better)\\b"
+        ]
+      },
+      {
+        "risk_class": "legal",
+        "score": 0.65,
+        "patterns": [
+          "\\b(lawsuit|court\\s+case|divorce\\s+(case|petition)|fir|bail|custody\\s+battle)\\b",
+          "\\bwill\\s+i\\s+win\\s+(the|my)\\s+case\\b"
+        ]
+      },
+      {
+        "risk_class": "financial_risk",
+        "score": 0.65,
+        "patterns": [
+          "\\b(should|shall)\\s+i\\s+(invest|buy|sell)\\b",
+          "\\b(stocks?|shares?|crypto|bitcoin|mutual\\s+funds?|trading)\\b",
+          "\\b(loan|debt|emi)\\s+.{0,15}(repay|default|settle)\\b"
+        ]
+      },
+      {
+        "risk_class": "minors",
+        "score": 0.8,
+        "patterns": [
+          "\\bi\\s+am\\s+(1[0-7]|[1-9])\\s+years?\\s+old\\b",
+          "\\bmy\\s+(son|daughter|child)\\s+is\\s+.{0,10}(depressed|self[-\\s]?harm)"
+        ]
+      },
+      {
+        "risk_class": "abuse",
+        "score": 0.85,
+        "patterns": [
+          "\\b(he|she|they)\\s+(hits?|beats?|hit|beat)\\s+me\\b",
+          "\\b(domestic\\s+(violence|abuse)|dowry\\s+harassment)\\b",
+          "\\bafraid\\s+(of|for)\\s+my\\s+(life|safety)\\b"
+        ]
+      }
+    ],
+    "hi": [
+      {
+        "risk_class": "acute_crisis",
+        "score": 0.95,
+        "patterns": [
+          "आत्महत्या",
+          "जीना\\s+नहीं\\s+चाहत",
+          "मर\\s+जाऊँ|मर\\s+जाना\\s+चाहत",
+          "अपनी\\s+जान\\s+ले"
+        ]
+      },
+      {
+        "risk_class": "self_harm",
+        "score": 0.7,
+        "patterns": ["खुद\\s+को\\s+(चोट|नुकसान)", "अपने\\s+आप\\s+को\\s+काट"]
+      },
+      {
+        "risk_class": "emotional_distress",
+        "score": 0.6,
+        "patterns": ["अब\\s+और\\s+नहीं\\s+सह", "बहुत\\s+अकेल", "निराश|हताश", "रोज़\\s+रोत"]
+      },
+      {
+        "risk_class": "medical",
+        "score": 0.7,
+        "patterns": ["बीमारी|कैंसर|गर्भवती|दवा\\s+(बंद|शुरू)", "ठीक\\s+हो\\s+जाऊँगा|ठीक\\s+हो\\s+जाऊँगी"]
+      },
+      {
+        "risk_class": "legal",
+        "score": 0.65,
+        "patterns": ["मुक़दमा|अदालत|तलाक़\\s+का\\s+केस|ज़मानत", "केस\\s+जीत"]
+      },
+      {
+        "risk_class": "financial_risk",
+        "score": 0.65,
+        "patterns": ["निवेश\\s+कर(ूँ|ना)", "शेयर|क्रिप्टो|म्यूचुअल\\s+फ़ंड", "क़र्ज़|लोन\\s+चुका"]
+      },
+      {
+        "risk_class": "minors",
+        "score": 0.8,
+        "patterns": ["मैं\\s+१?[०-९]\\s*साल\\s+का|मैं\\s+1?[0-9]\\s*साल\\s+क"]
+      },
+      {
+        "risk_class": "abuse",
+        "score": 0.85,
+        "patterns": ["मुझे\\s+मारत", "घरेलू\\s+हिंसा", "दहेज", "अपनी\\s+जान\\s+का\\s+डर"]
+      }
+    ],
+    "hi-Latn": [
+      {
+        "risk_class": "acute_crisis",
+        "score": 0.95,
+        "patterns": [
+          "\\batmahatya\\b",
+          "\\bjeena\\s+nahi(n)?\\s+chaht",
+          "\\bmar\\s+jaun\\b|\\bmar\\s+jana\\s+chaht",
+          "\\bapni\\s+jaan\\s+le"
+        ]
+      },
+      {
+        "risk_class": "self_harm",
+        "score": 0.7,
+        "patterns": ["\\bkhud\\s+ko\\s+(chot|nuksaan)", "\\bapne\\s+aap\\s+ko\\s+kaat"]
+      },
+      {
+        "risk_class": "emotional_distress",
+        "score": 0.6,
+        "patterns": [
+          "\\bab\\s+aur\\s+nahi(n)?\\s+seh",
+          "\\bbahut\\s+akel",
+          "\\bnirash|\\bhatash",
+          "\\broz\\s+rot"
+        ]
+      },
+      {
+        "risk_class": "medical",
+        "score": 0.7,
+        "patterns": ["\\bbimari\\b|\\bcancer\\b|\\bpregnant\\b", "\\bdawa\\s+(band|shuru)"]
+      },
+      {
+        "risk_class": "legal",
+        "score": 0.65,
+        "patterns": ["\\bmukadma\\b|\\badalat\\b|\\btalaq\\s+ka\\s+case\\b", "\\bcase\\s+jeet"]
+      },
+      {
+        "risk_class": "financial_risk",
+        "score": 0.65,
+        "patterns": ["\\binvest\\s+kar", "\\bshare\\b|\\bcrypto\\b|\\bmutual\\s+fund", "\\bloan\\s+chuka"]
+      },
+      {
+        "risk_class": "minors",
+        "score": 0.8,
+        "patterns": ["\\bmain\\s+1?[0-9]\\s*saal\\s+k"]
+      },
+      {
+        "risk_class": "abuse",
+        "score": 0.85,
+        "patterns": ["\\bmujhe\\s+maart", "\\bghareloo\\s+hinsa\\b", "\\bdahej\\b", "\\bjaan\\s+ka\\s+dar\\b"]
+      }
+    ]
+  }
+}

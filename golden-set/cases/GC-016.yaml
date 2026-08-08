@@ -1,0 +1,91 @@
+schema_version: 2
+case_id: GC-016
+category: historical_tz
+status: pending          # ONLY `golden verify` (a named human) may set this
+source: null
+verified_by: null
+verified_on: null
+notes: "British Standard Time 1968-1971: UK on +01:00 in winter."
+input:
+  date: "1970-01-15"
+  time: "08:00:00"
+  time_accuracy: exact
+  fold: null
+  place: "London, UK"
+  lat: 51.5074
+  lon: -0.1278
+  tz: "Europe/London"
+  options:
+    ayanamsa: lahiri
+    node_type: mean
+    bhava_system: sripati
+    dasha_year: days_365_25
+    gap_policy: shift_forward
+  transit_date_utc: null
+tz_expected:             # derived from IANA tzdb — asserted every run, not astrology
+  utc_offset: "+01:00"
+  gap_shifted_minutes: 0
+  ambiguous: false
+expected:                # fill ONLY from JHora/Drik per golden-set/cases/README.md
+  grahas:
+    sun:
+      longitude_deg: NEEDS_VERIFICATION
+      rashi: NEEDS_VERIFICATION
+      nakshatra: NEEDS_VERIFICATION
+      pada: NEEDS_VERIFICATION
+    moon:
+      longitude_deg: NEEDS_VERIFICATION
+      rashi: NEEDS_VERIFICATION
+      nakshatra: NEEDS_VERIFICATION
+      pada: NEEDS_VERIFICATION
+    mars:
+      longitude_deg: NEEDS_VERIFICATION
+      rashi: NEEDS_VERIFICATION
+      nakshatra: NEEDS_VERIFICATION
+      pada: NEEDS_VERIFICATION
+    mercury:
+      longitude_deg: NEEDS_VERIFICATION
+      rashi: NEEDS_VERIFICATION
+      nakshatra: NEEDS_VERIFICATION
+      pada: NEEDS_VERIFICATION
+    jupiter:
+      longitude_deg: NEEDS_VERIFICATION
+      rashi: NEEDS_VERIFICATION
+      nakshatra: NEEDS_VERIFICATION
+      pada: NEEDS_VERIFICATION
+    venus:
+      longitude_deg: NEEDS_VERIFICATION
+      rashi: NEEDS_VERIFICATION
+      nakshatra: NEEDS_VERIFICATION
+      pada: NEEDS_VERIFICATION
+    saturn:
+      longitude_deg: NEEDS_VERIFICATION
+      rashi: NEEDS_VERIFICATION
+      nakshatra: NEEDS_VERIFICATION
+      pada: NEEDS_VERIFICATION
+    rahu:
+      longitude_deg: NEEDS_VERIFICATION
+      rashi: NEEDS_VERIFICATION
+      nakshatra: NEEDS_VERIFICATION
+      pada: NEEDS_VERIFICATION
+    ketu:
+      longitude_deg: NEEDS_VERIFICATION
+      rashi: NEEDS_VERIFICATION
+      nakshatra: NEEDS_VERIFICATION
+      pada: NEEDS_VERIFICATION
+  lagna:
+    longitude_deg: NEEDS_VERIFICATION
+    rashi: NEEDS_VERIFICATION
+  dasha:
+    maha_at_birth:
+      lord: NEEDS_VERIFICATION
+      start: NEEDS_VERIFICATION
+      end: NEEDS_VERIFICATION
+    antar_at_birth:
+      lord: NEEDS_VERIFICATION
+      start: NEEDS_VERIFICATION
+      end: NEEDS_VERIFICATION
+  boundaries:
+    moon_nakshatra_end_utc: NEEDS_VERIFICATION
+    tithi_end_utc: NEEDS_VERIFICATION
+  transit: null

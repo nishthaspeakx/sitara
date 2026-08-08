@@ -8,7 +8,7 @@
 
 | What | Where |
 |---|---|
-| **The spec (law)** — Canonical Specification, FROZEN **v3.4** | [`docs/spec/SPEC.md`](docs/spec/SPEC.md) + [`docs/spec/diagrams/`](docs/spec/diagrams/) |
+| **The spec (law)** — Canonical Specification, FROZEN **v3.5** | [`docs/spec/SPEC.md`](docs/spec/SPEC.md) + [`docs/spec/diagrams/`](docs/spec/diagrams/) |
 | **The build plan (how)** — milestone-by-milestone | [`CLAUDE_CODE_PLAYBOOK.md`](CLAUDE_CODE_PLAYBOOK.md) |
 | **Non-negotiables** — carried into every session | [`CLAUDE.md`](CLAUDE.md) |
 | **Program decision trail** — research, board pack, competitive, blueprint, superseded specs | [`archive/`](archive/) |

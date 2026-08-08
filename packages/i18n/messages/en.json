@@ -54,9 +54,52 @@
       "step_up_required": "For your safety, please verify it's you before linking.",
       "no_pending_conflict": "There's nothing to resolve right now."
     },
+    "astro": {
+      "insufficient_birth_data": "I don't have enough information to calculate this accurately — shall we complete it?",
+      "place_unresolved": "We couldn't confirm the timezone for that birth place. Please check the place details and try again.",
+      "engine_unavailable": "Calculations are briefly unavailable. Please try again in a moment.",
+      "provider_disputed": "Our sources don't fully agree on this detail right now, so we're double-checking rather than guessing.",
+      "name_unconfirmed": "Please confirm how your name is spelled before we calculate your numbers.",
+      "name_invalid": "That name has characters we can't read as a name. Please check it and try again.",
+      "no_sunrise_at_location": "I can't work out sunrise for that place on that date, so I can't give you accurate timings there."
+    },
     "sys": {
       "validation": "Something in the request wasn't right. Please try again.",
-      "internal": "Something went wrong on our side. Please try again in a moment."
+      "internal": "Something went wrong on our side. Please try again in a moment.",
+      "unavailable": "Tara will be right back — please try again in a moment."
+    }
+  },
+  "numerology": {
+    "transliteration": {
+      "confirm": "We read your name as ‘{name}’ — correct?"
+    }
+  },
+  "panchang": {
+    "sources": {
+      "verified_two": "Verified against 2 independent sources",
+      "single": "From one source today",
+      "internal": "Calculated by our own engine"
+    },
+    "disputed_note": "Our sources differ slightly on this timing, so I'm keeping it general.",
+    "place_label": "Timings for {city}"
+  },
+  "chat": {
+    "fallback": {
+      "safe_line": "I'm not confident enough in that answer to give it to you, so I'd rather not guess. Someone on our side will look at it. Ask me something else meanwhile — I'm here."
+    },
+    "safety": {
+      "crisis": "Thank you for telling me. I'm not the right kind of help for this, and I don't want you to be alone with it. There are people trained for exactly this moment, and I can take you to them right now — tap Get support. I'm staying here with you."
+    },
+    "data": {
+      "cannot_calculate": "I don't have enough to work this out accurately, and I won't guess at it. Shall we fill in what's missing?",
+      "missing": {
+        "birth_date": "I'd need your date of birth for this one. Shall we add it to your profile?",
+        "birth_place": "I'd need your birth place for this — the city is enough. Shall we add it?",
+        "current_location": "Timings change with where you are. Which city should I use?"
+      }
+    },
+    "budget": {
+      "daily_soft_cap": "We've talked a lot today — I'll keep going, just a little more briefly."
     }
   }
 }

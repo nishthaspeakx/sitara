@@ -1,0 +1,24 @@
+schema_version: 1
+case_id: NC-009
+category: cross_script
+status: pending          # ONLY `golden verify` (a named human) may set this
+source: null
+verified_by: null
+verified_on: null
+notes: "Two-word name; spaces must not change the sum."
+input:
+  name_as_entered: "राम कुमार"
+  script: devanagari
+  confirmed_latin: "Rama Kumara"
+  name_source: confirmed_transliteration
+  dob: "1965-12-01"
+  master_numbers: reduce
+expected:                # hand-computed from the published tables — §5.5 needs 100%
+  moolank: NEEDS_VERIFICATION
+  bhagyank: NEEDS_VERIFICATION
+  chaldean_name_number: NEEDS_VERIFICATION
+  chaldean_compound: NEEDS_VERIFICATION
+  pythagorean_name_number: NEEDS_VERIFICATION
+  pythagorean_compound: NEEDS_VERIFICATION
+  iso15919: NEEDS_VERIFICATION
+  suggested_latin: NEEDS_VERIFICATION

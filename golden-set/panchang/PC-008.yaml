@@ -1,0 +1,56 @@
+schema_version: 1
+case_id: PC-008
+category: amanta_purnimanta_split
+status: pending          # ONLY `golden verify` (a named human) may set this
+source: null
+verified_by: null
+verified_on: null
+notes: "§5.2 Layer C names 'regional calendar splits like amanta/purnimanta'. Full-moon date: the two traditions name different months for the same day."
+scope: panchang          # Layer-A astronomy + the Layer-B fallback rule tables
+input:
+  local_date: "2026-08-28"
+  place: "Varanasi"
+  lat: 25.3176
+  lon: 82.9739
+  tz: "Asia/Kolkata"
+  tradition: purnimanta
+  options:
+    ayanamsa: lahiri
+    node_type: mean
+    rise_set: upper_limb_refracted
+tz_expected:             # derived from IANA tzdb — asserted every run, not astrology
+  utc_offset: NEEDS_VERIFICATION
+  ambiguous: false
+expected:                # fill ONLY from Drik Panchang / JHora per cases/README.md
+  # --- deterministic astronomy: Layer A is authoritative (§32.2, decision D1)
+  sun:
+    sunrise_local: NEEDS_VERIFICATION
+    sunset_local: NEEDS_VERIFICATION
+    solar_noon_local: NEEDS_VERIFICATION
+  tithi:
+    index_at_sunrise: NEEDS_VERIFICATION      # 1-30; 1-15 shukla, 16-30 krishna
+    paksha: NEEDS_VERIFICATION
+    starts_local: NEEDS_VERIFICATION
+    ends_local: NEEDS_VERIFICATION
+  nakshatra:
+    name_at_sunrise: NEEDS_VERIFICATION
+    starts_local: NEEDS_VERIFICATION
+    ends_local: NEEDS_VERIFICATION
+  # --- tradition RULE TABLES: DivineAPI is primary for the served value; these
+  # verify our §8 fallback rung, and the tables themselves need Jyotish sign-off.
+  day_timings:
+    rahu_kaal:
+      starts_local: NEEDS_VERIFICATION
+      ends_local: NEEDS_VERIFICATION
+    yamaganda:
+      starts_local: NEEDS_VERIFICATION
+      ends_local: NEEDS_VERIFICATION
+    gulikai:
+      starts_local: NEEDS_VERIFICATION
+      ends_local: NEEDS_VERIFICATION
+    abhijit:
+      starts_local: NEEDS_VERIFICATION
+      ends_local: NEEDS_VERIFICATION
+  choghadiya:
+    first_day_part: NEEDS_VERIFICATION        # e.g. kaal, shubh, rog…
+    first_night_part: NEEDS_VERIFICATION

@@ -1,0 +1,115 @@
+{
+  "_recording": {
+    "status": "provisional",
+    "recorded_at": null,
+    "note": "PROVISIONAL \u2014 shape written from vendor documentation, NOT recorded from a live API. The live paths under DIVINEAPI_BASE_URL returned 404 for every guessed path, so the correct endpoints must come from the DivineAPI dashboard (they are env-overridable: DIVINEAPI_PATH_*). Values are aligned to the same day and place as the RECORDED Prokerala fixtures so the cross-vendor agreement tests represent a normal day. Run `python -m sitara_api.panchang.record --provider divineapi` once the paths are known.",
+    "request": {
+      "method": "POST",
+      "path": "/indian-api/v1/choghadiya"
+    }
+  },
+  "status_code": 200,
+  "body": {
+    "success": true,
+    "data": {
+      "rahu_kaal": {
+        "start": "2026-01-01 14:03:34",
+        "end": "2026-01-01 15:25:09"
+      },
+      "yamaganda": {
+        "start": "2026-01-01 07:15:38",
+        "end": "2026-01-01 08:37:13"
+      },
+      "gulikai": {
+        "start": "2026-01-01 09:58:48",
+        "end": "2026-01-01 11:20:23"
+      },
+      "choghadiya": {
+        "day": [
+          {
+            "name": "shubh",
+            "start": "2026-01-01 07:15:38",
+            "end": "2026-01-01 08:37:13"
+          },
+          {
+            "name": "rog",
+            "start": "2026-01-01 08:37:13",
+            "end": "2026-01-01 09:58:48"
+          },
+          {
+            "name": "udveg",
+            "start": "2026-01-01 09:58:48",
+            "end": "2026-01-01 11:20:23"
+          },
+          {
+            "name": "char",
+            "start": "2026-01-01 11:20:23",
+            "end": "2026-01-01 12:41:59"
+          },
+          {
+            "name": "labh",
+            "start": "2026-01-01 12:41:59",
+            "end": "2026-01-01 14:03:34"
+          },
+          {
+            "name": "amrit",
+            "start": "2026-01-01 14:03:34",
+            "end": "2026-01-01 15:25:09"
+          },
+          {
+            "name": "kaal",
+            "start": "2026-01-01 15:25:09",
+            "end": "2026-01-01 16:46:44"
+          },
+          {
+            "name": "shubh",
+            "start": "2026-01-01 16:46:44",
+            "end": "2026-01-01 18:08:20"
+          }
+        ],
+        "night": [
+          {
+            "name": "amrit",
+            "start": "2026-01-01 18:08:20",
+            "end": "2026-01-01 19:46:48"
+          },
+          {
+            "name": "char",
+            "start": "2026-01-01 19:46:48",
+            "end": "2026-01-01 21:25:16"
+          },
+          {
+            "name": "rog",
+            "start": "2026-01-01 21:25:16",
+            "end": "2026-01-01 23:03:44"
+          },
+          {
+            "name": "kaal",
+            "start": "2026-01-01 23:03:44",
+            "end": "2026-01-02 00:42:12"
+          },
+          {
+            "name": "labh",
+            "start": "2026-01-02 00:42:12",
+            "end": "2026-01-02 02:20:40"
+          },
+          {
+            "name": "udveg",
+            "start": "2026-01-02 02:20:40",
+            "end": "2026-01-02 03:59:08"
+          },
+          {
+            "name": "shubh",
+            "start": "2026-01-02 03:59:08",
+            "end": "2026-01-02 05:37:36"
+          },
+          {
+            "name": "amrit",
+            "start": "2026-01-02 05:37:36",
+            "end": "2026-01-02 07:16:05"
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "_recording": {
+    "status": "provisional",
+    "recorded_at": null,
+    "note": "PROVISIONAL \u2014 shape written from vendor documentation, NOT recorded from a live API. The live paths under DIVINEAPI_BASE_URL returned 404 for every guessed path, so the correct endpoints must come from the DivineAPI dashboard (they are env-overridable: DIVINEAPI_PATH_*). Values are aligned to the same day and place as the RECORDED Prokerala fixtures so the cross-vendor agreement tests represent a normal day. Run `python -m sitara_api.panchang.record --provider divineapi` once the paths are known.",
+    "request": {
+      "method": "POST",
+      "path": "/indian-api/v1/panchang"
+    }
+  },
+  "status_code": 200,
+  "body": {
+    "success": true,
+    "data": {
+      "sunrise": "2026-01-01 07:15:38",
+      "sunset": "2026-01-01 18:08:20",
+      "tithi": {
+        "number": 13,
+        "name": "Trayodashi",
+        "paksha": "Shukla",
+        "start": "2026-01-01 01:48:00",
+        "end": "2026-01-01 22:22:00"
+      },
+      "nakshatra": {
+        "number": 4,
+        "name": "Rohini",
+        "start": "2026-01-01 01:30:30",
+        "end": "2026-01-01 22:48:00"
+      }
+    }
+  }
+}

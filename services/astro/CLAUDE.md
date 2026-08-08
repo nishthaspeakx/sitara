@@ -8,6 +8,11 @@ Deterministic pyswisseph engine (Lahiri ayanamsa; whole-sign presented, bhava co
 - Tests FIRST; golden-set parity (§5.5: positions ≤1 arc-min, boundaries ≤2 min, dasha ≤1 day) is release-blocking CI at ≥99.9% on verified cases. Expected values come from JHora/Drik/Jyotish lead — never from an LLM.
 - Fact-IDs are logical keys; artefacts embed full snapshots at generation (§34.2). No facts collection.
 
+## Engine defaults (M2, reviewer-adjudicable via EngineOptions; always recorded in FactSnapshot.method)
+- Rahu/Ketu: MEAN node (Ketu = Rahu+180°) · Bhava: SRIPATI (Porphyry cusps as madhya, sandhi at midpoints; whole-sign stays the presented system) · Vimshottari year: 365.25 days · DST gaps: shift_forward with gap_shifted_minutes recorded; folds: fold=0 default with ambiguous flagged (drives §5.4 confidence downgrade).
+- Ephemeris: Swiss data files in data/swisseph (auto-detected); Moshier fallback recorded in data_revision. All swe.* calls live in engine/ephemeris.py under one lock; endpoints are sync `def`.
+- Golden cases: an AI or engineer NEVER sets `status: verified` — only the Jyotish lead's sign-off (golden-set/cases/README.md runbook).
+
 ## Commands
 - Run: `uv run uvicorn sitara_astro.main:app --port 8003 --reload`
 - Test: `uv run pytest -q` · Golden set (from M2): `/golden`

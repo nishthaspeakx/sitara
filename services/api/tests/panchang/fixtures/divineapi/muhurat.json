@@ -1,0 +1,27 @@
+{
+  "_recording": {
+    "status": "provisional",
+    "recorded_at": null,
+    "note": "PROVISIONAL \u2014 shape written from vendor documentation, NOT recorded from a live API. The live paths under DIVINEAPI_BASE_URL returned 404 for every guessed path, so the correct endpoints must come from the DivineAPI dashboard (they are env-overridable: DIVINEAPI_PATH_*). Values are aligned to the same day and place as the RECORDED Prokerala fixtures so the cross-vendor agreement tests represent a normal day. Run `python -m sitara_api.panchang.record --provider divineapi` once the paths are known.",
+    "request": {
+      "method": "POST",
+      "path": "/indian-api/v1/muhurat"
+    }
+  },
+  "status_code": 200,
+  "body": {
+    "success": true,
+    "data": {
+      "muhurat": [
+        {
+          "start": "2026-01-01 12:09:35",
+          "end": "2026-01-01 12:50:57"
+        },
+        {
+          "start": "2026-01-01 19:58:04",
+          "end": "2026-01-01 21:23:17"
+        }
+      ]
+    }
+  }
+}

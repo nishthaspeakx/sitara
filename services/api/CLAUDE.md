@@ -7,6 +7,49 @@ Bounded-context modules in one process (auth, users/profiles, localisation, astr
 - LLM never computes astrology — facts come from the astrology facade over sitara-astro (§5.3).
 - All strings via i18n keys; idempotency keys on all mutation endpoints; no secrets/PII in logs (§13).
 
+## panchang module (M3, §5.2 Layer B/D) — invariants that must not regress
+- **No majority vote anywhere.** §32.2 replaced §5.2 Layer D's "majority source" with an authority rule. `adjudicate.py` is pure and vote-free; a test parses its AST to keep it that way.
+- **Layer A is never outvoted** on deterministic astronomy (boundary instants, sunrise/sunset) — vendor disagreement raises a review flag, never `disputed`. When Layer A cannot answer, §32.2's DivineAPI-primary rule takes over (`FactClass.PANCHANG_ASTRONOMY`).
+- **Prokerala is never persisted** — ToS. `PanchangCache.put` raises on it; Layer-A fallbacks are recomputed, not stored. So exactly one provider occupies a panchang row and §6.4's uniq index holds.
+- **Cache keys are global** (`sitara_schemas.cache_keys`, §7.2) — a user id in one would fan a person's data across everyone sharing the row.
+- **Provider shapes: Prokerala VERIFIED (live sandbox, 2026-01-01), DivineAPI still unverified** — its real endpoint paths are unknown (every guess 404s) and are env-overridable via `DIVINEAPI_PATH_*`. See `tests/panchang/fixtures/README.md`; the skipping provenance test is the honest marker — do not delete it.
+- **Prokerala quirks are load-bearing:** krishna-first tithi ids (rotate 15), 0-based nakshatra ids, `index` always 0, offset-bearing `datetime` required, and NO typed muhurat finder (a typed query is declined, never faked).
+- CI never calls a vendor: `test_no_live_network.py` blocks DNS + connect for non-loopback.
+
 ## Commands
 - Run: `uv run uvicorn sitara_api.main:app --port 8001 --reload`
 - Test: `uv run pytest -q` · Lint: `uv run ruff check .` · Types: `uv run pyright`
+
+## db module (M4, §6.4) — invariants that must not regress
+- **`db/registry.py` is the only declaration of database shape.** `ensure_schema`, `verify`, `csfle` and the migration runner all read it. Never create a collection or index anywhere else.
+- **`tests/db/test_registry_matches_spec.py` parses §6.4 out of `docs/spec/SPEC.md`** and fails on any divergence — retention, shard key, encryption marks, index list. Edit the spec or the registry and the other must follow. Do not weaken this test.
+- **Every index beyond §6.4's cell carries a `cite`;** every collection outside the table cites the section that mandates it (§22.5, §25.7, §14-deploy). Undeclared = drift = `verify` exits 1.
+- **TTL indexes exist only where §6.4 says "TTL"** (panchang_cache 90d, transit_cache 400d, notifications 180d, story_views 90d per §25.7). Prose retention ("8 years (tax)", "7 years, append-only") is a job's problem — a TTL index there deletes records the spec says to keep, and `verify` fails on it. See §36.2.
+- **`transit_cache` uniq is `(date, band, engine_semver)`** — §6.4's `(date, band)` extended per §7.2's key grammar; recorded as §36.1, and a test keeps the extension sourced.
+- **CSFLE is explicit, never automatic** (automatic is Atlas/Enterprise-only; dev is Community). Local KMS refuses outside dev/test; deterministic only for the §33.2 contact replicas. `memories.embedding` stays in the clear — you cannot vector-search ciphertext.
+- **`voice_sessions` and `call_sessions` structurally reject any audio field** (§13/§33.1). The validator does it, not a convention.
+- **Seeds are synthetic only** (§22.12): `@example.invalid` emails, +9199999 phones, `synthetic: true` on every doc; the seeder refuses a non-dev environment or a non-local host.
+- Every document carries `created_at`/`updated_at`/`schema_v` — use `db.documents.stamp()`, the validators enforce it.
+
+## chat_orchestration module (M5, §9) — invariants that must not regress
+- **The stage order in `pipeline.py` IS §9's mandatory pipeline.** `Stage` names every step; `test_stage_order_is_the_spec_order` reads the trace and asserts the sequence. Adding a stage means editing the spec first.
+- **Cite-or-die is mechanical, not prompted.** `grounding.py` rejects (a) an uncited astrological claim, (b) a `[[fact:…]]` id absent from the served payload, (c) a number not in the cited snapshot. The claim lexicon is derived from the `sitara_schemas` enums plus `policy/claim_terms.json`; **strong vs weak matters** — a weak term needs a number beside it, or Tara could never say "I don't have your birth chart yet" without failing her own validator.
+- **Exactly ONE corrective regeneration**, then the safe fallback line + `safety_events` review row (§9, §2.4 rule 8). `ChatSettings` raises if anyone sets it to anything but 1.
+- **L4 never reaches the model** (§22.9) — templated, instant, machine-delivered, queued for human oversight. L2+ removes astrology *at routing*, so no fact tool is even called.
+- **The §22.8 allowlist is applied in code** after the router speaks (`TOOL_ALLOWLIST`), never by asking the model nicely.
+- **A tool that cannot answer declines** (`FactToolUnavailable`) and the turn goes to a template. Granted tools returning nothing → `chat.data.cannot_calculate`; handing the model an empty payload plus a chart question is the shape of a fabrication.
+- **The trace records shapes, not content** (§13): `TurnTrace` hashes text unless `trace_capture_content`, which `build_tracer` refuses outside dev/test. Langfuse-shaped events go through a `TraceSink`.
+- **System blocks are the cached prefix** (§9): persona → citation contract → locale style guide, most-stable first. Nothing per-turn above the breakpoint, or every user's cache dies every turn. Bump `prompts.PROMPT_VERSION` on any edit.
+- **A blank `ANTHROPIC_API_KEY` is "provider down", not a boot failure** — `build_pipeline` returns None and `/v1/chat/turn` serves the §34.4 `SYS_UNAVAILABLE` envelope.
+- **Identifiers become ObjectIds at the store boundary, nowhere else.** §6.4 types `messages.conversation_id`, `guidance_logs.user_id` and `guidance_logs.message_id` as `objectId`; the pipeline carries §33.2's product identity as a string. `store.to_object_id` is the single conversion and refuses a non-`_id` loudly. **`tests/chat/test_store_mongo.py` writes through the real §6.4 validators** — it exists because the in-memory fake once accepted strings the real collection rejected, so the whole suite was green while every real write failed. Do not delete it, and keep `InMemoryMessageStore` minting real ObjectIds.
+- **An outage is not a safety event.** A provider failure serves the fallback line and does NOT queue a human (§8 degradation); only a validator double-failure or an L4 writes `safety_events` (§22.9's 24h SLA). `safety_events.classifier_scores` carries the real L1 labels plus the trigger, CSFLE-encrypted under the `safety` key class.
+- **The cache breakpoint goes after the last STABLE system block**, never simply on the last one — `LLMRequest.cacheable_prefix_len` carries it. Below the breakpoint sits the per-turn safety register; inside it, every L2+ turn would be a cache write instead of a read.
+- **The service renders §9's safety and decline strings itself**, so `packages/i18n/messages` ships in the image and `localisation.verify_catalogs` refuses to boot without them. Discovering a missing catalog when an L4 turn needs the crisis line is the one failure mode worth a startup crash.
+- **The claim lexicon's word boundaries are load-bearing** in both validators: "Tara" inside "tarah" (everyday Hinglish) once failed ordinary replies and burned the single regeneration.
+- **Open §31.3 item — CLOSED as §37 (CC-004):** §9's sampling control is capability-relative. The pipeline declares 0.2/0.7; `llm.py` applies them where the pinned model accepts them and records `temperature_declared` + a trace note where it cannot. Do not quietly delete the declaration.
+- **Release gates:** `uv run python -m sitara_api.release_gates` reports the human-closed §31.7 gates (helpline table, both safety corpora). `/shipcheck` runs it; three are open and block closed beta.
+
+## Commands (M4)
+- Build/repair schema: `uv run python -m sitara_api.db.migrate --phase expand`
+- Seed dev data: `uv run python -m sitara_api.db.seed --wipe`
+- **Verify against §6.4: `uv run python -m sitara_api.db.verify`** (exit 1 on drift)
