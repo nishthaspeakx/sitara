@@ -35,12 +35,14 @@ from tests.panchang.replay import (
 
 pytestmark = pytest.mark.asyncio
 
-ON = dt.date(2026, 8, 8)
+# The date the Prokerala fixtures were RECORDED on: a sandbox account rejects
+# every other date (error 1004), and the fixtures pin the shape, not the day.
+ON = dt.date(2026, 1, 1)
 QUERY = PanchangQuery(local_date=ON, place=MUMBAI, tradition=Tradition.AMANTA)
 MUHURAT_QUERY = MuhuratQuery(
     muhurat_type=MuhuratType.MARRIAGE,
-    date_from=dt.date(2026, 11, 15),
-    date_to=dt.date(2026, 11, 30),
+    date_from=dt.date(2026, 1, 1),
+    date_to=dt.date(2026, 1, 1),
     place=JAIPUR,
 )
 
@@ -76,15 +78,17 @@ class TestDivineApiNormalisation:
         result = await divineapi().panchang(QUERY)
         assert isinstance(result, NormalisedPanchang)
         assert result.provider is ProviderName.DIVINEAPI
-        assert result.tithi.index == 10
+        # Shukla Trayodashi / Rohini on 2026-01-01, matching the recorded
+        # Prokerala answer and our own engine.
+        assert result.tithi.index == 13
         assert result.nakshatra.index == 4
 
     async def test_local_wall_clock_is_converted_to_utc(self) -> None:
-        """The fixture says 06:17:29 with no offset. That is Mumbai local time;
-        06:17 IST is 00:47 UTC. Getting this wrong is the §5.3 wrong-timezone
-        bug, and no vendor is trusted to do it for us (§5.2)."""
+        """The fixture says 07:15:38 with no offset. That is Mumbai local time;
+        07:15:38 IST is 01:45:38 UTC. Getting this wrong is the §5.3
+        wrong-timezone bug, and no vendor is trusted to do it for us (§5.2)."""
         result = await divineapi().panchang(QUERY)
-        assert result.sunrise_utc == dt.datetime(2026, 8, 8, 0, 47, 29, tzinfo=dt.UTC)
+        assert result.sunrise_utc == dt.datetime(2026, 1, 1, 1, 45, 38, tzinfo=dt.UTC)
 
     async def test_day_timings(self) -> None:
         result = await divineapi().day_timings(QUERY)
@@ -119,7 +123,7 @@ class TestProkeralaNormalisation:
 
     async def test_offset_bearing_timestamps_are_trusted(self) -> None:
         result = await prokerala().panchang(QUERY)
-        assert result.sunrise_utc == dt.datetime(2026, 8, 8, 0, 47, 34, tzinfo=dt.UTC)
+        assert result.sunrise_utc == dt.datetime(2026, 1, 1, 1, 45, 38, tzinfo=dt.UTC)
 
     async def test_token_is_fetched_once_and_reused(self) -> None:
         """Re-authenticating per call would spend the Ruby tier's request
@@ -139,14 +143,55 @@ class TestProkeralaNormalisation:
         await provider.panchang(QUERY)
         assert calls.count("/token") == 1
 
-    async def test_day_timings(self) -> None:
+    async def test_day_timings_are_choghadiya_not_bands(self) -> None:
+        """RECORDED behaviour: Prokerala's choghadiya endpoint returns sixteen
+        choghadiya parts and NO rahu-kaal/yamaganda/gulikai bands. Those bands
+        therefore have no cross-check from this vendor, and the Layer-D job
+        compares what exists rather than inventing what does not (§5.3)."""
         result = await prokerala().day_timings(QUERY)
-        kinds = {w.timing for w in result.windows}
-        assert kinds == {
-            DayTimingKind.RAHU_KAAL,
-            DayTimingKind.YAMAGANDA,
-            DayTimingKind.GULIKAI,
-        }
+        kinds = [w.timing for w in result.windows]
+        assert kinds.count(DayTimingKind.CHOGHADIYA_DAY) == 8
+        assert kinds.count(DayTimingKind.CHOGHADIYA_NIGHT) == 8
+        assert DayTimingKind.RAHU_KAAL not in kinds
+
+    async def test_recorded_choghadiya_matches_our_own_rule_table(self) -> None:
+        """2026-01-01 is a Thursday. Our engine's tables and Prokerala's live
+        answer agree on both sequences — independent corroboration of the
+        tradition tables in services/astro (§5.2 Layer C)."""
+        result = await prokerala().day_timings(QUERY)
+        def names(kind: DayTimingKind) -> list[str]:
+            out = []
+            for window in result.windows:
+                if window.timing is kind:
+                    assert window.choghadiya is not None  # enforced by the model
+                    out.append(window.choghadiya.value)
+            return out
+
+        day, night = names(DayTimingKind.CHOGHADIYA_DAY), names(DayTimingKind.CHOGHADIYA_NIGHT)
+        assert day == ["shubh", "rog", "udveg", "char", "labh", "amrit", "kaal", "shubh"]
+        assert night == ["amrit", "char", "rog", "kaal", "labh", "udveg", "shubh", "amrit"]
+
+    async def test_typed_muhurat_is_declined_not_faked(self) -> None:
+        """RECORDED: Prokerala has no typed muhurat finder — the endpoint
+        ignores `type` and returns generic auspicious periods. Returning Brahma
+        Muhurat to someone asking about a wedding would be a fabricated fact
+        wearing the right label (§5.3, §5.2's provider table)."""
+        from sitara_schemas.facts import MuhuratType as MT
+
+        typed = MuhuratQuery(
+            muhurat_type=MT.MARRIAGE,
+            date_from=ON, date_to=ON, place=JAIPUR,
+        )
+        with pytest.raises(ProviderUnavailable, match="no typed muhurat finder"):
+            await prokerala().muhurat(typed)
+
+    async def test_generic_muhurat_flattens_period_lists(self) -> None:
+        generic = MuhuratQuery(
+            muhurat_type=MuhuratType.GENERAL, date_from=ON, date_to=ON, place=JAIPUR
+        )
+        result = await prokerala().muhurat(generic)
+        assert len(result.windows) >= 3  # abhijit, amrit kaal, brahma muhurat
+        assert all(w.ends_utc > w.starts_utc for w in result.windows)
 
 
 class TestCrossVendorAgreement:

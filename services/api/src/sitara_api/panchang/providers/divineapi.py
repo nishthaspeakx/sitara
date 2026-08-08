@@ -72,11 +72,16 @@ class DivineApiProvider:
         self._auth_token = auth_token
         self._paths = {**DEFAULT_PATHS, **(paths or {})}
 
-    def _credentials(self) -> tuple[str, str]:
-        if not self._api_key or not self._auth_token:
-            # Missing key behaves exactly like an outage so the §8 ladder runs
-            # (this is the playbook's kill-the-key acceptance).
-            raise ProviderMisconfigured(self.name, "DIVINEAPI_API_KEY/AUTH_TOKEN not configured")
+    def _credentials(self) -> tuple[str, str | None]:
+        """The api_key is required; the bearer token is not.
+
+        Some DivineAPI tiers authenticate with the key alone in the request
+        body, so we send the Authorization header only when a token exists
+        rather than refusing to call. A missing api_key behaves exactly like an
+        outage, so the §8 ladder runs (the playbook's kill-the-key acceptance).
+        """
+        if not self._api_key:
+            raise ProviderMisconfigured(self.name, "DIVINE_API_KEY not configured")
         return self._api_key, self._auth_token
 
     async def _call(self, path_key: str, query: PanchangQuery | MuhuratQuery, **extra):  # noqa: ANN003, ANN202
@@ -90,11 +95,9 @@ class DivineApiProvider:
             "lang": "en",  # facts only; all user-facing copy is ours (§2.4)
             **extra,
         }
+        headers = {"Authorization": f"Bearer {auth_token}"} if auth_token else {}
         return await self._client.request(
-            "POST",
-            self._paths[path_key],
-            data=body,
-            headers={"Authorization": f"Bearer {auth_token}"},
+            "POST", self._paths[path_key], data=body, headers=headers
         )
 
     async def panchang(self, query: PanchangQuery) -> NormalisedPanchang:

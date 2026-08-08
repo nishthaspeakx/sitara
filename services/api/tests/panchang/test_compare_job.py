@@ -24,7 +24,7 @@ from tests.panchang.test_degradation import FakeAstro, layer_a_facts
 
 pytestmark = pytest.mark.asyncio
 
-ON = dt.date(2026, 8, 8)
+ON = dt.date(2026, 1, 1)  # the date the Prokerala fixtures were recorded on
 ITEM = SampleItem(local_date=ON, place=MUMBAI, tradition=Tradition.AMANTA)
 
 
@@ -100,9 +100,10 @@ class TestVendorDisagreement:
         assert record is not None
         assert record["status"] == "pending"
         assert record["served_source"] == "divineapi"
-        # The fixtures already sit 60 s apart (a normal day), so a +30 min skew
-        # is a 1860 s gap. The recorded delta is what the reviewer sees.
-        assert record["delta_seconds"] == pytest.approx(1860, abs=1)
+        # The two fixtures already sit 45 s apart on the tithi end (a normal
+        # day, both within tolerance), so a +30 min skew is a 1845 s gap. The
+        # recorded delta is what the reviewer sees.
+        assert record["delta_seconds"] == pytest.approx(1845, abs=1)
         assert record["tolerance_seconds"] == 120
 
     async def test_the_disputed_row_is_flagged_but_still_served(self, cache, db) -> None:  # noqa: ANN001

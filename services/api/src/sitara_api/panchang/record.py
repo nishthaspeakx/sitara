@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any
 
 import httpx
+from sitara_schemas.facts import MuhuratType
 
 from sitara_api.config import Settings
 from sitara_api.panchang.providers.base import (
@@ -40,12 +41,18 @@ FIXTURE_ROOT = (
 )
 
 # Public, unremarkable inputs — a city and a date, nothing user-derived.
+#
+# SANDBOX CONSTRAINT: a Prokerala sandbox account rejects any date but January
+# 1st ("In sandbox mode, only January 1st is allowed — any time and any year is
+# accepted", error 1004). The fixtures exist to pin the response SHAPE and our
+# parse of it, and a January date does that just as well as any other — so the
+# default sits on Jan 1 and `--date` overrides it once production keys land.
 SAMPLE_PLACE = ResolvedPlace(label="Mumbai", lat=19.076, lon=72.8777, tz="Asia/Kolkata")
 SAMPLE_MUHURAT_PLACE = ResolvedPlace(
     label="Jaipur", lat=26.9124, lon=75.7873, tz="Asia/Kolkata"
 )
-SAMPLE_DATE = dt.date(2026, 8, 8)
-SAMPLE_MUHURAT_RANGE = (dt.date(2026, 11, 15), dt.date(2026, 11, 30))
+SAMPLE_DATE = dt.date(2026, 1, 1)
+SAMPLE_MUHURAT_RANGE = (dt.date(2026, 1, 1), dt.date(2026, 1, 1))
 
 _SECRET_KEYS = {
     "api_key",
@@ -125,20 +132,24 @@ def write_fixture(provider: str, name: str, exchange: dict[str, Any]) -> Path:
     return path
 
 
-async def _record(settings: Settings, providers: Sequence[str]) -> int:
+async def _record(
+    settings: Settings, providers: Sequence[str], sample_date: dt.date
+) -> int:
     written: list[Path] = []
+    seen_names: set[tuple[str, str]] = set()
 
     for provider_name in providers:
         transport = RecordingTransport()
         registry = build_registry(settings, transport=transport)
         provider = getattr(registry, provider_name)
-        panchang_query = PanchangQuery(local_date=SAMPLE_DATE, place=SAMPLE_PLACE)
+        panchang_query = PanchangQuery(local_date=sample_date, place=SAMPLE_PLACE)
         muhurat_query = MuhuratQuery(
-            muhurat_type=__import__(
-                "sitara_schemas.facts", fromlist=["MuhuratType"]
-            ).MuhuratType.MARRIAGE,
-            date_from=SAMPLE_MUHURAT_RANGE[0],
-            date_to=SAMPLE_MUHURAT_RANGE[1],
+            # GENERAL, not a typed finder: Prokerala has no typed muhurat
+            # endpoint (verified live), so a typed sample would record nothing
+            # for it. DivineAPI answers both.
+            muhurat_type=MuhuratType.GENERAL,
+            date_from=sample_date,
+            date_to=sample_date,
             place=SAMPLE_MUHURAT_PLACE,
         )
 
@@ -154,14 +165,17 @@ async def _record(settings: Settings, providers: Sequence[str]) -> int:
                 await coroutine
             except Exception as exc:  # noqa: BLE001 - record the failure too
                 logger.warning("%s %s failed: %s", provider_name, label, type(exc).__name__)
-            # A provider may make an auth call first (Prokerala's /token); every
-            # exchange is recorded under its own name.
-            for offset, exchange in enumerate(transport.exchanges[before:]):
+            # A provider may make an auth call first (Prokerala's /token), so
+            # name each exchange from its own path rather than its position;
+            # only a genuine repeat of the same name gets a numeric suffix.
+            for exchange in transport.exchanges[before:]:
                 path = exchange["request"]["path"]
                 name = "token" if path.rstrip("/").endswith("token") else label
-                if offset and name == label:
-                    name = f"{label}_{offset}"
-                written.append(write_fixture(provider_name, name, exchange))
+                candidate, suffix = name, 1
+                while (provider_name, candidate) in seen_names:
+                    candidate, suffix = f"{name}_{suffix}", suffix + 1
+                seen_names.add((provider_name, candidate))
+                written.append(write_fixture(provider_name, candidate, exchange))
 
     for path in written:
         print(f"wrote {path.relative_to(FIXTURE_ROOT.parents[2])}")
@@ -180,6 +194,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Record provider fixtures (one call each)")
     parser.add_argument("--all", action="store_true", help="record both providers")
     parser.add_argument("--provider", choices=[p.value for p in ProviderName], default=None)
+    parser.add_argument(
+        "--date",
+        type=dt.date.fromisoformat,
+        default=SAMPLE_DATE,
+        help=(
+            "local date to record for (default 2026-01-01 — a Prokerala SANDBOX "
+            "account rejects every other date)"
+        ),
+    )
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
@@ -205,7 +228,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"refusing to record: no credentials configured for {', '.join(missing)}")
         return 2
 
-    return asyncio.run(_record(settings, providers))
+    return asyncio.run(_record(settings, providers, args.date))
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -2,7 +2,7 @@
   "_recording": {
     "status": "provisional",
     "recorded_at": null,
-    "note": "PROVISIONAL \u2014 shape written from vendor documentation, NOT recorded from a live API. Run `python -m sitara_api.panchang.record --all` with trial keys to replace. See fixtures/README.md.",
+    "note": "PROVISIONAL \u2014 shape written from vendor documentation, NOT recorded from a live API. The live paths under DIVINEAPI_BASE_URL returned 404 for every guessed path, so the correct endpoints must come from the DivineAPI dashboard (they are env-overridable: DIVINEAPI_PATH_*). Values are aligned to the same day and place as the RECORDED Prokerala fixtures so the cross-vendor agreement tests represent a normal day. Run `python -m sitara_api.panchang.record --provider divineapi` once the paths are known.",
     "request": {
       "method": "POST",
       "path": "/indian-api/v1/choghadiya"
@@ -13,100 +13,100 @@
     "success": true,
     "data": {
       "rahu_kaal": {
-        "start": "2026-08-08 09:30:00",
-        "end": "2026-08-08 11:07:00"
+        "start": "2026-01-01 14:03:34",
+        "end": "2026-01-01 15:25:09"
       },
       "yamaganda": {
-        "start": "2026-08-08 13:53:00",
-        "end": "2026-08-08 15:30:00"
+        "start": "2026-01-01 07:15:38",
+        "end": "2026-01-01 08:37:13"
       },
       "gulikai": {
-        "start": "2026-08-08 06:17:00",
-        "end": "2026-08-08 07:54:00"
+        "start": "2026-01-01 09:58:48",
+        "end": "2026-01-01 11:20:23"
       },
       "choghadiya": {
         "day": [
           {
-            "name": "kaal",
-            "start": "2026-08-08 06:17:00",
-            "end": "2026-08-08 07:54:00"
-          },
-          {
             "name": "shubh",
-            "start": "2026-08-08 07:54:00",
-            "end": "2026-08-08 09:30:00"
+            "start": "2026-01-01 07:15:38",
+            "end": "2026-01-01 08:37:13"
           },
           {
             "name": "rog",
-            "start": "2026-08-08 09:30:00",
-            "end": "2026-08-08 11:07:00"
+            "start": "2026-01-01 08:37:13",
+            "end": "2026-01-01 09:58:48"
           },
           {
             "name": "udveg",
-            "start": "2026-08-08 11:07:00",
-            "end": "2026-08-08 12:44:00"
+            "start": "2026-01-01 09:58:48",
+            "end": "2026-01-01 11:20:23"
           },
           {
             "name": "char",
-            "start": "2026-08-08 12:44:00",
-            "end": "2026-08-08 14:21:00"
+            "start": "2026-01-01 11:20:23",
+            "end": "2026-01-01 12:41:59"
           },
           {
             "name": "labh",
-            "start": "2026-08-08 14:21:00",
-            "end": "2026-08-08 15:57:00"
+            "start": "2026-01-01 12:41:59",
+            "end": "2026-01-01 14:03:34"
           },
           {
             "name": "amrit",
-            "start": "2026-08-08 15:57:00",
-            "end": "2026-08-08 17:34:00"
+            "start": "2026-01-01 14:03:34",
+            "end": "2026-01-01 15:25:09"
           },
           {
             "name": "kaal",
-            "start": "2026-08-08 17:34:00",
-            "end": "2026-08-08 19:11:00"
+            "start": "2026-01-01 15:25:09",
+            "end": "2026-01-01 16:46:44"
+          },
+          {
+            "name": "shubh",
+            "start": "2026-01-01 16:46:44",
+            "end": "2026-01-01 18:08:20"
           }
         ],
         "night": [
           {
-            "name": "labh",
-            "start": "2026-08-08 19:11:00",
-            "end": "2026-08-08 20:34:00"
-          },
-          {
-            "name": "udveg",
-            "start": "2026-08-08 20:34:00",
-            "end": "2026-08-08 21:57:00"
-          },
-          {
-            "name": "shubh",
-            "start": "2026-08-08 21:57:00",
-            "end": "2026-08-08 23:20:00"
-          },
-          {
             "name": "amrit",
-            "start": "2026-08-08 23:20:00",
-            "end": "2026-08-09 00:43:00"
+            "start": "2026-01-01 18:08:20",
+            "end": "2026-01-01 19:46:48"
           },
           {
             "name": "char",
-            "start": "2026-08-09 00:43:00",
-            "end": "2026-08-09 02:06:00"
+            "start": "2026-01-01 19:46:48",
+            "end": "2026-01-01 21:25:16"
           },
           {
             "name": "rog",
-            "start": "2026-08-09 02:06:00",
-            "end": "2026-08-09 03:29:00"
+            "start": "2026-01-01 21:25:16",
+            "end": "2026-01-01 23:03:44"
           },
           {
             "name": "kaal",
-            "start": "2026-08-09 03:29:00",
-            "end": "2026-08-09 04:52:00"
+            "start": "2026-01-01 23:03:44",
+            "end": "2026-01-02 00:42:12"
           },
           {
             "name": "labh",
-            "start": "2026-08-09 04:52:00",
-            "end": "2026-08-09 06:16:00"
+            "start": "2026-01-02 00:42:12",
+            "end": "2026-01-02 02:20:40"
+          },
+          {
+            "name": "udveg",
+            "start": "2026-01-02 02:20:40",
+            "end": "2026-01-02 03:59:08"
+          },
+          {
+            "name": "shubh",
+            "start": "2026-01-02 03:59:08",
+            "end": "2026-01-02 05:37:36"
+          },
+          {
+            "name": "amrit",
+            "start": "2026-01-02 05:37:36",
+            "end": "2026-01-02 07:16:05"
           }
         ]
       }

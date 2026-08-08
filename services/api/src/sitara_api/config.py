@@ -1,5 +1,6 @@
 """Runtime configuration (playbook M1). Secrets stay in .env / .secrets — never here."""
 
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -40,7 +41,14 @@ class Settings(BaseSettings):
     # acceptance. Base URLs and paths are configurable so a shape correction
     # found at fixture-recording time needs no code change.
     divineapi_base_url: str = "https://astroapi-4.divineapi.com"
-    divineapi_api_key: str | None = None
+    # DIVINE_API_KEY is accepted as an alias: it is what the vendor's own
+    # dashboard calls the value, so operators paste it under that name.
+    divineapi_api_key: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("DIVINEAPI_API_KEY", "DIVINE_API_KEY"),
+    )
+    # Optional: some DivineAPI tiers authenticate with the api_key alone, and a
+    # blank token must degrade like an outage rather than crash (§8).
     divineapi_auth_token: str | None = None
     divineapi_timeout_seconds: float = 4.0
     divineapi_path_panchang: str | None = None

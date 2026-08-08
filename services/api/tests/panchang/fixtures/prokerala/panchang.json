@@ -1,8 +1,8 @@
 {
   "_recording": {
-    "status": "provisional",
-    "recorded_at": null,
-    "note": "PROVISIONAL \u2014 shape written from vendor documentation, NOT recorded from a live API. Run `python -m sitara_api.panchang.record --all` with trial keys to replace. See fixtures/README.md.",
+    "status": "recorded",
+    "recorded_at": "2026-08-08T06:44:22.289919+00:00",
+    "note": "Recorded from the live API by sitara_api.panchang.record. Credentials scrubbed. Re-record only when the vendor's contract changes.",
     "request": {
       "method": "GET",
       "path": "/v2/astrology/panchang"
@@ -12,26 +12,90 @@
   "body": {
     "status": "ok",
     "data": {
-      "sunrise": "2026-08-08T06:17:34+05:30",
-      "sunset": "2026-08-08T19:11:12+05:30",
-      "tithi": [
-        {
-          "id": 10,
-          "index": 10,
-          "name": "Dashami",
-          "start": "2026-08-07T21:05:00+05:30",
-          "end": "2026-08-08T22:42:00+05:30"
-        }
-      ],
+      "vaara": "Thursday",
       "nakshatra": [
         {
-          "id": 4,
-          "index": 4,
+          "id": 3,
           "name": "Rohini",
-          "start": "2026-08-08T03:13:00+05:30",
-          "end": "2026-08-09T05:49:00+05:30"
+          "lord": {
+            "id": 1,
+            "name": "Moon",
+            "vedic_name": "Chandra"
+          },
+          "start": "2026-01-01T01:30:04+05:30",
+          "end": "2026-01-01T22:48:26+05:30"
+        },
+        {
+          "id": 4,
+          "name": "Mrigashirsha",
+          "lord": {
+            "id": 4,
+            "name": "Mars",
+            "vedic_name": "Kuja"
+          },
+          "start": "2026-01-01T22:48:27+05:30",
+          "end": "2026-01-02T20:04:00+05:30"
         }
-      ]
+      ],
+      "tithi": [
+        {
+          "id": 28,
+          "index": 0,
+          "name": "Trayodashi",
+          "paksha": "Shukla Paksha",
+          "start": "2026-01-01T01:48:29+05:30",
+          "end": "2026-01-01T22:22:45+05:30"
+        },
+        {
+          "id": 29,
+          "index": 0,
+          "name": "Chaturdashi",
+          "paksha": "Shukla Paksha",
+          "start": "2026-01-01T22:22:46+05:30",
+          "end": "2026-01-02T18:53:59+05:30"
+        }
+      ],
+      "karana": [
+        {
+          "index": 0,
+          "id": 2,
+          "name": "Kaulava",
+          "start": "2026-01-01T01:48:29+05:30",
+          "end": "2026-01-01T12:06:39+05:30"
+        },
+        {
+          "index": 0,
+          "id": 3,
+          "name": "Taitila",
+          "start": "2026-01-01T12:06:40+05:30",
+          "end": "2026-01-01T22:22:45+05:30"
+        },
+        {
+          "index": 0,
+          "id": 4,
+          "name": "Garija",
+          "start": "2026-01-01T22:22:46+05:30",
+          "end": "2026-01-02T08:38:05+05:30"
+        }
+      ],
+      "yoga": [
+        {
+          "id": 22,
+          "name": "Subha",
+          "start": "2025-12-31T21:13:24+05:30",
+          "end": "2026-01-01T17:12:26+05:30"
+        },
+        {
+          "id": 23,
+          "name": "Sukla",
+          "start": "2026-01-01T17:12:27+05:30",
+          "end": "2026-01-02T13:06:49+05:30"
+        }
+      ],
+      "sunrise": "2026-01-01T07:15:38+05:30",
+      "sunset": "2026-01-01T18:08:20+05:30",
+      "moonrise": "2026-01-01T15:58:00+05:30",
+      "moonset": "2026-01-02T05:57:53+05:30"
     }
   }
 }

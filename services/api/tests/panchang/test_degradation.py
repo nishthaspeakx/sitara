@@ -28,7 +28,7 @@ from tests.panchang.replay import failing_transport, transport_for
 
 pytestmark = pytest.mark.asyncio
 
-ON = dt.date(2026, 8, 8)
+ON = dt.date(2026, 1, 1)  # matches the recorded Prokerala fixtures
 
 
 class FakeAstro:
@@ -56,16 +56,19 @@ def layer_a_facts() -> list:
         TzMethod,
     )
 
-    start = dt.datetime(2026, 8, 7, 15, 35, tzinfo=dt.UTC)
+    # Prokerala's recorded tithi ends 16:52:45 UTC; this sits 10 minutes later,
+    # deliberately beyond the §5.2 2-min tolerance so the Layer-A authority
+    # tests exercise a real disagreement rather than a coincidence.
+    start = dt.datetime(2025, 12, 31, 20, 18, 29, tzinfo=dt.UTC)
     return [
         FactSnapshot(
-            fact_id="fact:panchang.tithi.boundary/2026-08-08/te7u-amanta@v1",
+            fact_id="fact:panchang.tithi.boundary/2026-01-01/te7u-amanta@v1",
             kind=FactKind.PANCHANG_TITHI_BOUNDARY,
             value=TithiBoundaryValue(
                 tithi_index=10,
                 paksha=Paksha.SHUKLA,
                 starts_utc=start,
-                ends_utc=start + dt.timedelta(hours=25),
+                ends_utc=dt.datetime(2026, 1, 1, 17, 2, 45, tzinfo=dt.UTC),
             ),
             precision=FactPrecision(tolerance=1.0, unit="second"),
             method=FactMethod(
@@ -73,7 +76,7 @@ def layer_a_facts() -> list:
                 tz=TzMethod(tz="Asia/Kolkata", utc_offset_seconds=19800),
             ),
             valid_from=start,
-            valid_to=start + dt.timedelta(hours=25),
+            valid_to=dt.datetime(2026, 1, 1, 17, 2, 45, tzinfo=dt.UTC),
             engine_semver="0.1.0",
             data_revision="swe=2.10;ephe=swiss_files;tzdata=2025.2",
             source=FactSource.LAYER_A,
@@ -294,10 +297,10 @@ class TestDayTimingsLadder:
             TimingQuality,
         )
 
-        start = dt.datetime(2026, 8, 8, 4, 0, tzinfo=dt.UTC)
+        start = dt.datetime(2026, 1, 1, 4, 0, tzinfo=dt.UTC)
         facts = [
             FactSnapshot(
-                fact_id="fact:panchang.day_timing.rahu_kaal/2026-08-08/te7u-amanta@v1",
+                fact_id="fact:panchang.day_timing.rahu_kaal/2026-01-01/te7u-amanta@v1",
                 kind=FactKind.PANCHANG_DAY_TIMING,
                 value=DayTimingValue(
                     timing=DayTimingKind.RAHU_KAAL,
