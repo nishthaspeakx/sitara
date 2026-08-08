@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 from sitara_schemas import ErrorCode
 from sitara_schemas.facts import ConfidenceState, FactSnapshot
 
+from sitara_api.auth.router import CurrentSession
 from sitara_api.chat_orchestration.pipeline import ChatPipeline
 from sitara_api.chat_orchestration.types import BirthProfile, TurnRequest
 from sitara_api.errors import ApiError
@@ -50,15 +51,17 @@ class TurnResponse(BaseModel):
 async def chat_turn(
     payload: TurnPayload,
     request: Request,
+    session: CurrentSession,
     idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ) -> TurnResponse:
     pipeline: ChatPipeline | None = getattr(request.app.state, "chat_pipeline", None)
     if pipeline is None:
         raise ApiError(ErrorCode.SYS_UNAVAILABLE, "errors.sys.unavailable")
 
-    user_id = getattr(request.state, "user_id", None)
-    if not user_id:
-        raise ApiError(ErrorCode.AUTH_INVALID_TOKEN)
+    # §34.5: the httpOnly session cookie is the only way a product API learns
+    # who is calling. `request.state.user_id` is set by nothing — reading it
+    # would 401 every legitimately signed-in user.
+    user_id, _session_id = session
 
     profile: BirthProfile = getattr(request.state, "birth_profile", None) or BirthProfile()
     result = await pipeline.run(

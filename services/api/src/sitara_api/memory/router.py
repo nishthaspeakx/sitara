@@ -21,6 +21,7 @@ from fastapi import APIRouter, Query, Request
 from pydantic import BaseModel, Field
 from sitara_schemas import ErrorCode
 
+from sitara_api.auth.router import CurrentSession
 from sitara_api.errors import ApiError
 from sitara_api.memory.models import (
     ConsentRequired,
@@ -97,14 +98,10 @@ def _service(request: Request) -> MemoryService:
     return service
 
 
-def _user_id(request: Request) -> ObjectId:
-    user_id = getattr(request.state, "user_id", None)
-    if not user_id:
-        raise ApiError(ErrorCode.AUTH_INVALID_TOKEN)
-    try:
-        return ObjectId(str(user_id))
-    except Exception:
-        raise ApiError(ErrorCode.AUTH_INVALID_TOKEN) from None
+def _user_id(session: tuple[ObjectId, str]) -> ObjectId:
+    """§33.2: Mongo `_id` is the product identity, and §34.5's session cookie
+    is how a product API learns it."""
+    return session[0]
 
 
 def _object_id(value: str, code: ErrorCode = ErrorCode.SYS_VALIDATION) -> ObjectId:
@@ -117,18 +114,21 @@ def _object_id(value: str, code: ErrorCode = ErrorCode.SYS_VALIDATION) -> Object
 @router.get("", response_model=list[MemoryView])
 async def list_memories(
     request: Request,
+    session: CurrentSession,
     # §30.5: "Vault filters use exactly these 11 labels" — the query parameter
     # is named `type` because that is the label the client filters on.
     type_: Annotated[list[MemoryType] | None, Query(alias="type")] = None,
 ) -> list[MemoryView]:
     """§30.5's vault list. Shows decayed and muted memories too — it is the
     user's inventory of what Tara knows, not a retrieval ranking."""
-    memories = await _service(request).vault(_user_id(request), types=type_)
+    memories = await _service(request).vault(_user_id(session), types=type_)
     return [MemoryView.of(memory) for memory in memories]
 
 
 @router.post("", response_model=MemoryView, status_code=201)
-async def accept_chip(payload: AcceptChipRequest, request: Request) -> MemoryView:
+async def accept_chip(
+    payload: AcceptChipRequest, request: Request, session: CurrentSession
+) -> MemoryView:
     service = _service(request)
     candidate = MemoryCandidate(
         type=payload.type,
@@ -139,7 +139,7 @@ async def accept_chip(payload: AcceptChipRequest, request: Request) -> MemoryVie
     )
     try:
         memory = await service.accept_chip(
-            user_id=_user_id(request),
+            user_id=_user_id(session),
             candidate=candidate,
             wording_reconfirmed=payload.wording_reconfirmed,
         )
@@ -153,10 +153,12 @@ async def accept_chip(payload: AcceptChipRequest, request: Request) -> MemoryVie
 
 
 @router.patch("/{memory_id}", response_model=MemoryView)
-async def edit_memory(memory_id: str, payload: EditRequest, request: Request) -> MemoryView:
+async def edit_memory(
+    memory_id: str, payload: EditRequest, request: Request, session: CurrentSession
+) -> MemoryView:
     """§30.5: "correct a memory" → future guidance uses the corrected version."""
     memory = await _service(request).edit(
-        user_id=_user_id(request),
+        user_id=_user_id(session),
         memory_id=_object_id(memory_id),
         content=payload.content,
     )
@@ -166,11 +168,13 @@ async def edit_memory(memory_id: str, payload: EditRequest, request: Request) ->
 
 
 @router.post("/{memory_id}/mute", response_model=MemoryView)
-async def mute_memory(memory_id: str, payload: MuteRequest, request: Request) -> MemoryView:
+async def mute_memory(
+    memory_id: str, payload: MuteRequest, request: Request, session: CurrentSession
+) -> MemoryView:
     """§30.5's "don't remember this" — withheld from retrieval, kept in the
     vault, reversible. Deletion is the other endpoint and is not reversible."""
     memory = await _service(request).mute(
-        user_id=_user_id(request), memory_id=_object_id(memory_id), muted=payload.muted
+        user_id=_user_id(session), memory_id=_object_id(memory_id), muted=payload.muted
     )
     if memory is None:
         raise ApiError(ErrorCode.SYS_VALIDATION, "errors.memory.not_found")
@@ -178,25 +182,27 @@ async def mute_memory(memory_id: str, payload: MuteRequest, request: Request) ->
 
 
 @router.delete("/{memory_id}", status_code=204)
-async def forget_memory(memory_id: str, request: Request) -> None:
+async def forget_memory(memory_id: str, request: Request, session: CurrentSession) -> None:
     """Hard delete, embedding included (diagram 8).
 
     §30.5 states the scope at the confirm step, which is the client's job:
     "Tara stops knowing it; past journal text unchanged".
     """
     deleted = await _service(request).forget(
-        user_id=_user_id(request), memory_id=_object_id(memory_id)
+        user_id=_user_id(session), memory_id=_object_id(memory_id)
     )
     if not deleted:
         raise ApiError(ErrorCode.SYS_VALIDATION, "errors.memory.not_found")
 
 
 @router.post("/scoped/journal-entry-deleted")
-async def journal_entry_deleted(payload: ScopedDeleteRequest, request: Request) -> dict[str, int]:
+async def journal_entry_deleted(
+    payload: ScopedDeleteRequest, request: Request, session: CurrentSession
+) -> dict[str, int]:
     """§30.5: memories sourced from a deleted journal entry survive unless the
     user ticked the box. `delete_memories` IS the box."""
     deleted = await _service(request).on_journal_entry_deleted(
-        user_id=_user_id(request),
+        user_id=_user_id(session),
         message_ids=[_object_id(m) for m in payload.message_ids],
         delete_memories=payload.delete_memories,
     )
@@ -204,12 +210,14 @@ async def journal_entry_deleted(payload: ScopedDeleteRequest, request: Request) 
 
 
 @router.post("/scoped/conversation-deleted")
-async def conversation_deleted(payload: ScopedDeleteRequest, request: Request) -> dict[str, int]:
+async def conversation_deleted(
+    payload: ScopedDeleteRequest, request: Request, session: CurrentSession
+) -> dict[str, int]:
     """§30.5: dependent memory sources are marked "source removed". The
     memories survive — consent to Tara knowing them did not expire with the
     thread they came from."""
     marked = await _service(request).on_conversation_deleted(
-        user_id=_user_id(request),
+        user_id=_user_id(session),
         message_ids=[_object_id(m) for m in payload.message_ids],
     )
     return {"source_removed": marked}

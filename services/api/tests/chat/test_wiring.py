@@ -1,11 +1,14 @@
 """Wiring: the service boots with or without a model key, and the endpoint
 speaks the §34.4 envelope when it cannot answer."""
 
+import pytest
+from bson import ObjectId
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from sitara_api.chat_orchestration import ChatSettings, build_pipeline
 from sitara_api.chat_orchestration.pipeline import ChatPipeline
+from sitara_api.chat_orchestration.router import TurnPayload
 from sitara_api.chat_orchestration.router import router as chat_router
 from sitara_api.errors import install_error_handlers
 from tests.chat.conftest import ScriptedLLM
@@ -48,8 +51,10 @@ def test_content_capture_is_refused_outside_dev() -> None:
         )
 
 
-def test_the_endpoint_speaks_the_canonical_envelope_when_chat_is_down() -> None:
-    """§34.4: one envelope, never a custom shape — even for "not wired yet"."""
+def test_an_unauthenticated_turn_is_refused_in_the_canonical_envelope() -> None:
+    """§34.5: the httpOnly session cookie is the only way a product API learns
+    who is calling, and auth is answered before anything else. §34.4: one
+    envelope, never a custom shape."""
     app = FastAPI()
     app.state.chat_pipeline = None
     install_error_handlers(app)
@@ -60,11 +65,37 @@ def test_the_endpoint_speaks_the_canonical_envelope_when_chat_is_down() -> None:
         json={"conversation_id": "c1", "text": "hello", "locale": "en"},
     )
 
-    assert response.status_code == 503
+    assert response.status_code == 401
     body = response.json()
     assert set(body) == {"code", "message_key", "trace_id", "retryable"}
-    assert body["code"] == "SYS_UNAVAILABLE"
-    assert body["retryable"] is True
+    assert body["code"] == "AUTH_INVALID_TOKEN"
+
+
+def test_a_missing_pipeline_is_still_a_canonical_unavailable() -> None:
+    """The rung below auth: signed in, but chat has no model key (§8)."""
+    from fastapi import Request
+    from sitara_schemas.errors import HTTP_STATUS
+
+    from sitara_api.chat_orchestration.router import chat_turn
+    from sitara_api.errors import ApiError
+
+    app = FastAPI()
+    app.state.chat_pipeline = None
+    scope = {"type": "http", "app": app, "headers": []}
+
+    with pytest.raises(ApiError) as raised:
+        import asyncio
+
+        asyncio.run(
+            chat_turn(
+                payload=TurnPayload(conversation_id="c1", text="hi", locale="en"),
+                request=Request(scope),  # type: ignore[arg-type]
+                session=(ObjectId(), "session-1"),
+            )
+        )
+
+    assert raised.value.code.value == "SYS_UNAVAILABLE"
+    assert HTTP_STATUS[raised.value.code] == 503
 
 
 def test_every_server_rendered_string_exists_in_every_launch_locale() -> None:
