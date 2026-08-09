@@ -50,11 +50,19 @@ def _module_doc(module: ComposedModule) -> dict[str, Any]:
 
 
 def _module_from_doc(doc: dict[str, Any]) -> ComposedModule:
+    """Rebuild a module from its stored row.
+
+    `stored_fact_ids` carries the citations across the read. §6.4 keeps the ids
+    on `daily_briefings` and the full snapshots in `guidance_logs` (§34.2), so
+    a re-read brief has ids and no snapshots — and dropping them here would
+    leave a Trust Sheet opened on a stored brief with nothing to show.
+    """
     return ComposedModule(
         module=MorningModule(doc["module"]),
         text=doc.get("text") or "",
         polished_text=doc.get("text") if doc.get("polished") else None,
         template_id=doc.get("template_id") or "",
+        stored_fact_ids=tuple(doc.get("fact_ids") or ()),
     )
 
 

@@ -32,9 +32,11 @@ once a message has gone out:
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import logging
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import Any
 from zoneinfo import ZoneInfo
 
 from sitara_api.daily_guidance.templates import TEMPLATE_VERSION
@@ -102,15 +104,54 @@ def collapse_key_for(user_id: str, local_date: str) -> str:
     return f"brief:{user_id}:{local_date}"
 
 
-def message_id_for(user_id: str, local_date: str, locale: str, revision: int = 0) -> str:
-    """§23.4's idempotency identity, derived so a retry computes the same value.
+def message_id_for(
+    user_id: str, local_date: str, locale: str, revision: str = "0"
+) -> str:
+    """§23.4's idempotency identity. Two properties, and they pull apart.
 
-    `revision` increments when a regenerate produces a genuinely new message
-    for the same collapse key — the old row is superseded, the new one is a new
-    delivery, and both are visible in §23.8's analytics rather than one
-    silently overwriting the other.
+    §23.4 asks for BOTH of these, and they are not the same key:
+
+    * a RETRY of one enqueue must not send twice — so the id has to be DERIVED,
+      never random;
+    * a REGENERATE must replace the push — so the id has to CHANGE when the
+      brief does, or the replacement collides with the row it is replacing.
+
+    `revision` is what separates them, and it comes from the brief's
+    `generated_at`: stable across retries of one generation, different across
+    generations. Fixing it at 0 satisfied the first property and quietly broke
+    the second — a location change keeps the locale, so it minted the SAME id,
+    superseded the queued push, then failed to insert its replacement on the
+    unique index and left the user with no morning notification at all. §7.1's
+    own worked example ("user flew to London overnight") is that case.
     """
     return f"brief:{user_id}:{local_date}:{locale}:r{revision}"
+
+
+def revision_for(brief: Brief, scheduled_at: dt.datetime, expires_at: dt.datetime) -> str:
+    """A fingerprint of what would actually be DELIVERED.
+
+    Not a clock. `generated_at` was the obvious choice and it is wrong twice:
+    two generations inside the same second collide (the acceptance harness does
+    exactly that), and a regenerate that changed nothing would still mint a new
+    push. Fingerprinting the delivery gets both right by construction —
+
+        same brief, same schedule  → same id → §23.4 dedup, nothing sent twice
+        different brief or schedule → new id → §23.4 replacement
+
+    The schedule is in the hash because a location change can leave the text
+    untouched and still move the row: §23.4 expires the morning push at 12:00
+    LOCAL, and Mumbai's noon is five and a half hours from London's. Keeping
+    the old row there would expire the brief against the wrong city.
+    """
+    material = "|".join(
+        [
+            brief.status.value,
+            scheduled_at.astimezone(dt.UTC).isoformat(),
+            expires_at.astimezone(dt.UTC).isoformat(),
+            *(f"{m.module.value}={m.rendered}" for m in brief.modules),
+        ]
+    )
+    return hashlib.blake2b(material.encode("utf-8"), digest_size=6).hexdigest()
 
 
 def expiry_for(local_date: str, timezone: str) -> dt.datetime:
@@ -128,7 +169,7 @@ def build(
     timezone: str,
     due_at: dt.datetime,
     channel: str = DEFAULT_CHANNEL,
-    revision: int = 0,
+    revision: str | None = None,
 ) -> BriefNotification | None:
     """The row for this brief's push, or None when there is nothing to announce.
 
@@ -154,7 +195,14 @@ def build(
 
     return BriefNotification(
         user_id=brief.user_id,
-        message_id=message_id_for(brief.user_id, brief.local_date, brief.locale, revision),
+        message_id=message_id_for(
+            brief.user_id,
+            brief.local_date,
+            brief.locale,
+            revision
+            if revision is not None
+            else revision_for(brief, due_at, expires_at),
+        ),
         collapse_key=collapse_key_for(brief.user_id, brief.local_date),
         channel=channel,
         locale=brief.locale,
@@ -191,14 +239,19 @@ class NotificationQueue:
         self._db = db
 
     async def enqueue(self, notification: BriefNotification) -> bool:
-        """Write the row. Returns False when it was already there."""
+        """Write the row, then retire the ones it replaces. Order matters.
+
+        INSERT FIRST. Superseding first looks tidier — there is never a moment
+        when two rows are queued — and it is wrong in the one case that
+        matters: if the insert then fails (a retry of the same enqueue hits the
+        unique index), the old row has already been retired and the user is
+        left with NO push. Inserting first means the worst case is a moment
+        with two queued rows, which the collapse key resolves, rather than a
+        morning with none.
+        """
         from pymongo.errors import DuplicateKeyError
 
         from sitara_api.db.documents import stamp
-
-        # §23.4: a regenerated brief REPLACES its predecessor's push. Superseding
-        # first means there is never a window in which both rows are queued.
-        await self.supersede(notification.user_id, notification.collapse_key)
 
         document = stamp(
             {
@@ -222,26 +275,43 @@ class NotificationQueue:
         try:
             await self._db.notifications.insert_one(document)
         except DuplicateKeyError:
+            # The same generation, enqueued twice. §23.4's idempotency doing
+            # its job — and nothing is superseded, because nothing changed.
             logger.info(
                 "brief notification already queued — not duplicating (§23.4)",
                 extra={"message_id": notification.message_id},
             )
             return False
+
+        # §23.4: "a re-generated brief replaces, never duplicates, its push".
+        await self.supersede(
+            notification.user_id,
+            notification.collapse_key,
+            keep=notification.message_id,
+        )
         return True
 
-    async def supersede(self, user_id: str, collapse_key: str) -> int:
-        """Retire any queued row under this collapse key (§23.4).
+    async def supersede(
+        self, user_id: str, collapse_key: str, *, keep: str | None = None
+    ) -> int:
+        """Retire queued rows under this collapse key (§23.4).
 
         Only QUEUED rows: a message already handed to a provider cannot be
         unsent, and marking it superseded would make §23.8's delivery analytics
         lie about what actually reached the user.
+
+        `keep` excludes the row that is doing the replacing, so `enqueue` can
+        insert first and retire the rest without retiring itself.
         """
+        query: dict[str, Any] = {
+            "user_id": _oid(user_id),
+            "collapse_key": collapse_key,
+            "status": NotificationStatus.QUEUED.value,
+        }
+        if keep is not None:
+            query["message_id"] = {"$ne": keep}
         result = await self._db.notifications.update_many(
-            {
-                "user_id": _oid(user_id),
-                "collapse_key": collapse_key,
-                "status": NotificationStatus.QUEUED.value,
-            },
+            query,
             {
                 "$set": {
                     "status": NotificationStatus.SUPERSEDED.value,

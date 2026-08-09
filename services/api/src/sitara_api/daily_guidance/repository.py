@@ -166,6 +166,13 @@ class SubjectRepository:
             status=subscription.get("status"),
             trial_ends_at=subscription.get("trial_ends_at"),
         )
+        # §7.1's panchang facts are computed FOR a place, and this is where the
+        # tick learns which. Omitting it does not fail — `CompositeBriefFacts`
+        # simply skips the panchang half — so a scheduled brief silently became
+        # chart-only while the regenerate path, which loads the subject through
+        # `wiring.load_subject`, kept its timings. Two loaders, one shape: they
+        # must agree, and `test_repository_mongo.py` now asserts they do.
+        place = doc.get("brief_place") or {}
         return BriefSubject(
             user_id=str(doc["user_id"]),
             locale=locale,
@@ -174,6 +181,8 @@ class SubjectRepository:
             density=density_from(doc.get("density")),
             tier=tier_for(entitlement, now=tick),
             follow_timezone=doc.get("follow_timezone", True),
+            lat=place.get("lat"),
+            lon=place.get("lon"),
         )
 
 

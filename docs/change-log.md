@@ -196,7 +196,7 @@ after the identity lookup rather than before it.
 ---
 
 ## CL-008 — the morning wave: five decisions §7.1 implies but does not state
-**Date:** 9 August 2026 · **Approved:** pending founder review ·
+**Date:** 9 August 2026 · **Approved:** Founder (Nishtha Agarwal) ·
 **Raised by:** M6 implementation (§7.1 pipeline build) ·
 **Touches:** §7.1, §7.2, §23.4, §28.2, §32.13, §32.7, diagram 5
 
@@ -275,3 +275,75 @@ declines `NATAL_CHART`/`TRANSITS` (M5), so `personal_chart_theme`, `work` and
 through §7.1's stated path. Named rather than stubbed, so the gap is visible in
 `BriefFacts.missing` and in the degrade reason rather than hidden behind
 plausible-looking data.
+
+---
+
+## CL-009 — the chart tools, and four defects the M6 acceptance found
+**Date:** 9 August 2026 · **Approved:** Founder · **Raised by:** M6 acceptance +
+`/review` · **Touches:** §5.2 Layer A, §6.4 `charts`, §7.2, §13, §23.4
+
+**What changed.** `NATAL_CHART`/`TRANSITS` no longer decline. A third adapter
+over the internal engine (`astrology/chart_adapter.py`, breaker and typed
+snapshots like panchang and numerology) sits under `AstrologyFacade`, which is
+§13's single door to birth details: it decrypts the row, narrows it to the five
+values the engine needs, caches the natal chart per §7.2, and separates the two
+declines §5.3 and §8 mean differently — thin birth data (Tara ASKS) from an
+engine outage (Tara degrades).
+
+**Four defects, all found by running it rather than by reading it.**
+
+1. **A cited sentence that was false.** `moon_nakshatra_note` took the first
+   nakshatra-shaped value in the payload. `natal.graha.nakshatra` is emitted for
+   all NINE grahas and the Sun's arrives first, so the first live run produced
+   *"The Moon sits in Purva Bhadrapada today"* citing the SUN's nakshatra. Every
+   gate passed: the id was in the served payload, the name did match the fact it
+   named. The citation machinery checks that a sentence stands on a fact, never
+   that it stands on the RIGHT one — so the reader has to, and now `_nakshatra`
+   requires `Graha.MOON`.
+
+2. **A regenerate that cancelled the morning push.** §7.1's own worked example
+   ("user flew to London overnight") keeps the LOCALE, so it minted the same
+   `message_id`, superseded the queued row, then failed to insert its
+   replacement on §23.4's unique index — 0 queued, 1 superseded, no
+   notification. The existing test passed because it changed the locale. Fixed
+   three ways: `enqueue` INSERTS BEFORE it supersedes (so a failed insert can
+   never leave a user with nothing), `supersede` takes `keep`, and the revision
+   fingerprints what would be DELIVERED — rendered modules plus schedule —
+   rather than a clock. A clock was the obvious choice and is wrong twice: two
+   generations inside one second collide, and an unchanged regenerate would
+   send a second push for no reason.
+
+3. **Every scheduled brief silently lost its panchang.**
+   `SubjectRepository._to_subject` (the tick's bulk loader) never carried
+   `brief_place`, while `wiring.load_subject` (the per-user task and every
+   regenerate) did. Nothing failed — `CompositeBriefFacts` simply skips the
+   panchang half without a place — so scheduled briefs shipped chart-only and
+   regenerated ones came back with timings. Two loaders, one shape;
+   `test_repository_mongo.py::test_the_two_loaders_agree` is now the side-by-side
+   that would have caught it.
+
+4. **A `charts` row twenty times §6.4's bound.** The engine returns the FULL
+   vimshottari tree — 9 × 9 × 9 = 819 periods, 817 KB beside a 26 KB natal
+   chart, against a cell that reads "bounded ~40KB". Three periods are in effect
+   at any instant, so the row stores those and refreshes the window when it
+   stops covering `now`; a size guard refuses a write past the bound rather than
+   letting it grow back. Measured after the fix: 29.1 KB.
+
+**Also fixed from `/review`.** `build_astrology_facade` opened a Mongo client
+and provisioned a CSFLE codec per call and closed neither — once per Celery
+task, i.e. once per user per morning; the codec now borrows the task's own
+client and `build_service`'s teardown is real work rather than a `return None`.
+`_read_chart` filtered on `(subject_id, engine_version)` while §7.2's key is
+`natal_chart:{subject}:{engine_v}:{ayanamsa}` — an ayanamsa change without an
+engine bump would have served a chart whose every house was quietly wrong. The
+chart tools no longer fall back to UTC for a profile with no timezone (§5.3:
+decline rather than guess — the local date is the date the transits are computed
+for). `scripts/brief.py` gained `db/seed.py`'s HOST guard: `environment`
+defaults to `"dev"`, so an env check alone would have let a production
+`MONGODB_URI` seed synthetic users into production (§22.12).
+
+**Residual risk, named.** The Hindi and Hinglish house ordinals are wrong for
+houses 1–2 — the templates render `{house}वें भाव`, so house 1 reads "1वें भाव"
+where Hindi wants "पहले भाव". Visible in the live run. It is inside the
+`i18n.brief_templates_and_terms` gate, which is what that gate is for, and is
+called out here so the §14 reviewer is looking for it rather than at it.

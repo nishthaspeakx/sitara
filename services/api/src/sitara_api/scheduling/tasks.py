@@ -49,7 +49,7 @@ async def _with_db(work):  # noqa: ANN001, ANN202
     settings = Settings()
     client, db = make_mongo(settings)
     try:
-        return await work(db, settings)
+        return await work(db, settings, client)
     finally:
         client.close()
 
@@ -75,7 +75,7 @@ def wave_tick(tick_iso: str | None = None) -> dict[str, Any]:
 
         return {tier.value: count for tier, count in subjects_by_tier(subjects).items()}
 
-    async def work(db, _settings) -> dict[str, Any]:  # noqa: ANN001
+    async def work(db, _settings, _client) -> dict[str, Any]:  # noqa: ANN001
         from sitara_api.daily_guidance.repository import SubjectRepository
         from sitara_api.daily_guidance.store import BriefStore
         from sitara_api.daily_guidance.windows import select_wave
@@ -160,7 +160,7 @@ def generate_brief(self, user_id: str, local_date: str, due_at_iso: str) -> dict
     re-raises only after the service has had its chance to degrade.
     """
 
-    async def work(db, _settings) -> dict[str, Any]:  # noqa: ANN001
+    async def work(db, _settings, client) -> dict[str, Any]:  # noqa: ANN001
         from sitara_api.daily_guidance.wiring import build_service, load_subject
 
         subject = await load_subject(db, user_id)
@@ -168,7 +168,9 @@ def generate_brief(self, user_id: str, local_date: str, due_at_iso: str) -> dict
             logger.warning("brief skipped: no schedulable profile", extra={"user_id": user_id})
             return {"status": "skipped"}
 
-        service, close = await build_service(db)
+        # The codec borrows the task's own client for the key vault rather than
+        # opening a second one it would then have to remember to close.
+        service, close = await build_service(db, client)
         try:
             result = await service.generate_on_open(
                 subject,
@@ -198,7 +200,7 @@ def generate_brief(self, user_id: str, local_date: str, due_at_iso: str) -> dict
 def panchang_prejob(now_iso: str | None = None) -> dict[str, Any]:
     """Warm the shared panchang cells for zones that just passed 00:30 local."""
 
-    async def work(db, _settings) -> dict[str, Any]:  # noqa: ANN001
+    async def work(db, _settings, _client) -> dict[str, Any]:  # noqa: ANN001
         from sitara_api.daily_guidance.panchang_prejob import (
             PanchangPrejob,
             cells_for,
@@ -243,7 +245,7 @@ def consolidate_memories(dry_run: bool = False) -> dict[str, Any]:
     as three passes would triple the nightly scan for no benefit.
     """
 
-    async def work(db, _settings) -> dict[str, Any]:  # noqa: ANN001
+    async def work(db, _settings, _client) -> dict[str, Any]:  # noqa: ANN001
         from sitara_api.memory.consolidation import run_consolidation
 
         report = await run_consolidation(db, dry_run=dry_run)

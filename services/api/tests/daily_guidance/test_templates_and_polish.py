@@ -93,6 +93,103 @@ def test_a_module_whose_term_is_missing_in_locale_is_dropped(nakshatra_fact) -> 
     assert composer.compose(ranked, "ta") is None
 
 
+def test_the_moon_note_cites_the_moon_and_never_another_graha(
+    nakshatra_fact,  # noqa: ANN001
+) -> None:
+    """The bug the M6 acceptance harness caught on its first run.
+
+    `natal.graha.nakshatra` is emitted for all NINE grahas and the Sun's comes
+    first, so taking the first nakshatra-shaped value produced "The Moon sits
+    in Purva Bhadrapada today" citing the SUN's nakshatra. Cited, in the served
+    payload, numbers matching — and false. No validator can catch it: the
+    citation machinery checks that a sentence stands on a fact, not that it
+    stands on the RIGHT one, so the reader has to.
+    """
+    import datetime as dt
+
+    from sitara_schemas.facts import (
+        FactKind,
+        FactMethod,
+        FactPrecision,
+        FactSnapshot,
+        Graha,
+        Nakshatra,
+        NakshatraValue,
+        TzMethod,
+        build_fact_id,
+    )
+
+    def natal_nakshatra(graha: Graha, nakshatra: Nakshatra, index: int) -> FactSnapshot:
+        return FactSnapshot(
+            fact_id=build_fact_id(
+                f"natal.{graha.value}.nakshatra", "natal", "6a70000000000000000000a1", 1
+            ),
+            kind=FactKind.NATAL_GRAHA_NAKSHATRA,
+            value=NakshatraValue(
+                graha=graha, nakshatra=nakshatra, nakshatra_index=index, pada=1
+            ),
+            precision=FactPrecision(tolerance=0, unit="exact"),
+            method=FactMethod(
+                ayanamsa="lahiri",
+                tz=TzMethod(tz="Asia/Kolkata", utc_offset_seconds=19800),
+            ),
+            valid_from=dt.datetime(2026, 8, 12, tzinfo=dt.UTC),
+            valid_to=None,
+            engine_semver="0.1.0",
+            data_revision="test",
+        )
+
+    # The Sun first, exactly as the engine returns them.
+    facts = [
+        natal_nakshatra(Graha.SUN, Nakshatra.PURVA_BHADRAPADA, 25),
+        natal_nakshatra(Graha.MOON, Nakshatra.ROHINI, 4),
+    ]
+    composer = BriefComposer()
+    ranked = ranking.RankedModule(
+        module=MorningModule.MOON_NAKSHATRA_NOTE, snapshots=tuple(facts)
+    )
+    composed = composer.compose(ranked, "en")
+    assert composed is not None
+    assert "Rohini" in composed.text, "the card must name the MOON's nakshatra"
+    assert "Purva Bhadrapada" not in composed.text
+    assert composed.fact_ids == (facts[1].fact_id,), "and cite the Moon's fact"
+
+
+def test_the_moon_note_declines_when_only_other_grahas_are_known() -> None:
+    """No Moon nakshatra, no card. Falling back to another body's would be the
+    same false sentence with a different name in it."""
+    import datetime as dt
+
+    from sitara_schemas.facts import (
+        FactKind,
+        FactMethod,
+        FactPrecision,
+        FactSnapshot,
+        Graha,
+        Nakshatra,
+        NakshatraValue,
+        build_fact_id,
+    )
+
+    sun_only = FactSnapshot(
+        fact_id=build_fact_id("natal.sun.nakshatra", "natal", "6a70000000000000000000a1", 1),
+        kind=FactKind.NATAL_GRAHA_NAKSHATRA,
+        value=NakshatraValue(
+            graha=Graha.SUN, nakshatra=Nakshatra.PURVA_BHADRAPADA, nakshatra_index=25, pada=1
+        ),
+        precision=FactPrecision(tolerance=0, unit="exact"),
+        method=FactMethod(ayanamsa="lahiri"),
+        valid_from=dt.datetime(2026, 8, 12, tzinfo=dt.UTC),
+        valid_to=None,
+        engine_semver="0.1.0",
+        data_revision="test",
+    )
+    ranked = ranking.RankedModule(
+        module=MorningModule.MOON_NAKSHATRA_NOTE, snapshots=(sun_only,)
+    )
+    assert BriefComposer().compose(ranked, "en") is None
+
+
 def test_fact_free_modules_compose_without_a_citation() -> None:
     """A priority nudge repeats what the user said; it asserts nothing about
     the sky, and the grounding validator agrees."""

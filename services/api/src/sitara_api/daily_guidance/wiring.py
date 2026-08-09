@@ -40,37 +40,76 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
-class PanchangBriefFacts(BriefFactSource):
-    """The shared-cache half of §7.1's fact stage.
+class CompositeBriefFacts(BriefFactSource):
+    """§7.1's fact stage: "chart facts (cached, Layer A) → panchang facts".
 
-    Chart facts are the other half and are not wired yet: the Layer-A chart
-    engine reaches this service through the astrology facade, which M5 left
-    declining `NATAL_CHART`/`TRANSITS` (`chat_orchestration.facts`). Rather than
-    invent a chart source here, this returns what it genuinely has and NAMES
-    what it does not, so the brief degrades through §7.1's stated path instead
-    of through a stub that looks like data.
+    Both halves, and neither may take the other down. The two failure modes are
+    genuinely independent — DivineAPI can be unreachable while our own engine is
+    fine, and a user can have no birth time on a morning when every vendor is
+    healthy — so each is fetched, each failure is NAMED in `missing`, and the
+    brief degrades on whatever is left. That is what makes `degrade_reason`
+    worth reading: "the panchang cell was cold" and "this person has no birth
+    time" produce the same short brief and are not the same problem.
+
+    Chart facts are also the half with a real cache behind it (§7.2: the natal
+    chart is permanent until an engine bump), so the marginal cost of the chart
+    half after a user's first morning is one transit call.
     """
 
-    def __init__(self, panchang_service, place_resolver) -> None:  # noqa: ANN001
+    def __init__(self, panchang_service, place_resolver, astrology=None) -> None:  # noqa: ANN001
         self._panchang = panchang_service
         self._places = place_resolver
+        self._astrology = astrology
 
     async def fetch(self, subject: BriefSubject, local_date: str) -> BriefFacts:
-        from sitara_api.panchang.providers.base import ResolvedPlace
-        from sitara_api.panchang.providers.http import ProviderUnavailable
+        snapshots: list = []
+        missing: list[str] = []
+        degraded = False
+        confidence = ConfidenceState.VERIFIED
 
-        if subject.lat is None or subject.lon is None:
+        panchang = await self._panchang_facts(subject, local_date)
+        if panchang is None:
+            missing.append("panchang")
+            degraded = True
+        else:
+            snapshots.extend(panchang.facts)
+            confidence = panchang.confidence
+            degraded = degraded or panchang.degraded or panchang.disputed
+
+        chart = await self._chart_facts(subject, local_date)
+        if chart is None:
+            missing.append("chart")
+            # A brief without the personal chart is §5.4's tradition-based
+            # state, not an approximation of a reading we did not do.
+            confidence = ConfidenceState.TRADITION_BASED_GENERAL
+        else:
+            snapshots.extend(chart)
+
+        if not snapshots:
             return BriefFacts(
                 confidence=ConfidenceState.CANNOT_CALCULATE,
-                missing=("place", "panchang", "chart"),
+                missing=tuple(missing) or ("panchang", "chart"),
                 degraded=True,
             )
 
+        return BriefFacts(
+            snapshots=tuple(snapshots),
+            confidence=confidence,
+            missing=tuple(missing),
+            degraded=degraded,
+        )
+
+    async def _panchang_facts(self, subject: BriefSubject, local_date: str):  # noqa: ANN202
+        from sitara_api.panchang.providers.base import ResolvedPlace
+        from sitara_api.panchang.providers.http import ProviderUnavailable
+
+        if self._panchang is None or subject.lat is None or subject.lon is None:
+            return None
         place = ResolvedPlace(
             label=subject.timezone, lat=subject.lat, lon=subject.lon, tz=subject.timezone
         )
         try:
-            result = await self._panchang.panchang(
+            return await self._panchang.panchang(
                 dt.date.fromisoformat(local_date), place, Tradition.AMANTA
             )
         except ProviderUnavailable:
@@ -78,20 +117,40 @@ class PanchangBriefFacts(BriefFactSource):
                 "brief facts: panchang unavailable",
                 extra={"user_id": subject.user_id, "local_date": local_date},
             )
-            return BriefFacts(
-                confidence=ConfidenceState.CANNOT_CALCULATE,
-                missing=("panchang", "chart"),
-                degraded=True,
-            )
+            return None
 
-        return BriefFacts(
-            snapshots=tuple(result.facts),
-            confidence=result.confidence,
-            # Chart facts are genuinely absent until the facade serves them;
-            # saying so is what lets `service._confidence_for` be honest.
-            missing=("chart",),
-            degraded=result.degraded or result.disputed,
+    async def _chart_facts(self, subject: BriefSubject, local_date: str):  # noqa: ANN202
+        from sitara_api.astrology.chart_adapter import (
+            ChartEngineUnavailable,
+            InsufficientBirthData,
         )
+
+        if self._astrology is None:
+            return None
+        try:
+            bundle = await self._astrology.chart_for(
+                subject.user_id, local_date=local_date, timezone=subject.timezone
+            )
+        except InsufficientBirthData:
+            # Not an outage. §28.2's missing-birth-time variant is the surface
+            # that asks for it; the brief simply carries fewer cards today.
+            logger.info(
+                "brief facts: no chart — birth data insufficient",
+                extra={"user_id": subject.user_id},
+            )
+            return None
+        except ChartEngineUnavailable:
+            logger.warning(
+                "brief facts: chart engine unavailable",
+                extra={"user_id": subject.user_id},
+            )
+            return None
+        return bundle.all
+
+
+#: M5's name for the panchang-only source. Kept so nothing that imported it
+#: breaks; the composite is what `build_service` wires.
+PanchangBriefFacts = CompositeBriefFacts
 
 
 # ---------------------------------------------------------------------------
@@ -134,23 +193,81 @@ def build_panchang_service(db):  # noqa: ANN001, ANN201
         return None
 
 
+async def build_astrology_facade(db, client=None):  # noqa: ANN001, ANN201
+    """§13's single door to birth details, plus how to shut it.
+
+    Returns `(facade, close)`, or `(None, noop)` when it cannot be built.
+
+    CSFLE matters here more than anywhere else in the morning path: the birth
+    row is marked "field-level: FULL doc payload" (§6.4), so a facade built
+    without the codec would read ciphertext and hand the engine nonsense. When
+    encryption is ON and the codec cannot be provisioned, this returns None —
+    the brief then degrades with `missing=("chart",)` rather than composing a
+    chart from garbage.
+
+    The `close` half is not ceremony. `build_service` runs once per Celery
+    `generate_brief` task — once per user per morning — and an earlier version
+    opened a Mongo client here and never closed it, and provisioned a
+    `FieldCrypto` whose own `close()` was never called. At Stage-2 volumes that
+    is a hundred thousand leaked connection pools a day, on the one path that
+    must not fall over at 06:00.
+    """
+    from sitara_api.astrology import AstroChartAdapter, AstrologyFacade
+    from sitara_api.config import Settings
+    from sitara_api.db.csfle import CsfleConfigurationError, build_crypto
+
+    async def noop() -> None:
+        return None
+
+    settings = Settings()
+    crypto = None
+    if settings.csfle_enabled:
+        if client is None:
+            # The codec needs a CLIENT (for the key vault), not a database, and
+            # opening a second one per task is what caused the leak. The caller
+            # owns the connection and passes it in.
+            logger.warning("CSFLE enabled but no client passed — skipping chart facts")
+            return None, noop
+        try:
+            crypto = await build_crypto(client, settings)
+        except CsfleConfigurationError:
+            logger.warning("CSFLE unavailable — chart facts will be skipped (§13)")
+            return None, noop
+
+    facade = AstrologyFacade(
+        db=db,
+        adapter=AstroChartAdapter(
+            settings.astro_base_url, settings.astro_timeout_seconds
+        ),
+        crypto=crypto,
+    )
+
+    async def close() -> None:
+        if crypto is not None:
+            await crypto.close()
+
+    return facade, close
+
+
 async def build_service(
     db,  # noqa: ANN001
+    client=None,  # noqa: ANN001
 ) -> tuple[DailyGuidanceService, Callable[[], Awaitable[None]]]:
     """A ready service plus its teardown.
 
-    The teardown exists because the LLM adapter owns an HTTP client; a Celery
-    task that builds a service per message and never closes it leaks a
-    connection pool per brief.
+    The teardown is real work, not a placeholder: the CSFLE codec holds a
+    key-vault connection, and this runs once per Celery task. `client` is the
+    caller's Mongo client, borrowed for the key vault rather than opened again.
     """
     from sitara_api.panchang.places import GazetteerResolver
 
     panchang = build_panchang_service(db)
+    astrology, close_astrology = await build_astrology_facade(db, client)
     facts: BriefFactSource
-    if panchang is None:
+    if panchang is None and astrology is None:
         facts = _NoFacts()
     else:
-        facts = PanchangBriefFacts(panchang, GazetteerResolver())
+        facts = CompositeBriefFacts(panchang, GazetteerResolver(), astrology)
 
     polisher = None
     chat_settings = ChatSettings()
@@ -172,7 +289,7 @@ async def build_service(
     )
 
     async def close() -> None:
-        return None
+        await close_astrology()
 
     return service, close
 

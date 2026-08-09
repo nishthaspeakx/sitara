@@ -124,10 +124,20 @@ class ComposedModule:
     polished_text: str | None = None
     snapshots: tuple[FactSnapshot, ...] = ()
     template_id: str = ""
+    #: Set ONLY when the module was read back from `daily_briefings`.
+    #:
+    #: §6.4 stores `fact_ids` on the row and the full snapshots in
+    #: `guidance_logs` (§34.2), so a brief re-read from the store has the ids
+    #: and not the snapshots. Without this the ids vanished on read and a Trust
+    #: Sheet opened on a stored brief would have had nothing to show — the
+    #: citation surviving generation but not persistence.
+    stored_fact_ids: tuple[str, ...] = ()
 
     @property
     def fact_ids(self) -> tuple[str, ...]:
-        return tuple(snapshot.fact_id for snapshot in self.snapshots)
+        if self.snapshots:
+            return tuple(snapshot.fact_id for snapshot in self.snapshots)
+        return self.stored_fact_ids
 
     @property
     def rendered(self) -> str:

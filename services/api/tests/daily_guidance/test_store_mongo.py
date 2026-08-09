@@ -117,6 +117,26 @@ async def test_created_at_survives_a_regenerate(db, full_facts) -> None:  # noqa
     assert second["updated_at"] > first["updated_at"]
 
 
+async def test_a_reread_brief_keeps_its_citations(db, full_facts) -> None:  # noqa: ANN001
+    """The second bug the M6 harness caught.
+
+    §6.4 stores `fact_ids` on the row and the full snapshots in `guidance_logs`
+    (§34.2), so a brief read back has ids and no snapshots. Dropping them on
+    read left a Trust Sheet opened on a stored brief with nothing to show —
+    the citation surviving generation but not persistence.
+    """
+    store = BriefStore(db)
+    written = await store.upsert(brief_for(full_facts), now=NOW)
+    assert written.fact_ids, "the generated brief cites something"
+
+    reread = await store.get(USER_ID, LOCAL_DATE)
+    assert reread is not None
+    assert reread.fact_ids == written.fact_ids
+    for module in reread.modules:
+        original = next(m for m in written.modules if m.module is module.module)
+        assert module.fact_ids == original.fact_ids
+
+
 async def test_generated_pairs_pre_filter(db, full_facts) -> None:  # noqa: ANN001
     store = BriefStore(db)
     await store.upsert(brief_for(full_facts), now=NOW)
@@ -222,6 +242,119 @@ async def test_a_regenerated_brief_replaces_its_push(db, full_facts) -> None:  #
         {"status": NotificationStatus.SUPERSEDED.value}
     )
     assert superseded == 1, "the old row is retired, not deleted — §23.8 counts it"
+
+
+async def test_a_same_locale_regenerate_replaces_its_push(db, full_facts) -> None:  # noqa: ANN001
+    """The defect the M6 review found, and the one that mattered most.
+
+    §7.1's own worked example — "user flew to London overnight" — keeps the
+    LOCALE, so it used to mint the same `message_id`, supersede the queued push
+    and then fail to insert its replacement on the unique index. Net effect:
+    the user's morning notification was CANCELLED by the regenerate meant to
+    correct it. The locale-change test above passed throughout, because a new
+    locale changes the id.
+
+    The revision now comes from the brief's `generated_at`, which is stable
+    across retries of one generation and different across generations.
+    """
+    store, queue = BriefStore(db), NotificationQueue(db)
+    first = await store.upsert(brief_for(full_facts), now=NOW)
+    row = notify.build(first, timezone="Asia/Kolkata", due_at=DUE_AT)
+    assert row is not None
+    assert await queue.enqueue(row) is True
+
+    # A retry of the SAME generation must not send twice (§23.4 idempotency).
+    again = notify.build(first, timezone="Asia/Kolkata", due_at=DUE_AT)
+    assert again is not None
+    assert await queue.enqueue(again) is False
+
+    # The regenerate: same locale, recomputed for London. Note the SAME `now` —
+    # the acceptance harness regenerates inside one second, and a clock-based
+    # revision collided there. The revision fingerprints the delivery instead.
+    second = await store.upsert(brief_for(full_facts), now=NOW)
+    replacement = notify.build(second, timezone="Europe/London", due_at=DUE_AT)
+    assert replacement is not None
+    assert replacement.message_id != row.message_id
+    assert replacement.collapse_key == row.collapse_key
+    assert await queue.enqueue(replacement) is True
+
+    queued = await db.notifications.find(
+        {"status": NotificationStatus.QUEUED.value}
+    ).to_list(None)
+    assert len(queued) == 1, "exactly one push may be pending"
+    assert queued[0]["message_id"] == replacement.message_id
+    assert (
+        await db.notifications.count_documents(
+            {"status": NotificationStatus.SUPERSEDED.value}
+        )
+        == 1
+    )
+
+
+async def test_an_unchanged_regenerate_does_not_mint_a_second_push(db, full_facts) -> None:  # noqa: ANN001
+    """A regenerate that changes nothing is not a new delivery.
+
+    The revision fingerprints what would be DELIVERED — the brief's rendered
+    modules and its schedule — so recomputing an identical brief for the same
+    city produces the same id and §23.4's dedup absorbs it. A clock-based
+    revision would have sent a second push for no reason.
+    """
+    store, queue = BriefStore(db), NotificationQueue(db)
+    first = await store.upsert(brief_for(full_facts), now=NOW)
+    row = notify.build(first, timezone="Asia/Kolkata", due_at=DUE_AT)
+    assert row is not None and await queue.enqueue(row) is True
+
+    later = NOW + dt.timedelta(minutes=30)
+    same = await store.upsert(brief_for(full_facts), now=later)
+    unchanged = notify.build(same, timezone="Asia/Kolkata", due_at=DUE_AT)
+    assert unchanged is not None
+    assert unchanged.message_id == row.message_id
+    assert await queue.enqueue(unchanged) is False
+    assert await db.notifications.count_documents({}) == 1
+
+
+async def test_a_city_change_moves_the_expiry_and_replaces_the_push(db, full_facts) -> None:  # noqa: ANN001
+    """§23.4 expires the morning push at 12:00 LOCAL, and Mumbai's noon is five
+    and a half hours from London's. A regenerate that kept the old row would
+    expire the brief against the wrong city."""
+    store, queue = BriefStore(db), NotificationQueue(db)
+    stored = await store.upsert(brief_for(full_facts), now=NOW)
+    mumbai = notify.build(stored, timezone="Asia/Kolkata", due_at=DUE_AT)
+    london = notify.build(stored, timezone="Europe/London", due_at=DUE_AT)
+    assert mumbai is not None and london is not None
+
+    assert london.expires_at != mumbai.expires_at
+    assert london.message_id != mumbai.message_id
+    assert await queue.enqueue(mumbai) is True
+    assert await queue.enqueue(london) is True
+
+    queued = await db.notifications.find(
+        {"status": NotificationStatus.QUEUED.value}
+    ).to_list(None)
+    assert len(queued) == 1
+    assert queued[0]["expires_at"] == london.expires_at
+
+
+async def test_a_failed_insert_never_leaves_the_user_with_no_push(db, full_facts) -> None:  # noqa: ANN001
+    """Why `enqueue` inserts BEFORE it supersedes.
+
+    Superseding first is tidier — there is never a moment with two queued rows
+    — and it is wrong in the one case that matters: if the insert then fails,
+    the old row is already retired and nobody gets a brief. The worst case of
+    inserting first is a moment with two rows, which the collapse key resolves.
+    """
+    store, queue = BriefStore(db), NotificationQueue(db)
+    stored = await store.upsert(brief_for(full_facts), now=NOW)
+    row = notify.build(stored, timezone="Asia/Kolkata", due_at=DUE_AT)
+    assert row is not None
+    await queue.enqueue(row)
+
+    # The retry that used to wipe the queue.
+    assert await queue.enqueue(row) is False
+    still_queued = await db.notifications.count_documents(
+        {"status": NotificationStatus.QUEUED.value}
+    )
+    assert still_queued == 1, "the pending push survived a duplicate enqueue"
 
 
 async def test_the_collapse_key_ignores_locale(db, full_facts) -> None:  # noqa: ANN001

@@ -7,10 +7,12 @@ the astrology facade and then validates what came back.
 
 Two rules give this module its shape:
 
-* A tool we cannot serve is DECLINED, never approximated. `NATAL_CHART` and
-  `TRANSITS` raise `FactToolUnavailable` until the chart engine is wired, and
-  the pipeline turns that into an honest "I can't calculate this" rather than
-  handing the model an empty payload to be creative with (§5.3).
+* A tool we cannot serve is DECLINED, never approximated. The pipeline turns a
+  decline into an honest "I can't calculate this" rather than handing the model
+  an empty payload to be creative with (§5.3). The chart tools carry THREE
+  distinct declines and the pipeline renders them differently: no facade wired,
+  birth data too thin (Tara asks — §28.2's missing-birth-time variant), and the
+  engine down (Tara degrades — §8).
 * Only validated snapshots reach interpretation (§5.3 step 7). A stale transit
   is as wrong as an invented one, so `validate` checks the clock too.
 """
@@ -23,6 +25,7 @@ import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Protocol
+from zoneinfo import ZoneInfo
 
 from sitara_schemas.facts import ConfidenceState, FactKind, FactSnapshot, Tradition
 
@@ -207,12 +210,16 @@ class AstrologyFacadeProvider:
         panchang_service: object | None,
         numerology_adapter: object | None,
         place_resolver: object | None,
+        astrology_facade: object | None = None,
         default_place: str = "Delhi",
         tradition: Tradition = Tradition.AMANTA,
     ) -> None:
         self._panchang = panchang_service
         self._numerology = numerology_adapter
         self._places = place_resolver
+        # §13's single door to birth details. None means the chart tools
+        # decline, which is what M5 did unconditionally.
+        self._astrology = astrology_facade
         self._default_place = default_place
         self._tradition = tradition
 
@@ -226,13 +233,54 @@ class AstrologyFacadeProvider:
                 return await self._muhurat(query)
             case FactTool.NUMEROLOGY_PROFILE:
                 return await self._numerology_profile(query)
-            case FactTool.NATAL_CHART | FactTool.TRANSITS:
-                # Declared in the allowlist so routing and the trace are
-                # already correct; the engine lands in a later milestone. An
-                # honest decline is the whole point of §5.3 — the alternative
-                # is an empty payload and an inventive model.
-                raise FactToolUnavailable(query.tool, "chart_engine_not_wired")
+            case FactTool.NATAL_CHART:
+                return await self._chart(query, include_transits=False)
+            case FactTool.TRANSITS:
+                return await self._chart(query, include_transits=True)
         raise FactToolUnavailable(query.tool, "unknown_tool")
+
+    # -- chart (§5.2 Layer A, through the §13 facade) ----------------------
+
+    async def _chart(
+        self, query: FactQuery, *, include_transits: bool
+    ) -> Sequence[FactSnapshot]:
+        """Natal, dasha and (for TRANSITS) today's gochar.
+
+        Three declines, kept apart because the pipeline renders them
+        differently: no facade wired at all, birth data too thin to compute
+        (§5.3 — Tara ASKS, per §28.2's missing-birth-time variant), and the
+        engine being down (§8 — Tara degrades). Collapsing them would either
+        nag a user about an outage or hide a real gap behind a retry.
+        """
+        from sitara_api.astrology.chart_adapter import (
+            ChartEngineUnavailable,
+            InsufficientBirthData,
+        )
+
+        if self._astrology is None:
+            raise FactToolUnavailable(query.tool, "chart_facade_unavailable")
+
+        # §5.3 forbids guessing. Defaulting to UTC here looked harmless and
+        # shifts the LOCAL DATE by up to a day — which is the date the transits
+        # are computed for, so a user with no zone on file would have been
+        # served yesterday's sky with today's confidence.
+        zone = query.profile.tz
+        if not zone:
+            raise FactToolUnavailable(query.tool, "no_timezone_on_profile")
+        local_date = query.now.astimezone(ZoneInfo(zone)).date().isoformat()
+        try:
+            bundle = await self._astrology.chart_for(  # type: ignore[attr-defined]
+                query.user_id,
+                local_date=local_date,
+                timezone=zone,
+                chart_version=query.profile.chart_version,
+                include_transits=include_transits,
+            )
+        except InsufficientBirthData:
+            raise FactToolUnavailable(query.tool, "insufficient_birth_data") from None
+        except ChartEngineUnavailable:
+            raise FactToolUnavailable(query.tool, "chart_engine_unavailable") from None
+        return bundle.all
 
     # -- panchang ----------------------------------------------------------
 
@@ -246,8 +294,6 @@ class AstrologyFacadeProvider:
             raise FactToolUnavailable(query.tool, "place_unresolved") from None
 
     def _local_date(self, query: FactQuery, place) -> dt.date:  # noqa: ANN001
-        from zoneinfo import ZoneInfo
-
         return query.now.astimezone(ZoneInfo(place.tz)).date()
 
     async def _panchang_day(self, query: FactQuery) -> Sequence[FactSnapshot]:

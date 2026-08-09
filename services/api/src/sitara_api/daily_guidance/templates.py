@@ -41,6 +41,7 @@ from sitara_schemas.facts import (
     DayTimingValue,
     FactSnapshot,
     FestivalObservanceValue,
+    Graha,
     HouseAssignmentValue,
     MoolankValue,
     MuhuratWindowValue,
@@ -86,9 +87,24 @@ def _tithi(snapshots: Sequence[FactSnapshot]) -> tuple[FactSnapshot, int, str] |
 
 
 def _nakshatra(snapshots: Sequence[FactSnapshot]) -> tuple[FactSnapshot, str] | None:
+    """The MOON's nakshatra, and no other body's.
+
+    The graha check is the whole function. `natal.graha.nakshatra` is emitted
+    for all nine grahas and the Sun's arrives first, so taking the first
+    nakshatra-shaped value produced "The Moon sits in Purva Bhadrapada" citing
+    the SUN's nakshatra — a false sentence with a real citation, which is the
+    exact failure the citation machinery exists to prevent and cannot catch:
+    the id IS in the payload and the name DOES match the fact it names.
+
+    A `NakshatraBoundaryValue` carries no graha because it is the panchang's
+    nakshatra, which is the Moon's by definition (§5.2); a `NakshatraValue`
+    carries one and must be the Moon's to be this card.
+    """
     for snapshot in snapshots:
         value = snapshot.value
-        if isinstance(value, NakshatraBoundaryValue | NakshatraValue):
+        if isinstance(value, NakshatraBoundaryValue):
+            return snapshot, value.nakshatra.value
+        if isinstance(value, NakshatraValue) and value.graha is Graha.MOON:
             return snapshot, value.nakshatra.value
     return None
 
