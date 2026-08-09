@@ -19,7 +19,7 @@
 
 import { create } from "zustand";
 
-import type { ErrorEnvelope } from "@sitara/schemas";
+import { apiCall } from "./api";
 
 /** §24.4's thirteen. S01 answers nothing, so the stack starts at S02. */
 export const STEPS = {
@@ -138,36 +138,10 @@ export const useOnboarding = create<OnboardingState>((set) => ({
 // ---------------------------------------------------------------------------
 // API client
 // ---------------------------------------------------------------------------
-
-const FALLBACK: ErrorEnvelope = {
-  code: "SYS_UNAVAILABLE",
-  message_key: "errors.sys.unavailable",
-  trace_id: "",
-  retryable: true,
-};
-
-export type ApiResult<T> = { ok: true; data: T } | { ok: false; error: ErrorEnvelope };
-
-/**
- * Every call goes to the same-origin `/v1` proxy so §34.5's httpOnly session
- * cookie is first-party and actually rides along. A network failure becomes a
- * §34.4 envelope rather than a thrown exception, because every screen renders
- * an envelope and none of them should need a try/catch.
- */
-async function call<T>(path: string, init?: RequestInit): Promise<ApiResult<T>> {
-  try {
-    const response = await fetch(`/v1${path}`, {
-      ...init,
-      credentials: "same-origin",
-      headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
-    });
-    const body = response.status === 204 ? null : await response.json();
-    if (response.ok) return { ok: true, data: body as T };
-    return { ok: false, error: body as ErrorEnvelope };
-  } catch {
-    return { ok: false, error: FALLBACK };
-  }
-}
+// Paths only. The origin, the credentials mode and the §34.4 envelope handling
+// live in `lib/api.ts`. Two modules each keeping their own copy of that is how
+// one of them ends up with a prefix the locale middleware rewrites and the
+// other does not — which is exactly what happened to `/v1` and `/auth`.
 
 export interface ServerState {
   locale: string;
@@ -184,15 +158,15 @@ export interface ServerState {
 }
 
 export function fetchState(signal?: AbortSignal) {
-  return call<ServerState>("/onboarding", { signal });
+  return apiCall<ServerState>("/v1/onboarding", { signal });
 }
 
 export function patchState(patch: Record<string, unknown>) {
-  return call<ServerState>("/onboarding", { method: "PATCH", body: JSON.stringify(patch) });
+  return apiCall<ServerState>("/v1/onboarding", { method: "PATCH", body: JSON.stringify(patch) });
 }
 
 export function postConsents(types: string[]) {
-  return call<ServerState>("/onboarding/consents", {
+  return apiCall<ServerState>("/v1/onboarding/consents", {
     method: "POST",
     body: JSON.stringify({ types }),
   });
@@ -205,14 +179,14 @@ export function putBirth(payload: {
   time?: string | null;
   part_of_day?: PartOfDay | null;
 }) {
-  return call<ServerState>("/onboarding/birth", {
+  return apiCall<ServerState>("/v1/onboarding/birth", {
     method: "PUT",
     body: JSON.stringify(payload),
   });
 }
 
 export function searchPlaces(query: string, signal?: AbortSignal) {
-  return call<Place[]>(`/places?q=${encodeURIComponent(query)}`, { signal });
+  return apiCall<Place[]>(`/v1/places?q=${encodeURIComponent(query)}`, { signal });
 }
 
 // ---------------------------------------------------------------------------
@@ -248,7 +222,7 @@ export interface Reading {
 }
 
 export function fetchFirstReading(signal?: AbortSignal) {
-  return call<Reading>("/readings/first", { method: "POST", signal });
+  return apiCall<Reading>("/v1/readings/first", { method: "POST", signal });
 }
 
 /**

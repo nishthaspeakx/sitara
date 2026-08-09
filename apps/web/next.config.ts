@@ -7,8 +7,17 @@ import { distDirFor } from "./scripts/dist-dirs.mjs";
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 // §34.5/§6.2 — the API's httpOnly session cookies must be first-party, so
-// /auth/* proxies to the backend (same-origin in the browser; the refresh
-// cookie's Path=/auth then matches exactly). Production terminates on one site.
+// /auth/* and /v1/* proxy to the backend (same-origin in the browser; the
+// refresh cookie's Path=/auth then matches exactly). Production terminates on
+// one site.
+//
+// **This is read at BUILD time, not at runtime.** Next evaluates `rewrites()`
+// during `next build` and serialises the result into `routes-manifest.json`, so
+// setting API_PROXY_TARGET on `next start` has no effect whatsoever — the
+// destination is already baked in. That is a silent failure: the server starts,
+// the routes work, and they point somewhere else entirely. It cost a debugging
+// session when the flow suite's stub API turned out never to be receiving
+// anything, and every deployment must therefore set this at build time.
 const API_BASE_URL = process.env.API_PROXY_TARGET ?? "http://localhost:8001";
 
 /**

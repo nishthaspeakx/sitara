@@ -14,7 +14,7 @@
     "screenshots:update": "playwright test --project=components --project=screens --update-snapshots",
     "test": "playwright test --project=library",
     "test:screens": "playwright test --project=screens",
-    "build:test": "NEXT_PUBLIC_AUTH_ADAPTER=fake NEXT_PUBLIC_CEREMONY_DEADLINE_MS=1500 NEXT_DIST_DIR=.next-test next build"
+    "build:test": "NEXT_PUBLIC_AUTH_ADAPTER=fake NEXT_PUBLIC_CEREMONY_DEADLINE_MS=1500 API_PROXY_TARGET=http://127.0.0.1:3101 NEXT_DIST_DIR=.next-test next build"
   },
   "dependencies": {
     "@sitara/i18n": "workspace:*",

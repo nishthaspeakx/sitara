@@ -17,10 +17,15 @@ import { DIST_DIRS } from "./scripts/dist-dirs.mjs";
  * The screens server runs with `NEXT_PUBLIC_AUTH_ADAPTER=fake` so the flow tests
  * drive the real screens without a live Firebase project, and with a short
  * ceremony deadline so the S13 timeout path is testable in seconds rather than
- * in the six the product actually waits.
+ * in the six the product actually waits. Its `/auth` and `/v1` proxies point at
+ * `scripts/stub-api.mjs` — a real process, so every API call travels the real
+ * path through the locale middleware and the rewrite.
  */
 const STORYBOOK_PORT = 6100;
 const APP_PORT = 3100;
+/** The stand-in for `sitara-api`. See scripts/stub-api.mjs for why it is a real
+ *  process rather than a `page.route` intercept. */
+const STUB_API_PORT = 3101;
 
 /**
  * Which servers this run actually needs.
@@ -82,27 +87,48 @@ export default defineConfig({
       ? [{
           command: `node scripts/serve-static.mjs storybook-static ${STORYBOOK_PORT}`,
           url: `http://127.0.0.1:${STORYBOOK_PORT}/index.json`,
-          reuseExistingServer: !process.env.CI,
+          // Never reused. A server left running from an earlier build serves
+          // that build, and the suite reports on code nobody is looking at —
+          // which is how a design-qa run failed 5 tests that pass in isolation,
+          // against a `next start` from before the fix under test. A few
+          // seconds of startup is cheaper than one such debugging session.
+          reuseExistingServer: false,
           timeout: 60_000,
         }]
       : []),
     ...(needs("screens")
       ? [{
+          command: `node scripts/stub-api.mjs ${STUB_API_PORT}`,
+          url: `http://127.0.0.1:${STUB_API_PORT}/healthz`,
+          reuseExistingServer: false,
+          timeout: 30_000,
+        },
+        {
           command: `pnpm exec next start --port ${APP_PORT}`,
           url: `http://127.0.0.1:${APP_PORT}/en`,
-          reuseExistingServer: !process.env.CI,
+          reuseExistingServer: false,
           timeout: 120_000,
-          // The fake adapter and the short deadline are baked into the test
-          // output by `build:test`; NEXT_DIST_DIR points `next start` at it.
-          // `next dev` cannot be redirected this way — see next.config.ts.
-          env: { NEXT_DIST_DIR: DIST_DIRS.test },
+          env: {
+            // The fake adapter and the short deadline are baked into the test
+            // output by `build:test`; NEXT_DIST_DIR points `next start` at it.
+            // `next dev` cannot be redirected this way — see next.config.ts.
+            NEXT_DIST_DIR: DIST_DIRS.test,
+            // NOTE: the proxy target is NOT settable here. Next evaluates
+            // `rewrites()` at BUILD time and bakes the destination into
+            // routes-manifest.json, so `build:test` is where
+            // API_PROXY_TARGET=127.0.0.1:${STUB_API_PORT} is set. Setting it on
+            // the server instead looks like it works and silently sends every
+            // request to whatever the build baked in — which for a while was a
+            // developer's real sitara-api on :8001, quietly passing tests that
+            // were meant to be hermetic.
+          },
         }]
       : []),
   ],
   projects: [
     {
       name: "library",
-      testMatch: /library\.spec\.ts|tara-disclosure\.spec\.ts|dist-dirs\.spec\.ts/,
+      testMatch: /library\.spec\.ts|tara-disclosure\.spec\.ts|dist-dirs\.spec\.ts|api-routing\.spec\.ts/,
     },
     {
       name: "components",

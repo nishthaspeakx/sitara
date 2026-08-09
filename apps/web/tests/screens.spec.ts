@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { SKIP_LAUNCH, stubBackend } from "./_onboarding-fixtures";
+import { SKIP_LAUNCH, setupApi } from "./_onboarding-fixtures";
 
 /**
  * Per-SCREEN, per-locale, per-theme baselines — the half of §24.8's design-QA
@@ -90,13 +90,17 @@ test.describe("§24.8 — screen baselines", () => {
     for (const locale of LOCALES) {
       for (const theme of THEMES) {
         test(`${screen.id} · ${locale} · ${theme}`, async ({ page }) => {
-          const state = await stubBackend(page, locale);
           // S06/S07 need each other's answers, and S13 needs a finished stack,
           // so every screen is captured as a user who got there legitimately
           // would see it.
-          state.completed_steps = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-          state.has_birth_details = true;
-          state.time_accuracy = "exact";
+          await setupApi(page, {
+            locale,
+            state: {
+              completed_steps: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+              has_birth_details: true,
+              time_accuracy: "exact",
+            },
+          });
 
           await page.addInitScript((t) => {
             document.documentElement.setAttribute("data-theme", t as string);

@@ -26,7 +26,7 @@ import { Button, Card, ErrorState, Input, SectionHeader } from "@/components/ui"
 import { Link, useRouter } from "@/i18n/navigation";
 import { clearPendingAuth, getPendingPhone, setPendingPhone } from "@/lib/auth-flow";
 import { authClient } from "@/lib/auth-client";
-import { STEPS } from "@/lib/onboarding";
+import { patchState, STEPS } from "@/lib/onboarding";
 import { exchangeSession, firebaseErrorKey, isDobRequired } from "@/lib/session";
 
 import { useStepCommit } from "../_step";
@@ -79,6 +79,14 @@ export default function VerifyPage() {
     });
     if (result.ok) {
       clearPendingAuth();
+      // S03 and S04 are the only steps that cannot record themselves as they
+      // happen: there is no session to PATCH against until the exchange
+      // succeeds. Recording them here is not bookkeeping — §24.4's resume takes
+      // "where to continue" from the LOWEST unrecorded step, so without this a
+      // user who had signed in, consented and entered her birth details would
+      // come back to the sign-up screen.
+      await patchState({ completed_step: STEPS.AUTH });
+      await patchState({ completed_step: STEPS.VERIFY });
       router.push("/start/consent");
       return;
     }

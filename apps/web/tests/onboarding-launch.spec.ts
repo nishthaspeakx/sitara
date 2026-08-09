@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { stubBackend } from "./_onboarding-fixtures";
+import { setupApi } from "./_onboarding-fixtures";
 
 /**
  * §0.11's five launch paths, and the analytics that tells them apart.
@@ -38,7 +38,7 @@ async function events(page: Page): Promise<Array<{ event: string; props: Record<
 test.describe("§0.11 — the launch sequence", () => {
   for (const path of PATHS) {
     test(`the ${path} path runs and reports itself exactly once`, async ({ page }) => {
-      await stubBackend(page);
+      await setupApi(page);
       await captureEvents(page);
 
       // §0.11's own acceptance needs each path drivable on demand ("all timings
@@ -63,7 +63,7 @@ test.describe("§0.11 — the launch sequence", () => {
   test("skipping reports the skipped path and lands inside §0.11's 300ms budget", async ({
     page,
   }) => {
-    await stubBackend(page);
+    await setupApi(page);
     await captureEvents(page);
     // The full ceremony, so there is 5.5s of sequence to actually cut short.
     await page.goto("/en/?launch=full");
@@ -86,7 +86,7 @@ test.describe("§0.11 — the launch sequence", () => {
   });
 
   test("the skip affordance is hidden on the first-ever launch", async ({ page }) => {
-    await stubBackend(page);
+    await setupApi(page);
     // §0.11: "skippable by tap/Enter/Escape from first frame (AFTER first
     // launch)". A first-ever visitor has not seen the thing she would be
     // skipping, and gets the 1.2s static form anyway.
@@ -103,7 +103,7 @@ test.describe("§0.11 — the launch sequence", () => {
   }) => {
     const context = await browser.newContext({ reducedMotion: "reduce" });
     const page = await context.newPage();
-    await stubBackend(page);
+    await setupApi(page);
     // Storage says the assets are local, so without the preference this would
     // be the full ceremony.
     await page.addInitScript(() => localStorage.setItem("sitara.launch.seen", "1"));
@@ -117,7 +117,7 @@ test.describe("§0.11 — the launch sequence", () => {
   });
 
   test("§13 — the launch event carries no identifying properties", async ({ page }) => {
-    await stubBackend(page);
+    await setupApi(page);
     await captureEvents(page);
     await page.goto("/en/?launch=static");
     await page.waitForURL(/\/start\/language$/);

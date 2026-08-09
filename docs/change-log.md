@@ -549,3 +549,77 @@ regardless of which projects are selected. On a clean checkout that is a hang
 waiting for a `next start` against a `.next-test` nobody has built yet. Servers
 are now scoped to the projects that need them.
 
+---
+
+## CL-013 — API routing, and a suite that could not see a 404
+**Date:** 9 August 2026 · **Approved:** Founder (Nishtha Agarwal) ·
+**Raised by:** every onboarding step 404-ing in a real browser ·
+**Touches:** §34.5, §6.2, §34.4, §24.6, §28.1
+
+**What broke.** `GET/PATCH /v1/onboarding` came back 404 in Chrome, at
+`http://localhost:3000/hi/v1/onboarding`. next-intl's middleware exists to put a
+locale on every route it sees, and its matcher excluded `auth` but not `v1` — so
+it 307'd `/v1/onboarding` to `/<locale>/v1/onboarding`, which matches no rewrite
+and no page. `/auth/session` worked and `/v1/*` did not, for a reason nothing in
+the code connected. **API routes are never locale-prefixed**; the locale travels
+in the request body or comes from the session.
+
+**What was fixed.**
+
+1. **The prefix, at source.** The matcher excludes every proxied prefix.
+   `src/lib/api.ts` holds the one list, `tests/api-routing.spec.ts` asserts the
+   three places that must agree — the list, the rewrites, the matcher — and
+   `apiUrl()` throws on a locale-prefixed path at the call site.
+
+2. **One API door.** `session.ts` and `onboarding.ts` each built their own paths
+   and handled their own errors. Both now call `apiCall`, which is also where
+   the §34.4 envelope is guaranteed: a 404 or a proxy error carries no envelope,
+   and returning the raw body handed screens `undefined.message_key`.
+
+3. **A step that failed silently.** S02 switched locale AND persisted, and it
+   switched first — which replaces the React tree, so the failed PATCH set its
+   error on a component that no longer existed. The user tapped a language and
+   *nothing happened*: no error, no retry, no advance. The order is now
+   persist-then-navigate, with the locale carried into the forward navigation,
+   and `tests/onboarding-errors.spec.ts` drives a forced failure through EVERY
+   step that writes and asserts the envelope surfaces and does not advance.
+
+4. **Resume sent users backwards.** Found by asserting persisted state rather
+   than navigation: S03, S04 and S06 advanced without recording themselves, and
+   `next_step` is the lowest UNrecorded step — so a user who had signed in,
+   consented and given her birth details resumed at the sign-up screen.
+
+**Why the suite was green.** It used `page.route("**/v1/onboarding", …)`, which
+intercepts in the BROWSER. The request never left, so the Next server — and with
+it the middleware and the rewrite — never saw it. The suite verified that the
+client handles a response the test invented, and had never once verified the URL
+that produces it. **A browser-level intercept structurally cannot observe a
+redirect issued by the server it prevented the request from reaching.**
+
+Replaced by `scripts/stub-api.mjs`, a real process the app proxies to, so every
+request travels browser → `next start` → middleware → rewrite → API. Confirmed
+by regression: restoring the old matcher now fails `api-routing.spec.ts`.
+
+**A trap found while fixing it.** The first attempt made the API base URL
+client-configurable via `NEXT_PUBLIC_API_BASE_URL`, which `.env.example` already
+shipped as `http://localhost:8001`. Every developer build picked it up and every
+call became cross-origin: CORS refused the preflight, and any call that had got
+through would have arrived **without the httpOnly session cookie**. §34.5 and
+§6.2 require the browser to call its own origin and the server to proxy — "one
+site" is the design, not an implementation detail. The knob is removed rather
+than defaulted-to-empty; the origin is still env-configured in exactly one
+place, `API_PROXY_TARGET`, on the server side of the proxy.
+
+**Also recorded.** Next evaluates `rewrites()` at BUILD time and bakes the
+destination into `routes-manifest.json`, so `API_PROXY_TARGET` on `next start`
+does nothing — silently, with the server up and the routes working. It cost a
+debugging session in which the flow suite's stub was receiving nothing while a
+developer's real `sitara-api` quietly served the tests. Playwright no longer
+reuses running servers either: a `next start` left over from an earlier build
+serves that build, which failed five design-qa tests that pass in isolation.
+
+**Residual risk.** `apiUrl` validates prefixes at runtime, so a bad path throws
+in the browser rather than at build time. The three-way agreement is asserted by
+a test rather than derived from one source, because Next requires the middleware
+matcher to be a static literal it can analyse at build time.
+

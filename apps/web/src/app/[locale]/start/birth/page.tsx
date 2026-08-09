@@ -17,15 +17,25 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
-import { Button, Card, Input, ListRow, SearchField, SectionHeader, Sheet } from "@/components/ui";
-import { useRouter } from "@/i18n/navigation";
-import { searchPlaces, STEP_ROUTES, STEPS, useOnboarding, type Place } from "@/lib/onboarding";
+import {
+  Button,
+  Card,
+  ErrorState,
+  Input,
+  ListRow,
+  SearchField,
+  SectionHeader,
+  Sheet,
+} from "@/components/ui";
+import { patchState, searchPlaces, STEPS, useOnboarding, type Place } from "@/lib/onboarding";
 import { useCloseOnBack } from "@/lib/overlay";
+
+import { useStepCommit } from "../_step";
 
 export default function BirthPage() {
   const t = useTranslations();
-  const router = useRouter();
   const { birthDate, birthPlace, set } = useOnboarding();
+  const { commit, busy, error, clearError } = useStepCommit(STEPS.BIRTH);
   const [query, setQuery] = useState(birthPlace?.label ?? "");
   const [results, setResults] = useState<Place[]>([]);
   const [whyOpen, setWhyOpen] = useState(false);
@@ -109,14 +119,20 @@ export default function BirthPage() {
         </div>
       </Card>
 
+      {/* S06 collects, S07 writes the pair. This still commits: §24.4's resume
+          reads the LOWEST unrecorded step, so a screen that advances without
+          recording itself sends a returning user backwards. */}
       <Button
         fullWidth
+        loading={busy}
         disabled={!ready}
         data-testid="birth-continue"
-        onClick={() => router.push(STEP_ROUTES[STEPS.BIRTH_TIME]!)}
+        onClick={() => void commit(() => patchState({ completed_step: STEPS.BIRTH }))}
       >
         {t("start.continue")}
       </Button>
+
+      {error ? <ErrorState error={error} onRetry={clearError} /> : null}
 
       <Button variant="tertiary" onClick={() => setWhyOpen(true)}>
         {t("start.birth.why_ask")}

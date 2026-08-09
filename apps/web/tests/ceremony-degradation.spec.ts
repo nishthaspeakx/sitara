@@ -1,4 +1,4 @@
-import { expect, test, type Page, type Route } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 /**
  * S13 — the first-reading ceremony, and every way it is allowed to fail.
@@ -33,87 +33,27 @@ import { expect, test, type Page, type Route } from "@playwright/test";
  * approximate, and one built without a chart must not claim otherwise.
  */
 
-const READING_ROUTE = "**/v1/readings/first";
-const ONBOARDING_ROUTE = "**/v1/onboarding";
+import { SKIP_LAUNCH, setupApi, type Scenario } from "./_onboarding-fixtures";
 
 /** Set on the flows webServer so the client deadline is testable in seconds. */
 const DEADLINE_MS = Number(process.env.NEXT_PUBLIC_CEREMONY_DEADLINE_MS ?? 1500);
 
+/** A user who has completed S02–S12 — S13 is reachable only from a full stack. */
+const COMPLETED = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+
 /**
- * A user who has completed S02–S12. S13 is reachable only from a complete
- * stack, so the resume guard needs this to let the ceremony mount at all.
+ * Every case drives the REAL request path — browser → next start → middleware →
+ * rewrite → stub-api — with the stub told which way to fail. The suite used to
+ * fulfil these in the browser with `page.route`, which meant it never once
+ * exercised the URL, and a locale-prefixed 404 on this very endpoint passed it.
  */
-const COMPLETED_ONBOARDING = {
-  locale: "en",
-  completed_steps: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-  birth_time_known: true,
-  brief_time: "07:00",
-};
-
-/** §34.2 — the artefact embeds the snapshot it cited, so the stub carries one. */
-const MOON_NAKSHATRA_FACT = {
-  fact_id: "natal.graha.nakshatra:moon:v1",
-  kind: "natal.graha.nakshatra",
-  value: { graha: "moon", nakshatra: "rohini" },
-  source: "sitara-astro",
-  confidence: "verified",
-};
-
-const HOUSE_FACT = {
-  fact_id: "natal.house_assignment:venus:v1",
-  kind: "natal.house_assignment",
-  value: { graha: "venus", whole_sign_house: 7 },
-  source: "sitara-astro",
-  confidence: "verified",
-};
-
-const PANCHANG_FACT = {
-  fact_id: "panchang.tithi:2026-08-09:bengaluru",
-  kind: "panchang.tithi",
-  value: { tithi_index: 11, paksha: "shukla" },
-  source: "divineapi",
-  confidence: "verified",
-};
-
-const COMPLETE_READING = {
-  status: "complete",
-  confidence: "verified",
-  source_state: "default",
-  missing: [],
-  degrade_reason: null,
-  lines: [
-    {
-      id: "moon_nakshatra",
-      values: { nakshatra: "Rohini" },
-      fact_ids: [MOON_NAKSHATRA_FACT.fact_id],
-      confidence: "verified",
-    },
-    {
-      id: "observation",
-      house: 7,
-      values: { graha: "Venus" },
-      fact_ids: [HOUSE_FACT.fact_id],
-      confidence: "verified",
-    },
-    {
-      id: "panchang",
-      values: { tithi: "Ekadashi", paksha: "Shukla" },
-      fact_ids: [PANCHANG_FACT.fact_id],
-      confidence: "verified",
-    },
-  ],
-  facts: [MOON_NAKSHATRA_FACT, HOUSE_FACT, PANCHANG_FACT],
-};
-
-async function stubOnboarding(page: Page) {
-  await page.route(ONBOARDING_ROUTE, (route: Route) =>
-    route.fulfill({ json: COMPLETED_ONBOARDING }),
-  );
-}
-
-/** §34.4 envelope — the only error shape the client may ever receive. */
-function envelope(code: string, messageKey: string, retryable: boolean) {
-  return { code, message_key: messageKey, trace_id: "trace-ceremony-test", retryable };
+async function openCeremony(page: Page, scenario: Scenario, locale = "en") {
+  await setupApi(page, {
+    locale,
+    scenario,
+    state: { completed_steps: [...COMPLETED], has_birth_details: true, time_accuracy: "exact" },
+  });
+  await page.goto(`/${locale}/start/reading${SKIP_LAUNCH}`);
 }
 
 /**
@@ -155,19 +95,10 @@ async function assertNeverStranded(page: Page) {
 }
 
 test.describe("S13 first-reading ceremony — degradation", () => {
-  test.beforeEach(async ({ page }) => {
-    await stubOnboarding(page);
-  });
-
   test("the engine answers slowly but within the deadline: the real reading arrives", async ({
     page,
   }) => {
-    await page.route(READING_ROUTE, async (route: Route) => {
-      await new Promise((r) => setTimeout(r, Math.floor(DEADLINE_MS * 0.5)));
-      await route.fulfill({ json: COMPLETE_READING });
-    });
-
-    await page.goto("/en/start/reading");
+    await openCeremony(page, "reading_slow");
 
     // The skeleton is what the user sees first — §24.6 forbids a spinner on a
     // content surface, so this must be the skeleton and not a throbber.
@@ -184,11 +115,10 @@ test.describe("S13 first-reading ceremony — degradation", () => {
   test("the request never resolves: the client deadline fires and the user is not stranded", async ({
     page,
   }) => {
-    // Never fulfilled, never aborted — the hang that no server-side timeout can
-    // rescue, and the exact failure this suite exists for.
-    await page.route(READING_ROUTE, () => {});
-
-    await page.goto("/en/start/reading");
+    // The server accepts the request and never answers — the hang that no
+    // server-side timeout can rescue, and the exact failure this suite exists
+    // for.
+    await openCeremony(page, "reading_hangs");
     await expect(page.locator('[aria-busy="true"]')).toBeVisible();
 
     // Past the deadline the ceremony must have given up honestly.
@@ -205,25 +135,9 @@ test.describe("S13 first-reading ceremony — degradation", () => {
   test("no birth time: Moon-chart framing, an approximate chip, and the add-time affordance", async ({
     page,
   }) => {
-    await page.route(READING_ROUTE, (route: Route) =>
-      route.fulfill({
-        json: {
-          ...COMPLETE_READING,
-          status: "partial",
-          confidence: "approximate",
-          missing: ["birth_time"],
-          degrade_reason: "insufficient_birth_data",
-          // §5.3: no lagna-sensitive claim survives a missing birth time, so
-          // the house observation is absent rather than guessed.
-          lines: COMPLETE_READING.lines.filter(
-            (l) => l.id !== "observation",
-          ),
-          facts: [MOON_NAKSHATRA_FACT, PANCHANG_FACT],
-        },
-      }),
-    );
-
-    await page.goto("/en/start/reading");
+    // §5.3: no lagna-sensitive claim survives a missing birth time, so the
+    // stub drops the house observation rather than guessing it.
+    await openCeremony(page, "reading_no_birth_time");
 
     await expect(page.getByTestId("reading-confidence")).toHaveAttribute(
       "data-state",
@@ -244,29 +158,7 @@ test.describe("S13 first-reading ceremony — degradation", () => {
   test("the chart engine is down: a panchang-only reading, one retry, flow still advances", async ({
     page,
   }) => {
-    let attempts = 0;
-    await page.route(READING_ROUTE, (route: Route) => {
-      attempts += 1;
-      if (attempts === 1) {
-        return route.fulfill({
-          status: 503,
-          json: envelope("ASTRO_ENGINE_UNAVAILABLE", "errors.astro.engine_unavailable", true),
-        });
-      }
-      return route.fulfill({
-        json: {
-          ...COMPLETE_READING,
-          status: "partial",
-          confidence: "tradition_based_general",
-          missing: ["natal_chart"],
-          degrade_reason: "engine_unavailable",
-          lines: COMPLETE_READING.lines.filter((l) => l.id === "panchang"),
-          facts: [PANCHANG_FACT],
-        },
-      });
-    });
-
-    await page.goto("/en/start/reading");
+    await openCeremony(page, "reading_engine_down_then_panchang");
 
     // §24.6: in-locale, warm, ONE retry action.
     const retry = page.getByRole("button", { name: /retry|try again/i });
@@ -286,21 +178,7 @@ test.describe("S13 first-reading ceremony — degradation", () => {
   test("the panchang is unavailable but the chart is not: chart lines only, no invented timings", async ({
     page,
   }) => {
-    await page.route(READING_ROUTE, (route: Route) =>
-      route.fulfill({
-        json: {
-          ...COMPLETE_READING,
-          status: "partial",
-          confidence: "verified_limited_birth_data",
-          missing: ["panchang"],
-          degrade_reason: "panchang_unavailable",
-          lines: COMPLETE_READING.lines.filter((l) => l.id !== "panchang"),
-          facts: [MOON_NAKSHATRA_FACT, HOUSE_FACT],
-        },
-      }),
-    );
-
-    await page.goto("/en/start/reading");
+    await openCeremony(page, "reading_no_panchang");
 
     await expect(page.getByTestId("reading-line")).toHaveCount(2);
     await expect(page.getByTestId("reading-confidence")).toHaveAttribute(
@@ -316,14 +194,7 @@ test.describe("S13 first-reading ceremony — degradation", () => {
   test("everything fails: an honest error with a retry AND a working way to Today", async ({
     page,
   }) => {
-    await page.route(READING_ROUTE, (route: Route) =>
-      route.fulfill({
-        status: 503,
-        json: envelope("SYS_UNAVAILABLE", "errors.sys.unavailable", true),
-      }),
-    );
-
-    await page.goto("/en/start/reading");
+    await openCeremony(page, "reading_unavailable");
 
     await expect(page.locator("main").getByRole("alert")).toBeVisible();
     await expect(page.getByRole("button", { name: /retry|try again/i })).toHaveCount(1);
@@ -343,18 +214,8 @@ test.describe("S13 first-reading ceremony — degradation", () => {
   });
 
   test("degradation is honest in every locale, not just English", async ({ page }) => {
-    await page.route(READING_ROUTE, (route: Route) =>
-      route.fulfill({
-        status: 503,
-        json: envelope("ASTRO_ENGINE_UNAVAILABLE", "errors.astro.engine_unavailable", true),
-      }),
-    );
-
     for (const locale of ["hi", "hi-Latn"] as const) {
-      await page.route(ONBOARDING_ROUTE, (route: Route) =>
-        route.fulfill({ json: { ...COMPLETED_ONBOARDING, locale } }),
-      );
-      await page.goto(`/${locale}/start/reading`);
+      await openCeremony(page, "reading_unavailable", locale);
 
       await assertNeverStranded(page);
 

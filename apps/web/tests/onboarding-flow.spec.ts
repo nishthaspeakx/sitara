@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { SKIP_LAUNCH, stubBackend } from "./_onboarding-fixtures";
+import { SKIP_LAUNCH, serverState, setupApi } from "./_onboarding-fixtures";
 
 /**
  * The complete §24.4 happy path, S01 → S13 → Today, in every launch locale.
@@ -26,6 +26,20 @@ const SCRIPT: Record<string, string> = {
   hi: "devanagari",
 };
 
+/**
+ * The S02 card for each locale, written in its own script (§10-3).
+ *
+ * The walk used to tap "English" whatever locale it was testing, which — now
+ * that S02 persists before it navigates — correctly switches the whole flow to
+ * English and makes "completes in hi" a test of the English stack. Choosing the
+ * card under test is what actually exercises Devanagari end to end.
+ */
+const LANGUAGE_CARD: Record<string, string> = {
+  en: "English",
+  hi: "हिन्दी",
+  "hi-Latn": "Hinglish",
+};
+
 /** No screen may show a raw key — that is what a missing string looks like. */
 async function assertNoRawKeys(page: Page) {
   const text = await page.locator("body").innerText();
@@ -33,7 +47,7 @@ async function assertNoRawKeys(page: Page) {
 }
 
 async function walkTheStack(page: Page, locale: string) {
-  await stubBackend(page, locale);
+  const clientId = await setupApi(page, { locale });
 
   // ── S01 launch ──────────────────────────────────────────────────────────
   await page.goto(`/${locale}/${SKIP_LAUNCH}`);
@@ -46,7 +60,7 @@ async function walkTheStack(page: Page, locale: string) {
   // The eight cards are each written in their OWN script (§10-3), so the
   // Devanagari name is present whatever the active locale is.
   await expect(page.getByText("हिन्दी")).toBeVisible();
-  await page.getByRole("button", { name: /English/ }).first().click();
+  await page.getByRole("button", { name: LANGUAGE_CARD[locale]! }).first().click();
 
   // ── S03 sign-up ─────────────────────────────────────────────────────────
   await page.waitForURL(/\/start\/auth$/);
@@ -121,6 +135,22 @@ async function walkTheStack(page: Page, locale: string) {
 
   await page.waitForURL(new RegExp(`/${locale}/today$`));
   await assertNoRawKeys(page);
+
+  // The steps did not merely navigate — they PERSISTED. Asserted against the
+  // server's own view, because §24.4's resume reads from there, and because a
+  // request that 404'd would leave this empty while every screen still advanced.
+  //
+  // ALL TWELVE, contiguously. This assertion caught a real gap: S03, S04 and
+  // S06 used to advance without recording themselves, and `next_step` is the
+  // LOWEST unrecorded step — so a user who had signed in, consented and given
+  // her birth details resumed at the sign-up screen.
+  const persisted = await serverState(clientId);
+  expect(persisted.completed_steps.sort((a, b) => a - b)).toEqual([
+    2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
+  ]);
+  expect(persisted.has_birth_details).toBe(true);
+  expect(persisted.interest).toBe("balanced");
+  expect(persisted.priorities.length).toBe(2);
 }
 
 for (const locale of LOCALES) {
@@ -130,7 +160,7 @@ for (const locale of LOCALES) {
 }
 
 test("Hindi renders in Devanagari, not in a silent English fallback", async ({ page }) => {
-  await stubBackend(page, "hi");
+  await setupApi(page, { locale: "hi" });
   await page.goto(`/hi/start/consent${SKIP_LAUNCH}`);
 
   await expect(page.locator("html")).toHaveAttribute("data-script", "devanagari");
@@ -143,7 +173,7 @@ test("Hindi renders in Devanagari, not in a silent English fallback", async ({ p
 test("S11 enforces §24.4's three-priority cap in the interface, not just on the server", async ({
   page,
 }) => {
-  await stubBackend(page);
+  await setupApi(page);
   await page.goto(`/en/start/priorities${SKIP_LAUNCH}`);
 
   const chips = page.getByTestId("priority-chips").getByRole("button");
@@ -156,7 +186,7 @@ test("S11 enforces §24.4's three-priority cap in the interface, not just on the
 });
 
 test("§30.1 — the location prompt is unreachable without its explainer", async ({ page }) => {
-  await stubBackend(page);
+  await setupApi(page);
   let geolocationAsked = false;
   await page.addInitScript(() => {
     // Record any call rather than granting: the assertion is about ORDER.

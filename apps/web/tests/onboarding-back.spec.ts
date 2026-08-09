@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { SKIP_LAUNCH, stubBackend } from "./_onboarding-fixtures";
+import { SKIP_LAUNCH, setupApi } from "./_onboarding-fixtures";
 
 /**
  * §28.1's navigation rules, applied to the onboarding stack.
@@ -17,7 +17,7 @@ import { SKIP_LAUNCH, stubBackend } from "./_onboarding-fixtures";
 
 test.describe("§28.1 — the onboarding stack's back rules", () => {
   test("back walks to the previous STEP, not backwards through history", async ({ page }) => {
-    await stubBackend(page);
+    await setupApi(page);
 
     // Arrive at S09 directly, as a resume redirect does. There is no history
     // entry for S08, so a stack that popped history would leave the app.
@@ -35,7 +35,7 @@ test.describe("§28.1 — the onboarding stack's back rules", () => {
   test("back from the FIRST step shows the save-progress note, never a blank page", async ({
     page,
   }) => {
-    await stubBackend(page);
+    await setupApi(page);
     await page.goto(`/en/start/language${SKIP_LAUNCH}`);
 
     await page.getByRole("button", { name: /back/i }).click();
@@ -53,7 +53,7 @@ test.describe("§28.1 — the onboarding stack's back rules", () => {
   });
 
   test("browser back closes the topmost sheet before it pops the route", async ({ page }) => {
-    await stubBackend(page);
+    await setupApi(page);
     await page.goto(`/en/start/birth${SKIP_LAUNCH}`);
 
     await page.getByRole("button", { name: /why we ask/i }).click();
@@ -69,7 +69,7 @@ test.describe("§28.1 — the onboarding stack's back rules", () => {
   });
 
   test("closing a sheet by its control leaves Back working in one press", async ({ page }) => {
-    await stubBackend(page);
+    await setupApi(page);
     await page.goto(`/en/start/city${SKIP_LAUNCH}`);
 
     // Open and close the S43 explainer with its own control. The history entry
@@ -85,9 +85,8 @@ test.describe("§28.1 — the onboarding stack's back rules", () => {
   });
 
   test("§24.4 — a resumed stack returns to the step it was left on", async ({ page }) => {
-    const state = await stubBackend(page);
     // The server says S02–S08 are done, so S09 is where she left off.
-    state.completed_steps = [2, 3, 4, 5, 6, 7, 8];
+    await setupApi(page, { state: { completed_steps: [2, 3, 4, 5, 6, 7, 8] } });
 
     await page.goto(`/en/${SKIP_LAUNCH}`);
     await page.waitForURL(/\/start\/interest$/);
@@ -95,8 +94,9 @@ test.describe("§28.1 — the onboarding stack's back rules", () => {
   });
 
   test("a finished stack skips onboarding entirely and lands on Today", async ({ page }) => {
-    const state = await stubBackend(page);
-    state.completed_steps = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
+    await setupApi(page, {
+      state: { completed_steps: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13] },
+    });
 
     await page.goto(`/en/${SKIP_LAUNCH}`);
     await page.waitForURL(/\/en\/today$/);

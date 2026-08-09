@@ -3,6 +3,10 @@
 /**
  * The commit-and-advance move every onboarding screen makes.
  *
+ * The ORDER is the contract: persist, and only then navigate. A screen that
+ * navigates first cannot show its own error, because the component holding the
+ * error state is gone by the time the request resolves.
+ *
  * Not a §24.3 component — it has no DOM surface. It is the shape of "this
  * screen's answer is complete": persist it (§24.4's per-step persistence),
  * record the analytics event, then move to the next route. Twelve screens
@@ -17,7 +21,8 @@ import type { ErrorEnvelope } from "@sitara/schemas";
 
 import { useRouter } from "@/i18n/navigation";
 import { track } from "@/lib/analytics";
-import { STEP_ROUTES, type ApiResult, useOnboarding } from "@/lib/onboarding";
+import type { ApiResult } from "@/lib/api";
+import { STEP_ROUTES, useOnboarding } from "@/lib/onboarding";
 
 export function useStepCommit(step: number) {
   const router = useRouter();
@@ -29,7 +34,7 @@ export function useStepCommit(step: number) {
   const commit = useCallback(
     async <T,>(
       request: () => Promise<ApiResult<T>>,
-      options: { next?: string } = {},
+      options: { next?: string; locale?: string } = {},
     ): Promise<boolean> => {
       if (busy) return false;
       setBusy(true);
@@ -48,7 +53,12 @@ export function useStepCommit(step: number) {
       const steps = Object.keys(STEP_ROUTES).map(Number).sort((a, b) => a - b);
       const nextStep = steps[steps.indexOf(step) + 1];
       const fallback = nextStep === undefined ? undefined : STEP_ROUTES[nextStep];
-      router.push(options.next ?? fallback ?? "/today");
+      // `options.locale` switches locale and advances in ONE navigation. Doing
+      // them as two — switch, then commit — unmounts this component while the
+      // request is in flight, so a failure sets state on a tree that is being
+      // replaced and the user sees nothing happen at all. That was a live bug
+      // on S02: a dead button, no error, no retry.
+      router.push(options.next ?? fallback ?? "/today", { locale: options.locale });
       return true;
     },
     [busy, locale, markComplete, router, step],

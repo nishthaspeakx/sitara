@@ -21,7 +21,6 @@
 import { useLocale, useTranslations } from "next-intl";
 
 import { Card, ErrorState, ListRow, SectionHeader, TaraPresence } from "@/components/ui";
-import { usePathname, useRouter } from "@/i18n/navigation";
 import { patchState, STEPS } from "@/lib/onboarding";
 
 import { useStepCommit } from "../_step";
@@ -40,18 +39,21 @@ const LANGUAGES = [
 
 export default function LanguagePage() {
   const t = useTranslations();
-  const router = useRouter();
-  const pathname = usePathname();
   const active = useLocale();
   const { commit, busy, error, clearError } = useStepCommit(STEPS.LANGUAGE);
 
   async function choose(code: string) {
-    if (code !== active) {
-      // Switching locale re-renders the whole app in the new script (§10-3:
-      // "full re-render, no residue"). The commit follows on the new route.
-      router.replace(pathname, { locale: code });
-    }
-    await commit(() => patchState({ locale: code, completed_step: STEPS.LANGUAGE }));
+    // Persist FIRST, then move. This screen used to switch locale immediately
+    // and commit afterwards, which reads well and is wrong: the locale switch
+    // replaces the tree, so a failed PATCH set its error on a component that no
+    // longer existed. The user tapped a language and nothing happened at all —
+    // no error, no retry, no advance.
+    //
+    // §10-3's "full re-render, no residue" still holds; it just happens on the
+    // forward navigation, which `commit` performs with the chosen locale.
+    await commit(() => patchState({ locale: code, completed_step: STEPS.LANGUAGE }), {
+      locale: code,
+    });
   }
 
   return (

@@ -5,41 +5,31 @@
  */
 import type { ErrorEnvelope } from "@sitara/schemas";
 
+import { apiCall } from "./api";
+
 export type ExchangeOk = { ok: true; userId: string; isNewUser: boolean };
 export type ExchangeErr = { ok: false; error: ErrorEnvelope };
 export type ExchangeResult = ExchangeOk | ExchangeErr;
-
-const FALLBACK_ENVELOPE: ErrorEnvelope = {
-  code: "SYS_INTERNAL",
-  message_key: "errors.sys.internal",
-  trace_id: "",
-  retryable: true,
-};
 
 export async function exchangeSession(
   idToken: string,
   opts: { locale: string; dateOfBirth?: string; deviceName?: string },
 ): Promise<ExchangeResult> {
-  try {
-    const res = await fetch("/auth/session", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "same-origin",
-      body: JSON.stringify({
-        id_token: idToken,
-        locale: opts.locale,
-        date_of_birth: opts.dateOfBirth ?? null,
-        device_name: opts.deviceName ?? null,
-      }),
-    });
-    const body = await res.json();
-    if (res.ok) {
-      return { ok: true, userId: body.user_id, isNewUser: body.is_new_user };
-    }
-    return { ok: false, error: body as ErrorEnvelope };
-  } catch {
-    return { ok: false, error: FALLBACK_ENVELOPE };
+  // The locale rides in the BODY. API routes are never locale-prefixed — a
+  // prefixed one is redirected by the locale middleware and 404s.
+  const result = await apiCall<{ user_id: string; is_new_user: boolean }>("/auth/session", {
+    method: "POST",
+    body: JSON.stringify({
+      id_token: idToken,
+      locale: opts.locale,
+      date_of_birth: opts.dateOfBirth ?? null,
+      device_name: opts.deviceName ?? null,
+    }),
+  });
+  if (result.ok) {
+    return { ok: true, userId: result.data.user_id, isNewUser: result.data.is_new_user };
   }
+  return { ok: false, error: result.error };
 }
 
 export function isDobRequired(result: ExchangeResult): boolean {
