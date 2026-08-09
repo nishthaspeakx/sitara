@@ -1,0 +1,31 @@
+{
+  "local_date": "2026-08-12",
+  "local_time": "09:10",
+  "timezone": "Asia/Kolkata",
+  "density": "med",
+  "tier": "paying",
+  "status": "pending",
+  "degrade_reason": null,
+  "confidence": null,
+  "taras_line": {
+    "text": "नई सुबह है, और मैं यहाँ हूँ आपके साथ।",
+    "confidence": "tradition_based_general"
+  },
+  "modules": [],
+  "panchang": [],
+  "state": {
+    "first_session": true,
+    "first_morning": false,
+    "brief_time": "07:00",
+    "travel": {
+      "active": false,
+      "city": null
+    },
+    "festival": null,
+    "birthday": false,
+    "birth_time_missing": false,
+    "trial_day": null,
+    "plan": "premium",
+    "story_ring_enabled": false
+  }
+}

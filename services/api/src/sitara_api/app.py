@@ -16,6 +16,8 @@ from sitara_api.chat_orchestration import ChatSettings, build_pipeline
 from sitara_api.chat_orchestration.router import router as chat_router
 from sitara_api.chat_orchestration.types import LAUNCH_LOCALES
 from sitara_api.config import Settings
+from sitara_api.daily_guidance.router import router as today_router
+from sitara_api.daily_guidance.wiring import build_service as build_daily_guidance
 from sitara_api.db import ensure_indexes, make_mongo, make_redis
 from sitara_api.db.csfle import build_crypto
 from sitara_api.errors import install_error_handlers
@@ -40,6 +42,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         client, db = make_mongo(settings)
         app.state.db = db
+        # The CSFLE key vault needs the CLIENT, not the database, and
+        # `daily_guidance.wiring.build_service` borrows it rather than opening a
+        # second one — an earlier version opened one per call and never closed
+        # it, which at Stage-2 volumes is a leaked pool per brief.
+        app.state.mongo_client = client
         app.state.redis = make_redis(settings)
         await ensure_indexes(db)
         # §13 CSFLE. Returns None only in dev with encryption switched off;
@@ -87,7 +94,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             place_resolver=app.state.place_resolver,
             memory_retriever=app.state.memory_service,
         )
+        # §7.1's pipeline, for the on-open path `GET /v1/today` needs (§28.2).
+        # Built ONCE here rather than per request: it provisions a CSFLE codec
+        # holding a key-vault connection, and Today is the app's busiest screen.
+        app.state.daily_guidance, close_daily_guidance = await build_daily_guidance(
+            db, client
+        )
         yield
+        await close_daily_guidance()
         if app.state.field_crypto is not None:
             await app.state.field_crypto.close()
         client.close()
@@ -124,6 +138,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(chat_router)
     app.include_router(memory_router)
     app.include_router(onboarding_router)
+    app.include_router(today_router)
+    # §28.2's variant switcher runs the REAL service over fact fixtures, and
+    # it exists ONLY in dev — `db.seed` refuses a non-dev host for the same
+    # reason: a convenience that can reach production data is not one.
+    if settings.environment == "dev":
+        from sitara_api.daily_guidance.dev_router import router as today_dev_router
+
+        app.include_router(today_dev_router)
 
     @app.get("/healthz")
     def healthz() -> dict[str, str]:

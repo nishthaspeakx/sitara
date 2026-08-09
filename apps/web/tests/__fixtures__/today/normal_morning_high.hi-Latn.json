@@ -1,0 +1,195 @@
+{
+  "local_date": "2026-08-12",
+  "local_time": "08:30",
+  "timezone": "Asia/Kolkata",
+  "density": "high",
+  "tier": "paying",
+  "status": "ranking_only",
+  "degrade_reason": null,
+  "confidence": "verified",
+  "taras_line": {
+    "text": "Subah Rohini mein khul rahi hai — shuruaat ke liye komal samay.",
+    "confidence": "verified"
+  },
+  "modules": [
+    {
+      "module": "energy_of_day",
+      "text": "Aaj Shukla paksha hai, tithi 5.",
+      "confidence": "verified",
+      "trust": {
+        "plain": "Aapki kundli se ganana, do sources se milaan",
+        "sources_line": "Aapki kundli se ganana · 2 sources se verified",
+        "details": [
+          "Tithi · Shukla paksha 5"
+        ]
+      }
+    },
+    {
+      "module": "personal_chart_theme",
+      "text": "Chandra aaj aapke dasve bhaav se guzar rahe hain.",
+      "confidence": "verified",
+      "trust": {
+        "plain": "Aapki kundli se ganana, do sources se milaan",
+        "sources_line": "Aapki kundli se ganana · 2 sources se verified",
+        "details": [
+          "Chandra · dasve"
+        ]
+      }
+    },
+    {
+      "module": "moon_nakshatra_note",
+      "text": "Chandra aaj Rohini mein hain.",
+      "confidence": "verified",
+      "trust": {
+        "plain": "Aapki kundli se ganana, do sources se milaan",
+        "sources_line": "Aapki kundli se ganana · 2 sources se verified",
+        "details": [
+          "Nakshatra · Rohini"
+        ]
+      }
+    },
+    {
+      "module": "colour",
+      "text": "Shukla paksha mein aaj halke, gehre-garm rang achhe rahenge.",
+      "confidence": "verified",
+      "trust": {
+        "plain": "Aapki kundli se ganana, do sources se milaan",
+        "sources_line": "Aapki kundli se ganana · 2 sources se verified",
+        "details": [
+          "Tithi · Shukla paksha 5"
+        ]
+      }
+    },
+    {
+      "module": "number",
+      "text": "Aaj aapka number 8 hai.",
+      "confidence": "verified",
+      "trust": {
+        "plain": "Aapki kundli se ganana, do sources se milaan",
+        "sources_line": "Aapki kundli se ganana · 2 sources se verified",
+        "details": [
+          "Ank · 8"
+        ]
+      }
+    },
+    {
+      "module": "favourable_window",
+      "text": "11:45 se 12:35 tak ek achha samay hai.",
+      "confidence": "verified",
+      "trust": {
+        "plain": "Aapki kundli se ganana, do sources se milaan",
+        "sources_line": "Aapki kundli se ganana · 2 sources se verified",
+        "details": [
+          "Abhijit · 11:45–12:35"
+        ]
+      }
+    },
+    {
+      "module": "caution_window",
+      "text": "Rahu Kaal 09:00 se 10:30 tak hai — is samay ko chhod dena behtar.",
+      "confidence": "verified",
+      "trust": {
+        "plain": "Aapki kundli se ganana, do sources se milaan",
+        "sources_line": "Aapki kundli se ganana · 2 sources se verified",
+        "details": [
+          "Rahu Kaal · 09:00–10:30"
+        ]
+      }
+    },
+    {
+      "module": "priorities",
+      "text": "Aapne kaha tha ki abhi Kaam aur career sabse zaroori hai.",
+      "confidence": "verified",
+      "trust": {
+        "plain": "Aapki kundli se ganana, do sources se milaan",
+        "sources_line": "Aapki kundli se ganana · 2 sources se verified",
+        "details": []
+      }
+    },
+    {
+      "module": "what_to_avoid",
+      "text": "09:00 se 10:30 ke beech kuch naya shuru karne ki zarurat nahin.",
+      "confidence": "verified",
+      "trust": {
+        "plain": "Aapki kundli se ganana, do sources se milaan",
+        "sources_line": "Aapki kundli se ganana · 2 sources se verified",
+        "details": [
+          "Rahu Kaal · 09:00–10:30"
+        ]
+      }
+    },
+    {
+      "module": "food_and_drink",
+      "text": "Shukla paksha, tithi 5 — aaj halka khaana theek rahega.",
+      "confidence": "verified",
+      "trust": {
+        "plain": "Aapki kundli se ganana, do sources se milaan",
+        "sources_line": "Aapki kundli se ganana · 2 sources se verified",
+        "details": [
+          "Tithi · Shukla paksha 5"
+        ]
+      }
+    },
+    {
+      "module": "work",
+      "text": "Chandra aapke dasve bhaav mein hain — naye morche ke bajaay chalta kaam behtar.",
+      "confidence": "verified",
+      "trust": {
+        "plain": "Aapki kundli se ganana, do sources se milaan",
+        "sources_line": "Aapki kundli se ganana · 2 sources se verified",
+        "details": [
+          "Chandra · dasve"
+        ]
+      }
+    },
+    {
+      "module": "spiritual_practice",
+      "text": "Shukla paksha, tithi 5: aaj aapke niyam ke liye achha din hai.",
+      "confidence": "verified",
+      "trust": {
+        "plain": "Aapki kundli se ganana, do sources se milaan",
+        "sources_line": "Aapki kundli se ganana · 2 sources se verified",
+        "details": [
+          "Tithi · Shukla paksha 5"
+        ]
+      }
+    },
+    {
+      "module": "tomorrow_prep_teaser",
+      "text": "Kal tithi 5 aa rahi hai — aaj raat thodi tayyari theek rahegi.",
+      "confidence": "verified",
+      "trust": {
+        "plain": "Aapki kundli se ganana, do sources se milaan",
+        "sources_line": "Aapki kundli se ganana · 2 sources se verified",
+        "details": [
+          "Tithi · Shukla paksha 5"
+        ]
+      }
+    }
+  ],
+  "panchang": [
+    {
+      "label_key": "ui.panchang.tithi",
+      "value": "Shukla paksha 5"
+    },
+    {
+      "label_key": "ui.panchang.nakshatra",
+      "value": "Rohini"
+    }
+  ],
+  "state": {
+    "first_session": false,
+    "first_morning": false,
+    "brief_time": "07:00",
+    "travel": {
+      "active": false,
+      "city": null
+    },
+    "festival": null,
+    "birthday": false,
+    "birth_time_missing": false,
+    "trial_day": null,
+    "plan": "premium",
+    "story_ring_enabled": false
+  }
+}

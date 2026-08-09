@@ -184,6 +184,10 @@
       "10": "dasve",
       "11": "gyarahve",
       "12": "barahve"
+    },
+    "tradition": {
+      "amanta": "Amanta",
+      "purnimanta": "Purnimanta"
     }
   },
   "brief": {
@@ -207,7 +211,17 @@
       "tomorrow_prep_teaser": "Kal tithi {tithi} aa rahi hai — aaj raat thodi tayyari theek rahegi."
     },
     "degraded_note": "Aaj Tara ke paas zaroori baatein hain; poori reading thodi der mein.",
-    "notification_title": "Tara ke saath aapki subah"
+    "notification_title": "Tara ke saath aapki subah",
+    "taras_line": {
+      "afternoon": "Aadha din beet chuka. Dekhte hain aage kya hai.",
+      "afternoon_nakshatra": "Dopahar apne saath {nakshatra} liye chal rahi hai.",
+      "evening": "Roshni dhal rahi hai. Thoda dheeme hone ka samay hai.",
+      "evening_nakshatra": "Shaam {nakshatra} mein thehar rahi hai.",
+      "morning": "Nayi subah hai, aur main yahaan hoon aapke saath.",
+      "morning_nakshatra": "Subah {nakshatra} mein khul rahi hai — shuruaat ke liye komal samay.",
+      "night": "Din tham raha hai. Aaj raat aapse aur kuch nahin maanga ja raha.",
+      "night_nakshatra": "Raat {nakshatra} mein utar rahi hai, aur aaraam hi kaafi hai."
+    }
   },
   "ui": {
     "close": "Band karein",
@@ -705,5 +719,58 @@
       },
       "memory_offer": "Aapne kaha ki abhi {priority} sabse zyada maayne rakhta hai."
     }
+  },
+  "festivals": {
+    "raksha_bandhan": "Raksha Bandhan"
+  },
+  "today": {
+    "aria": {
+      "screen": "Aaj",
+      "settings": "Settings aur notifications",
+      "sky": "Aaj"
+    },
+    "tithi_line": "{paksha}, tithi {tithi}",
+    "recap": {
+      "title": "Aapka pehla paath",
+      "body": "Pehli mulaqat mein Tara ne aapki kundli mein jo dekha.",
+      "action": "Phir se padhein"
+    },
+    "promise": "Aapka pehla subah ka brief {time} baje aayega.",
+    "brief_time": {
+      "edit": "Samay badlein",
+      "title": "Aapki subah kab aani chahiye?",
+      "label": "Brief ka samay",
+      "save": "Save karein"
+    },
+    "degraded": "Aaj Tara ke paas zaroori baatein hain; poora paath jald lautega.",
+    "more": "Aaj ke liye aur",
+    "less": "Kam dikhayein",
+    "practical": "Aaj ek nazar mein",
+    "panchang": {
+      "link": "Aaj ki samay-saarni",
+      "title": "Panchang"
+    },
+    "night": {
+      "title": "Din dhal raha hai.",
+      "prompt": "Aaj kya mann mein reh gaya?",
+      "cta": "Aaj par sochein",
+      "archived": "Aaj subah ka brief aapki journal mein hai."
+    },
+    "banner": {
+      "grace": "Payment par dhyaan chahiye.",
+      "grace_action": "Dekh lein",
+      "travel": "Aap {city} mein hain. Timings aapki jagah ke hisaab se nikale gaye hain.",
+      "offline": "{time} tak ka dikha rahi hoon."
+    },
+    "trial_pill": "Trial ka din {day}",
+    "birth_time_chip": "Behtar paath ke liye janm samay jodein",
+    "locked": {
+      "title": "Aapke niji cards",
+      "body": "Ye subscription ke saath khulte hain.",
+      "action": "Plans dekhein"
+    },
+    "festival_accent": "Aaj {name}",
+    "first_morning": "Aapki pehli subah. Har din aise hi aayegi.",
+    "how_it_works": "Har subah Tara din ko aapki kundli ke saath padhti hain, aur jo milta hai wo batati hain."
   }
 }

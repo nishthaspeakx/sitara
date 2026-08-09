@@ -1,0 +1,65 @@
+{
+  "local_date": "2026-08-12",
+  "local_time": "08:30",
+  "timezone": "Asia/Kolkata",
+  "density": "med",
+  "tier": "paying",
+  "status": "verified_core_cards",
+  "degrade_reason": "grounding_failed",
+  "confidence": "tradition_based_general",
+  "taras_line": {
+    "text": "Subah Rohini mein khul rahi hai — shuruaat ke liye komal samay.",
+    "confidence": "verified"
+  },
+  "modules": [
+    {
+      "module": "energy_of_day",
+      "text": "Aaj Shukla paksha hai, tithi 5.",
+      "confidence": "verified",
+      "trust": {
+        "plain": "Aapki kundli se ganana, do sources se milaan",
+        "sources_line": "Aapki kundli se ganana · 2 sources se verified",
+        "details": [
+          "Tithi · Shukla paksha 5"
+        ]
+      }
+    },
+    {
+      "module": "moon_nakshatra_note",
+      "text": "Chandra aaj Rohini mein hain.",
+      "confidence": "verified",
+      "trust": {
+        "plain": "Aapki kundli se ganana, do sources se milaan",
+        "sources_line": "Aapki kundli se ganana · 2 sources se verified",
+        "details": [
+          "Nakshatra · Rohini"
+        ]
+      }
+    }
+  ],
+  "panchang": [
+    {
+      "label_key": "ui.panchang.tithi",
+      "value": "Shukla paksha 5"
+    },
+    {
+      "label_key": "ui.panchang.nakshatra",
+      "value": "Rohini"
+    }
+  ],
+  "state": {
+    "first_session": false,
+    "first_morning": false,
+    "brief_time": "07:00",
+    "travel": {
+      "active": false,
+      "city": null
+    },
+    "festival": null,
+    "birthday": false,
+    "birth_time_missing": false,
+    "trial_day": null,
+    "plan": "premium",
+    "story_ring_enabled": false
+  }
+}

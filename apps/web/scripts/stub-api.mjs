@@ -33,8 +33,52 @@
  */
 
 import { createServer } from "node:http";
+import { readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const port = Number(process.argv[2] ?? 3101);
+
+/**
+ * ── `/v1/today` is REPLAYED, never authored here ───────────────────────────
+ *
+ * Everything this file serves for onboarding is a small state machine, because
+ * §24.4's per-step persistence is what those tests are about. A morning brief
+ * is the opposite: its content is the OUTPUT of §7.1's pipeline — the ranking
+ * engine picking from the closed seventeen, the composer citing the snapshot
+ * each slot came from, the degradation ladder choosing between four outcomes.
+ * A hand-written brief in this file would be a brief nobody's engine produced,
+ * and every §24.8 baseline taken from it would be a picture of fiction.
+ *
+ * So the payloads are RECORDED from the real service by
+ * `services/api/scripts/record_today_fixtures.py` and committed under
+ * `tests/__fixtures__/today/`. This server only picks the right one and hands
+ * it over the wire, through the real request path. `tests/today-fixtures.spec.ts`
+ * re-validates every recording against the generated schema, so one cannot
+ * quietly drift into something the engine would never emit.
+ */
+const FIXTURE_DIR = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "tests",
+  "__fixtures__",
+  "today",
+);
+
+/** @type {Map<string, object>} keyed `${variant}.${locale}` */
+const todayFixtures = new Map();
+try {
+  for (const file of readdirSync(FIXTURE_DIR)) {
+    if (!file.endsWith(".json")) continue;
+    todayFixtures.set(file.slice(0, -".json".length), JSON.parse(
+      readFileSync(path.join(FIXTURE_DIR, file), "utf-8"),
+    ));
+  }
+} catch {
+  // Recorded fixtures are a build artefact of the API. A run before the first
+  // recording should fail the Today specs loudly, not every other suite.
+  console.warn(`[stub-api] no today fixtures at ${FIXTURE_DIR}`);
+}
 
 /** @type {Map<string, {state: object, scenario: string}>} */
 const clients = new Map();
@@ -158,7 +202,13 @@ function clientFor(req) {
   const cookie = req.headers.cookie ?? "";
   const match = /(?:^|;\s*)sitara_test_client=([^;]+)/.exec(cookie);
   const id = match ? decodeURIComponent(match[1]) : "default";
-  if (!clients.has(id)) clients.set(id, { state: emptyState(), scenario: "ok" });
+  if (!clients.has(id)) {
+    clients.set(id, {
+      state: emptyState(),
+      scenario: "ok",
+      today: { variant: "normal_morning", locale: "en" },
+    });
+  }
   return clients.get(id);
 }
 
@@ -193,6 +243,15 @@ const server = createServer(async (req, res) => {
     clients.set(id, {
       state: { ...emptyState(body.locale ?? "en"), ...(body.state ?? {}) },
       scenario: body.scenario ?? "ok",
+      // Which recorded brief `/v1/today` replays for this client.
+      today: {
+        variant: body.variant ?? "normal_morning",
+        locale: body.locale ?? "en",
+        // §28.2's densities are recorded for `normal_morning` only — density
+        // changes the ranking engine's output COUNT, never its facts, so one
+        // recording per density is the property worth replaying.
+        density: body.density ?? "med",
+      },
     });
     return send(res, 200, { ok: true });
   }
@@ -266,6 +325,27 @@ const server = createServer(async (req, res) => {
   if (path === "/v1/places") {
     const q = (url.searchParams.get("q") ?? "").toLowerCase();
     return send(res, 200, PLACES.filter((p) => p.label.toLowerCase().startsWith(q)));
+  }
+
+  // ── §28.2 Today ──────────────────────────────────────────────────────────
+  if (path === "/v1/today" && req.method === "GET") {
+    if (scenario === "today_unavailable") {
+      // What the OFFLINE variant actually runs into. The screen falls back to
+      // its cached payload; nothing here pretends to be a cache.
+      return send(res, 503, envelope("SYS_UNAVAILABLE", "errors.sys.unavailable", true));
+    }
+    const { variant, locale, density } = client.today ?? {
+      variant: "normal_morning",
+      locale: "en",
+      density: "med",
+    };
+    const name = density && density !== "med" ? `${variant}_${density}` : variant;
+    const fixture = todayFixtures.get(`${name}.${locale}`);
+    if (!fixture) {
+      console.error(`[stub-api] no recorded brief for ${name}.${locale}`);
+      return send(res, 404, envelope("SYS_VALIDATION", "errors.sys.validation", false));
+    }
+    return send(res, 200, fixture);
   }
 
   if (path === "/v1/readings/first" && req.method === "POST") {

@@ -110,3 +110,107 @@ export const BINARY_HEADER_FLAGS_BYTES = 4 as const;
 export const HEARTBEAT_INTERVAL_S = 10 as const;
 export const REAP_AFTER_SILENCE_S = 30 as const;
 export const RESUME_WINDOW_S = 300 as const;
+
+// ---------------------------------------------------------------------------
+// SPEC §28.2 — the Today payload and the closed sets it carries.
+// `variant` is deliberately absent: §32.1's precedence is a RULE over this
+// state, evaluated in apps/web/src/lib/today-variant.ts, not a server value.
+// ---------------------------------------------------------------------------
+export const DENSITIES = ["low", "med", "high"] as const;
+export type Density = (typeof DENSITIES)[number];
+export const TIERS = ["paying", "trial", "dormant"] as const;
+export type Tier = (typeof TIERS)[number];
+export const BRIEF_STATUSES = ["pending", "polished", "ranking_only", "verified_core_cards", "failed"] as const;
+export type BriefStatus = (typeof BRIEF_STATUSES)[number];
+export const BRIEF_DEGRADE_REASONS = ["grounding_failed", "llm_unavailable", "panchang_unavailable", "chart_unavailable", "language_quality_failed"] as const;
+export type BriefDegradeReason = (typeof BRIEF_DEGRADE_REASONS)[number];
+export const PLAN_STATES = ["premium", "trial", "free", "grace"] as const;
+export type PlanState = (typeof PLAN_STATES)[number];
+export const TIME_BANDS = ["morning", "afternoon", "evening", "night"] as const;
+export type TimeBand = (typeof TIME_BANDS)[number];
+
+/** §28.2's four time-of-day bands, as START minutes local. The thresholds are DECLARED here because both sides need them and they are spec rules, not preferences: the API composes Tara's line for the band, and the client renders the night takeover — '>20:00 the whole tab transforms'. Two hand-written copies of 20:00 is how a screen goes to dusk an hour after the sentence on it did. */
+export const TIME_BAND_STARTS: ReadonlyArray<readonly [TimeBand, string]> = [
+  ["night", "20:00"],
+  ["evening", "17:00"],
+  ["afternoon", "12:00"],
+  ["morning", "00:00"],
+];
+
+/** §28.2's band for a zero-padded local "HH:MM". Never a UTC time. */
+export function timeBand(localTime: string): TimeBand {
+  for (const [band, startsAt] of TIME_BAND_STARTS) {
+    if (localTime >= startsAt) return band;
+  }
+  return "morning";
+}
+
+/** §30.4's three layers, already rendered. Fact IDs are absent BY SHAPE — there is no field one could travel in, which is the same guarantee TrustSheet's props give on the component side. */
+export interface TodayTrust {
+  plain: string;
+  sources_line: string;
+  details: string[];
+}
+
+/** One of §34.3's seventeen, composed and grounded. `text` is engine output — §5.3 forbids the LLM computing it and the composer put the citation inside the sentence before stripping it for the wire. */
+export interface TodayModule {
+  module: MorningModule;
+  text: string;
+  confidence: ConfidenceState;
+  trust: TodayTrust;
+}
+
+/** §28.2 item (2) — 'one warm sentence for this moment', the emotional anchor, always present. NOT one of the seventeen and never rendered as a card. */
+export interface TodayTarasLine {
+  text: string;
+  confidence: ConfidenceState;
+}
+
+/** §28.2 item (6), shaped for the §24.3 PanchangStrip. `label_key` is an i18n key; `value` is a localised term the API resolved. */
+export interface TodayPanchangEntry {
+  label_key: string;
+  value: string;
+}
+
+/** §28.2's festival variant — the ONLY surface allowed above the core card, and suppressed to a core-card accent when two banners already show (§32.1). */
+export interface TodayFestival {
+  name: string;
+  tradition_label: string;
+  date_label: string;
+}
+
+/** §30.2 Travel Mode. `city` is the place timings were recomputed for. */
+export interface TodayTravel {
+  active: boolean;
+  city: string | null;
+}
+
+/** Everything §32.1's precedence rule reads, and nothing it does not. The rule itself lives on the client so there is exactly one implementation of it. */
+export interface TodayState {
+  first_session: boolean;
+  first_morning: boolean;
+  brief_time: string;
+  travel: TodayTravel;
+  festival: TodayFestival | null;
+  birthday: boolean;
+  birth_time_missing: boolean;
+  trial_day: number | null;
+  plan: PlanState;
+  story_ring_enabled: boolean;
+}
+
+/** What GET /v1/today serves. `local_time` is DATA, not ambient: §28.2's night takeover fires after 20:00 LOCAL, and a screen that read the browser clock would render a different variant than the brief was generated for — and would make every §24.8 baseline depend on when CI ran. */
+export interface TodayPayload {
+  local_date: string;
+  local_time: string;
+  timezone: string;
+  density: Density;
+  tier: Tier;
+  status: BriefStatus;
+  degrade_reason: BriefDegradeReason | null;
+  confidence: ConfidenceState | null;
+  taras_line: TodayTarasLine | null;
+  modules: TodayModule[];
+  panchang: TodayPanchangEntry[];
+  state: TodayState;
+}

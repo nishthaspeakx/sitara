@@ -42,12 +42,50 @@ export type Scenario =
   | "reading_no_birth_time"
   | "reading_engine_down_then_panchang"
   | "reading_no_panchang"
-  | "reading_unavailable";
+  | "reading_unavailable"
+  | "today_unavailable";
+
+/**
+ * §28.2's sixteen. The ids are the recorded fixtures' filenames, so a variant
+ * that has never been recorded from the real pipeline cannot be asked for.
+ */
+export const TODAY_VARIANTS = [
+  "first_session",
+  "first_morning",
+  "normal_morning",
+  "afternoon",
+  "evening",
+  "night",
+  "festival",
+  "birthday",
+  "travel",
+  "missing_birth_time",
+  "offline",
+  "provider_degraded",
+  "trial",
+  "premium",
+  "free",
+  "payment_grace",
+] as const;
+export type TodayVariant = (typeof TODAY_VARIANTS)[number];
+
+/**
+ * §32.1's own named screenshot case, recorded alongside the sixteen but not one
+ * of them: "the design-QA screenshot suite adds the worst-case combination
+ * (grace+travel+festival+trial) per locale". Kept out of `TODAY_VARIANTS` so
+ * "§28.2's sixteen" keeps meaning sixteen.
+ */
+export const EXTRA_FIXTURES = ["worst_case"] as const;
+export type FixtureName = TodayVariant | (typeof EXTRA_FIXTURES)[number];
 
 export interface SetupOptions {
   locale?: string;
   scenario?: Scenario;
   state?: Partial<StubState>;
+  /** Which recorded brief `/v1/today` replays. */
+  variant?: FixtureName;
+  /** §28.2's density. Recorded for `normal_morning` only. */
+  density?: "low" | "med" | "high";
 }
 
 let counter = 0;
@@ -68,6 +106,8 @@ export async function setupApi(page: Page, options: SetupOptions = {}): Promise<
       locale: options.locale ?? "en",
       scenario: options.scenario ?? "ok",
       state: options.state ?? {},
+      variant: options.variant ?? "normal_morning",
+      density: options.density ?? "med",
     }),
   });
   if (!response.ok) throw new Error(`stub-api reset failed: ${response.status}`);
@@ -89,3 +129,34 @@ export async function serverState(clientId: string): Promise<StubState> {
  * force the static path so they spend their time on the stack instead.
  */
 export const SKIP_LAUNCH = "?launch=static";
+
+/**
+ * A client who finished onboarding, pointed at one recorded morning.
+ *
+ * Today is a post-onboarding surface, so every one of its specs needs the same
+ * completed stack; only the variant differs. Same `setupApi` underneath — same
+ * real request path, still no `page.route` anywhere.
+ */
+export async function setupToday(
+  page: Page,
+  options: {
+    locale?: string;
+    variant?: FixtureName;
+    scenario?: Scenario;
+    density?: "low" | "med" | "high";
+  } = {},
+): Promise<string> {
+  return setupApi(page, {
+    locale: options.locale ?? "en",
+    scenario: options.scenario ?? "ok",
+    variant: options.variant ?? "normal_morning",
+    density: options.density ?? "med",
+    state: {
+      completed_steps: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      has_birth_details: true,
+      has_city: true,
+      time_accuracy: "exact",
+      brief_time: "07:00",
+    },
+  });
+}

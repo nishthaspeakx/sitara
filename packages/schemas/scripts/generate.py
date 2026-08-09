@@ -31,9 +31,47 @@ def py_ident(member_id: str) -> str:
     return member_id.replace(".", "_").replace("-", "_").upper()
 
 
+# ------------------------------------------------------------- shape types
+#
+# The §28.2 payload is the first source here that declares STRUCTURE and not
+# only a closed set, so it needs a type mapper. The vocabulary is deliberately
+# tiny — scalars, an optional marker, a list marker, and a reference to an enum
+# or another shape. Anything a richer type system would buy is a thing the wire
+# should not be carrying.
+
+_PY_SCALARS = {"string": "str", "boolean": "bool", "integer": "int"}
+_TS_SCALARS = {"string": "string", "boolean": "boolean", "integer": "number"}
+
+
+def _split_type(declared: str) -> tuple[str, bool, bool]:
+    """`"TodayModule[]"` -> ("TodayModule", is_list=True, optional=False)."""
+    optional = declared.endswith("?")
+    base = declared[:-1] if optional else declared
+    is_list = base.endswith("[]")
+    if is_list:
+        base = base[:-2]
+    return base, is_list, optional
+
+
+def py_type(declared: str) -> str:
+    base, is_list, optional = _split_type(declared)
+    inner = _PY_SCALARS.get(base, base)
+    if is_list:
+        inner = f"tuple[{inner}, ...]"
+    return f"{inner} | None" if optional else inner
+
+
+def ts_type(declared: str) -> str:
+    base, is_list, optional = _split_type(declared)
+    inner = _TS_SCALARS.get(base, base)
+    if is_list:
+        inner = f"{inner}[]"
+    return f"{inner} | null" if optional else inner
+
+
 # ---------------------------------------------------------------- python
 
-def gen_python(modules: dict, codes: dict, envelope: dict, ws: dict) -> None:
+def gen_python(modules: dict, codes: dict, envelope: dict, ws: dict, today: dict) -> None:
     PY_OUT.mkdir(parents=True, exist_ok=True)
 
     # modules.py
@@ -156,6 +194,85 @@ def gen_python(modules: dict, codes: dict, envelope: dict, ws: dict) -> None:
     ]
     (PY_OUT / "ws_events.py").write_text("\n".join(lines), encoding="utf-8")
 
+    # today.py
+    lines = [
+        f'"""{HEADER}',
+        "",
+        "SPEC §28.2 — the Today payload and the closed sets it carries.",
+        "",
+        "`sitara_api.daily_guidance.types` imports Density, Tier, BriefStatus and",
+        "BriefDegradeReason FROM HERE rather than declaring its own. Both sides of",
+        "the wire need them, and a second declaration is how the two drift — the",
+        "same reason §34.3's MorningModule was never copied into the service.",
+        '"""',
+        "",
+        "from enum import StrEnum",
+        "",
+        "from pydantic import BaseModel, ConfigDict",
+        "",
+        "from sitara_schemas.facts import ConfidenceState",
+        "from sitara_schemas.modules import MorningModule",
+        "",
+        "__all__ = [",
+    ]
+    exported = [
+        *today["enums"],
+        *today["shapes"],
+        today["time_bands"]["enum_name"],
+        "TIME_BAND_STARTS",
+        "time_band",
+    ]
+    for name in sorted(exported):
+        lines.append(f'    "{name}",')
+    lines += ["]", ""]
+
+    for enum in today["enums"].values():
+        lines += ["", f"class {enum['enum_name']}(StrEnum):", f'    """{enum["$comment"]}"""', ""]
+        for m in enum["members"]:
+            lines.append(f'    {py_ident(m["id"])} = "{m["id"]}"')
+        lines.append("")
+
+    bands = today["time_bands"]
+    lines += ["", f"class {bands['enum_name']}(StrEnum):", f'    """{bands["$comment"]}"""', ""]
+    for m in bands["members"]:
+        lines.append(f'    {py_ident(m["id"])} = "{m["id"]}"')
+    lines += [
+        "",
+        "",
+        "#: Each band's first minute, local. Ordered latest-first so a lookup is",
+        "#: 'the first band whose start this time has reached'.",
+        f"TIME_BAND_STARTS: tuple[tuple[{bands['enum_name']}, str], ...] = (",
+    ]
+    for m in reversed(bands["members"]):
+        lines.append(f'    ({bands["enum_name"]}.{py_ident(m["id"])}, "{m["starts_at"]}"),')
+    lines += [
+        ")",
+        "",
+        "",
+        f"def time_band(local_time: str) -> {bands['enum_name']}:",
+        '    """§28.2\'s band for a zero-padded local "HH:MM". Never a UTC time."""',
+        "    for band, starts_at in TIME_BAND_STARTS:",
+        "        if local_time >= starts_at:",
+        "            return band",
+        f"    return {bands['enum_name']}.{py_ident(bands['members'][0]['id'])}",
+        "",
+    ]
+
+    for name, shape in today["shapes"].items():
+        lines += [
+            "",
+            f"class {name}(BaseModel):",
+            f'    """{shape["$comment"]}"""',
+            "",
+            "    model_config = ConfigDict(frozen=True)",
+            "",
+        ]
+        for f in shape["fields"]:
+            default = " = None" if f["type"].endswith("?") else ""
+            lines.append(f'    {f["name"]}: {py_type(f["type"])}{default}')
+        lines.append("")
+    (PY_OUT / "today.py").write_text("\n".join(lines), encoding="utf-8")
+
     # __init__.py
     lines = [
         f'"""{HEADER}',
@@ -211,7 +328,7 @@ def gen_python(modules: dict, codes: dict, envelope: dict, ws: dict) -> None:
 # ------------------------------------------------------------ typescript
 
 def gen_typescript(
-    modules: dict, codes: dict, envelope: dict, ws: dict, confidence: dict
+    modules: dict, codes: dict, envelope: dict, ws: dict, confidence: dict, today: dict
 ) -> None:
     TS_OUT.mkdir(parents=True, exist_ok=True)
     bf = ws["binary_frame"]
@@ -293,7 +410,51 @@ def gen_typescript(
         f"export const REAP_AFTER_SILENCE_S = {ws['reap_after_silence_s']} as const;",
         f"export const RESUME_WINDOW_S = {ws['resume_window_s']} as const;",
         "",
+        "// ---------------------------------------------------------------------------",
+        "// SPEC §28.2 — the Today payload and the closed sets it carries.",
+        "// `variant` is deliberately absent: §32.1's precedence is a RULE over this",
+        "// state, evaluated in apps/web/src/lib/today-variant.ts, not a server value.",
+        "// ---------------------------------------------------------------------------",
     ]
+    for enum in today["enums"].values():
+        name = enum["enum_name"]
+        ids = ", ".join(f'"{m["id"]}"' for m in enum["members"])
+        # The plural is DECLARED, not inflected. `DENSITYS` and `BRIEF_STATUSS`
+        # are what a rule produces; naming is not a thing to be clever about in
+        # generated code someone has to read.
+        const = enum["const_name"]
+        lines += [
+            f"export const {const} = [{ids}] as const;",
+            f"export type {name} = (typeof {const})[number];",
+        ]
+    bands = today["time_bands"]
+    band_ids = ", ".join(f'"{m["id"]}"' for m in bands["members"])
+    lines += [
+        f"export const {bands['const_name']} = [{band_ids}] as const;",
+        f"export type {bands['enum_name']} = (typeof {bands['const_name']})[number];",
+        "",
+        f"/** {bands['$comment']} */",
+        f"export const TIME_BAND_STARTS: ReadonlyArray<readonly [{bands['enum_name']}, string]> = [",
+    ]
+    for m in reversed(bands["members"]):
+        lines.append(f'  ["{m["id"]}", "{m["starts_at"]}"],')
+    lines += [
+        "];",
+        "",
+        '/** §28.2\'s band for a zero-padded local "HH:MM". Never a UTC time. */',
+        f"export function timeBand(localTime: string): {bands['enum_name']} {{",
+        "  for (const [band, startsAt] of TIME_BAND_STARTS) {",
+        "    if (localTime >= startsAt) return band;",
+        "  }",
+        f'  return "{bands["members"][0]["id"]}";',
+        "}",
+        "",
+    ]
+    for name, shape in today["shapes"].items():
+        lines += [f"/** {shape['$comment']} */", f"export interface {name} {{"]
+        for f in shape["fields"]:
+            lines.append(f'  {f["name"]}: {ts_type(f["type"])};')
+        lines += ["}", ""]
     (TS_OUT / "index.ts").write_text("\n".join(lines), encoding="utf-8")
 
 
@@ -303,6 +464,7 @@ def main() -> None:
     envelope = load("error-envelope.json")
     ws = load("ws-events.json")
     confidence = load("confidence-states.json")
+    today = load("today.json")
 
     assert len(modules["members"]) == 17, "SPEC §34.3: exactly 17 morning modules"
     assert len(confidence["members"]) == 5, "SPEC §5.4: exactly 5 confidence states"
@@ -312,9 +474,9 @@ def main() -> None:
             f"error code {m['code']} outside closed namespaces"
         )
 
-    gen_python(modules, codes, envelope, ws)
-    gen_typescript(modules, codes, envelope, ws, confidence)
-    print("generated: python/sitara_schemas/{__init__,modules,errors,ws_events}.py")
+    gen_python(modules, codes, envelope, ws, today)
+    gen_typescript(modules, codes, envelope, ws, confidence, today)
+    print("generated: python/sitara_schemas/{__init__,modules,errors,ws_events,today}.py")
     print("generated: typescript/src/index.ts")
 
 

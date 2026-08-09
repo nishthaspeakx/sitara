@@ -85,3 +85,85 @@ def test_envelope_shape() -> None:
         retryable=True,
     )
     assert set(env.model_dump().keys()) == {"code", "message_key", "trace_id", "retryable"}
+
+
+# ---------------------------------------------------------------------------
+# §28.2 — the Today payload
+# ---------------------------------------------------------------------------
+
+
+def test_today_enums_agree_across_both_languages() -> None:
+    """The five closed sets §28.2's payload carries.
+
+    Same guard, same reason as the confidence states above: these ids are the
+    WIRE format. `sitara_api` serves them and the Today screen switches on them,
+    so a set that reads `verified_core_cards` on one side and `core_cards` on
+    the other is a degraded morning that renders as a normal one.
+    """
+    import sitara_schemas.today as today_mod
+
+    source = src("today.json")["enums"]
+    assert source, "today.json declares no enums"
+    for spec in source.values():
+        ids = [m["id"] for m in spec["members"]]
+        enum = getattr(today_mod, spec["enum_name"])
+        assert sorted(m.value for m in enum) == sorted(ids), spec["enum_name"]
+        assert ts_const_array(spec["const_name"]) == ids, spec["const_name"]
+
+
+def test_today_payload_fields_agree_across_both_languages() -> None:
+    """A field present on one side of the wire and absent on the other is a
+    field the screen reads as `undefined` — silently, and only in production."""
+    import sitara_schemas.today as today_mod
+
+    for name, shape in src("today.json")["shapes"].items():
+        declared = [f["name"] for f in shape["fields"]]
+        model = getattr(today_mod, name)
+        assert list(model.model_fields) == declared, f"{name} (python)"
+
+        m = re.search(rf"export interface {name} \{{(.*?)\n\}}", TS_INDEX, re.S)
+        assert m, f"{name} missing from typescript/src/index.ts"
+        assert re.findall(r"^\s+(\w+):", m.group(1), re.M) == declared, f"{name} (ts)"
+
+
+def test_today_payload_cannot_carry_a_fact_id() -> None:
+    """§30.4: "fact-IDs remain internal (logs/admin) and never render to users".
+
+    The guarantee is structural on the component side — `TrustSheet` has no prop
+    that could hold one — and this keeps the wire honest to the same standard.
+    A `fact_ids` field would make leaking them a matter of remembering not to.
+    """
+    for name, shape in src("today.json")["shapes"].items():
+        for field in shape["fields"]:
+            assert "fact_id" not in field["name"], f"{name}.{field['name']}"
+
+
+def test_time_band_thresholds_agree_across_both_languages() -> None:
+    """§28.2's "the whole tab transforms after 20:00" is ONE threshold.
+
+    The API composes Tara's line for the band and the client renders the night
+    takeover, so the boundary is read on both sides. Two hand-written 20:00s is
+    how a screen goes to dusk an hour after the sentence on it did.
+    """
+    from sitara_schemas.today import TIME_BAND_STARTS, TimeBand, time_band
+
+    spec = src("today.json")["time_bands"]
+    ids = [m["id"] for m in spec["members"]]
+    assert sorted(b.value for b in TimeBand) == sorted(ids)
+    assert ts_const_array(spec["const_name"]) == ids
+
+    # Latest-first, so a lookup is "the first band this time has reached".
+    declared = {m["id"]: m["starts_at"] for m in spec["members"]}
+    assert [(b.value, s) for b, s in TIME_BAND_STARTS] == [
+        (i, declared[i]) for i in reversed(ids)
+    ]
+    ts_pairs = re.findall(r'\["(\w+)", "([\d:]+)"\]', TS_INDEX)
+    assert ts_pairs == [(i, declared[i]) for i in reversed(ids)]
+
+    # Each band's own first minute, and the minute before it.
+    for index, member in enumerate(spec["members"]):
+        assert time_band(member["starts_at"]).value == member["id"]
+        if index:
+            hh, mm = (int(p) for p in member["starts_at"].split(":"))
+            before = f"{hh - 1:02d}:59" if mm == 0 else f"{hh:02d}:{mm - 1:02d}"
+            assert time_band(before).value == spec["members"][index - 1]["id"]

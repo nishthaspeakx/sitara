@@ -1,0 +1,147 @@
+{
+  "local_date": "2026-08-12",
+  "local_time": "08:30",
+  "timezone": "Asia/Kolkata",
+  "density": "med",
+  "tier": "paying",
+  "status": "ranking_only",
+  "degrade_reason": null,
+  "confidence": "verified",
+  "taras_line": {
+    "text": "सुबह रोहिणी में खुल रही है — शुरुआत के लिए कोमल समय।",
+    "confidence": "verified"
+  },
+  "modules": [
+    {
+      "module": "energy_of_day",
+      "text": "आज शुक्ल पक्ष है, तिथि 5।",
+      "confidence": "verified",
+      "trust": {
+        "plain": "आपकी कुंडली से गणना, दो स्रोतों से मिलान",
+        "sources_line": "आपकी कुंडली से गणना · 2 स्रोतों से सत्यापित",
+        "details": [
+          "तिथि · शुक्ल पक्ष 5"
+        ]
+      }
+    },
+    {
+      "module": "personal_chart_theme",
+      "text": "चंद्र आज आपके दसवें भाव से गुज़र रहे हैं।",
+      "confidence": "verified",
+      "trust": {
+        "plain": "आपकी कुंडली से गणना, दो स्रोतों से मिलान",
+        "sources_line": "आपकी कुंडली से गणना · 2 स्रोतों से सत्यापित",
+        "details": [
+          "चंद्र · दसवें"
+        ]
+      }
+    },
+    {
+      "module": "moon_nakshatra_note",
+      "text": "चंद्रमा आज रोहिणी में हैं।",
+      "confidence": "verified",
+      "trust": {
+        "plain": "आपकी कुंडली से गणना, दो स्रोतों से मिलान",
+        "sources_line": "आपकी कुंडली से गणना · 2 स्रोतों से सत्यापित",
+        "details": [
+          "नक्षत्र · रोहिणी"
+        ]
+      }
+    },
+    {
+      "module": "colour",
+      "text": "शुक्ल पक्ष में आज हल्के, गर्म रंग अच्छे रहेंगे।",
+      "confidence": "verified",
+      "trust": {
+        "plain": "आपकी कुंडली से गणना, दो स्रोतों से मिलान",
+        "sources_line": "आपकी कुंडली से गणना · 2 स्रोतों से सत्यापित",
+        "details": [
+          "तिथि · शुक्ल पक्ष 5"
+        ]
+      }
+    },
+    {
+      "module": "number",
+      "text": "आज आपका अंक 8 है।",
+      "confidence": "verified",
+      "trust": {
+        "plain": "आपकी कुंडली से गणना, दो स्रोतों से मिलान",
+        "sources_line": "आपकी कुंडली से गणना · 2 स्रोतों से सत्यापित",
+        "details": [
+          "अंक · 8"
+        ]
+      }
+    },
+    {
+      "module": "favourable_window",
+      "text": "11:45 से 12:35 तक अच्छा समय है।",
+      "confidence": "verified",
+      "trust": {
+        "plain": "आपकी कुंडली से गणना, दो स्रोतों से मिलान",
+        "sources_line": "आपकी कुंडली से गणना · 2 स्रोतों से सत्यापित",
+        "details": [
+          "अभिजित · 11:45–12:35"
+        ]
+      }
+    },
+    {
+      "module": "caution_window",
+      "text": "राहु काल 09:00 से 10:30 तक है — इस समय को छोड़ देना बेहतर।",
+      "confidence": "verified",
+      "trust": {
+        "plain": "आपकी कुंडली से गणना, दो स्रोतों से मिलान",
+        "sources_line": "आपकी कुंडली से गणना · 2 स्रोतों से सत्यापित",
+        "details": [
+          "राहु काल · 09:00–10:30"
+        ]
+      }
+    },
+    {
+      "module": "priorities",
+      "text": "आपने कहा था कि अभी काम और करियर सबसे ज़रूरी है।",
+      "confidence": "verified",
+      "trust": {
+        "plain": "आपकी कुंडली से गणना, दो स्रोतों से मिलान",
+        "sources_line": "आपकी कुंडली से गणना · 2 स्रोतों से सत्यापित",
+        "details": []
+      }
+    },
+    {
+      "module": "what_to_avoid",
+      "text": "09:00 से 10:30 के बीच कुछ नया शुरू करने की ज़रूरत नहीं।",
+      "confidence": "verified",
+      "trust": {
+        "plain": "आपकी कुंडली से गणना, दो स्रोतों से मिलान",
+        "sources_line": "आपकी कुंडली से गणना · 2 स्रोतों से सत्यापित",
+        "details": [
+          "राहु काल · 09:00–10:30"
+        ]
+      }
+    }
+  ],
+  "panchang": [
+    {
+      "label_key": "ui.panchang.tithi",
+      "value": "शुक्ल पक्ष 5"
+    },
+    {
+      "label_key": "ui.panchang.nakshatra",
+      "value": "रोहिणी"
+    }
+  ],
+  "state": {
+    "first_session": false,
+    "first_morning": false,
+    "brief_time": "07:00",
+    "travel": {
+      "active": false,
+      "city": null
+    },
+    "festival": null,
+    "birthday": false,
+    "birth_time_missing": false,
+    "trial_day": null,
+    "plan": "free",
+    "story_ring_enabled": false
+  }
+}

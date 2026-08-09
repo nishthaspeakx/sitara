@@ -35,7 +35,8 @@ import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from sitara_schemas.facts import ConfidenceState, FactSnapshot
+from sitara_schemas.facts import ConfidenceState, FactKind, FactSnapshot
+from sitara_schemas.modules import MorningModule
 
 from sitara_api.daily_guidance import notify, ranking
 from sitara_api.daily_guidance.idempotency import briefing_key
@@ -46,6 +47,7 @@ from sitara_api.daily_guidance.types import (
     Brief,
     BriefStatus,
     BriefSubject,
+    ComposedModule,
     DegradeReason,
     WaveMember,
 )
@@ -93,6 +95,107 @@ class GenerationResult:
     polish: PolishReport
 
 
+@dataclass(frozen=True)
+class ComposedBrief:
+    """The ladder's verdict, before anything is persisted or notified.
+
+    Split out of `generate_for` so the four outcomes can be reached without a
+    store, a queue or a clock. Two callers need exactly that: the tests, which
+    should be able to assert "these facts degrade to core cards" without a
+    database; and §28.2's dev variant switcher, which renders every variant from
+    real engine output and would otherwise have needed a fake `BriefStore` —
+    and a fake that accepts what the real one rejects is a defect in the fake,
+    so the better answer was not to need one.
+    """
+
+    modules: tuple[ComposedModule, ...]
+    status: BriefStatus
+    degrade_reason: DegradeReason | None
+    polish: PolishReport
+
+
+def _relevance_for(facts: BriefFacts) -> dict[MorningModule, float]:
+    """This morning's nudges to the contextual ranking.
+
+    `RankingContext.relevance` exists for exactly this — "a festival today, a
+    family birthday tomorrow" — and the festival is the case that has to use it,
+    because §28.2 puts a festival on TWO surfaces: the banner above the core
+    card (§32.1's only permitted one) and a contextual card among the max four.
+
+    Left unnudged, `festival_observance` sits mid-pool and loses the MED-density
+    cut to `family_reminder` and `priorities`, so a festival morning renders no
+    festival anywhere — the day's most visible fact, invisible. The nudge is a
+    ranking preference, not a bypass: the module is still gated on having a
+    `FESTIVAL_OBSERVANCE` fact like everything else (§5.3).
+    """
+    has_festival = any(
+        snapshot.kind is FactKind.FESTIVAL_OBSERVANCE for snapshot in facts.snapshots
+    )
+    return {MorningModule.FESTIVAL_OBSERVANCE: 10.0} if has_festival else {}
+
+
+async def compose_brief(
+    facts: BriefFacts,
+    subject: BriefSubject,
+    *,
+    polisher: BriefPolisher | None = None,
+    skip_polish: bool = False,
+    inputs: dict[str, str] | None = None,
+) -> ComposedBrief:
+    """§7.1's ranking → composition → polish → degradation ladder.
+
+    Every branch here is a spec line, and the three failure-shaped outcomes are
+    NOT interchangeable — see `BriefStatus`. In particular a provider outage
+    lands on RANKING_ONLY, not VERIFIED_CORE_CARDS: the composed text is already
+    verified, so §8 degrades it gracefully rather than treating it as a
+    grounding failure.
+    """
+    context = ranking.RankingContext(
+        density=subject.density,
+        available_inputs=frozenset(inputs or ()),
+        relevance=_relevance_for(facts),
+    )
+    ranked = ranking.rank(facts.snapshots, context)
+    composer = BriefComposer(inputs=inputs)
+    modules = composer.compose_all(ranked, subject.locale)
+
+    status = BriefStatus.POLISHED
+    degrade_reason: DegradeReason | None = None
+    report = PolishReport()
+
+    if not modules:
+        # Nothing composed at all. Fall to core cards; if those are empty too,
+        # the facts were not there and the brief FAILS honestly rather than
+        # shipping an empty card set.
+        modules = composer.compose_all(ranking.core_cards(facts.snapshots), subject.locale)
+        status = BriefStatus.VERIFIED_CORE_CARDS if modules else BriefStatus.FAILED
+        degrade_reason = (
+            DegradeReason.PANCHANG_UNAVAILABLE
+            if "panchang" in facts.missing
+            else DegradeReason.CHART_UNAVAILABLE
+        )
+    elif skip_polish or polisher is None:
+        # §7.1's cost lever. Complete and verified; simply not polished.
+        status = BriefStatus.RANKING_ONLY
+    else:
+        modules, report = await polisher.polish(modules, subject.locale, subject.density)
+        if report.unavailable:
+            status = BriefStatus.RANKING_ONLY
+        elif report.all_rejected:
+            # Diagram 5's `fail` edge off grounding validation.
+            core = composer.compose_all(ranking.core_cards(facts.snapshots), subject.locale)
+            modules = core or modules
+            status = BriefStatus.VERIFIED_CORE_CARDS
+            degrade_reason = DegradeReason.GROUNDING_FAILED
+
+    return ComposedBrief(
+        modules=tuple(modules),
+        status=status,
+        degrade_reason=degrade_reason,
+        polish=report,
+    )
+
+
 class DailyGuidanceService:
     def __init__(
         self,
@@ -122,46 +225,17 @@ class DailyGuidanceService:
         subject = member.subject
         facts = await self._facts.fetch(subject, member.local_date)
 
-        context = ranking.RankingContext(
-            density=subject.density,
-            available_inputs=frozenset(inputs or ()),
+        composed = await compose_brief(
+            facts,
+            subject,
+            polisher=self._polisher,
+            skip_polish=skip_polish,
+            inputs=inputs,
         )
-        ranked = ranking.rank(facts.snapshots, context)
-        composer = BriefComposer(inputs=inputs)
-        modules = composer.compose_all(ranked, subject.locale)
-
-        status = BriefStatus.POLISHED
-        degrade_reason: DegradeReason | None = None
-        report = PolishReport()
-
-        if not modules:
-            # Nothing composed at all. Fall to core cards; if those are empty
-            # too, the facts were not there and the brief FAILS honestly rather
-            # than shipping an empty card set.
-            modules = composer.compose_all(ranking.core_cards(facts.snapshots), subject.locale)
-            status = BriefStatus.VERIFIED_CORE_CARDS if modules else BriefStatus.FAILED
-            degrade_reason = (
-                DegradeReason.PANCHANG_UNAVAILABLE
-                if "panchang" in facts.missing
-                else DegradeReason.CHART_UNAVAILABLE
-            )
-        elif skip_polish or self._polisher is None:
-            # §7.1's cost lever. Complete and verified; simply not polished.
-            status = BriefStatus.RANKING_ONLY
-        else:
-            modules, report = await self._polisher.polish(
-                modules, subject.locale, subject.density
-            )
-            if report.unavailable:
-                status = BriefStatus.RANKING_ONLY
-            elif report.all_rejected:
-                # Diagram 5's `fail` edge off grounding validation.
-                core = composer.compose_all(
-                    ranking.core_cards(facts.snapshots), subject.locale
-                )
-                modules = core or modules
-                status = BriefStatus.VERIFIED_CORE_CARDS
-                degrade_reason = DegradeReason.GROUNDING_FAILED
+        modules = composed.modules
+        status = composed.status
+        degrade_reason = composed.degrade_reason
+        report = composed.polish
 
         brief = Brief(
             user_id=subject.user_id,

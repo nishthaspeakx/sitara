@@ -94,6 +94,18 @@ Bounded-context modules in one process (auth, users/profiles, localisation, astr
 - **The pre-job works over CELLS, not users.** §7.2's key carries no user by construction, so a city of ten thousand costs what a city of one costs. A pre-job iterating users would produce identical output at ten thousand times the price and nothing downstream would notice.
 - **Chart facts are NOT wired** — the astrology facade still declines `NATAL_CHART`/`TRANSITS` (M5). `BriefFacts.missing` names the gap so the brief degrades through §7.1's stated path instead of through a stub that looks like data.
 
+## today module (M9, §28.2) — invariants that must not regress
+- **`GET /v1/today` is the door M6 never had.** M6 stored `daily_briefings` rows nothing could read. The router is deliberately thin: `BriefStore.get` on the user's LOCAL date (§32.13, never UTC), `generate_on_open` on a miss (§7.1's dormant path and §32.13's missed-date path are one code path), `mark_opened`, serialise. Every other decision is made somewhere better.
+- **A failed brief is a SCREEN, not a 5xx.** §28.2 has a designed variant for every way this goes wrong. Returning an error envelope from `/v1/today` would replace a designed state with an error page on the app's home surface.
+- **The brief enums live in `sitara_schemas.today`, not here.** `Density`, `Tier`, `BriefStatus` and `BriefDegradeReason` cross the wire, so both sides need one declaration — the same discipline §34.3's `MorningModule` already follows. `types.py` imports and re-exports them; it declares none.
+- **`variant` is NOT a payload field.** §32.1's precedence is a rule over `TodayState`, evaluated once in `apps/web/src/lib/today-variant.ts` where the stack is rendered. A server that also picked the variant would be a second implementation, and the two would disagree on exactly the crowded morning the rule exists for.
+- **`compose_brief` is the ladder without the store.** Split out of `generate_for` so the four outcomes are reachable with no database, no queue and no clock — which is what let the dev router run the REAL ladder instead of needing a fake `BriefStore`.
+- **A festival is nudged, not bypassed.** `_relevance_for` raises `festival_observance`'s relevance when the fact is present, because §28.2 puts a festival on two surfaces and at MED density the card otherwise loses the cut to `family_reminder` — a festival morning rendering no festival anywhere. It is still gated on having the fact (§5.3).
+- **Tara's line is NOT an eighteenth module.** §28.2 item (2) is composed by `templates.compose_taras_line` in two registers: cited when it leans on the day, claimless when there are no facts. The claimless register is what makes "always present" compatible with cite-or-die. **A cited line must be ONE sentence** — `_cite` puts the marker before the final stop, so a two-sentence line leaves the claim in sentence one uncited. A parametrised test over every band × locale caught exactly that.
+- **`sources_line` is derived from the CONFIDENCE STATE, not the snapshot count.** A module's snapshot count is how many different facts it stands on, not how many sources agreed on one — reading it produced a Trust Sheet saying "checked against two sources" directly above "one source available today". §32.2 already encodes corroboration in the state.
+- **`dev_router` is dev-only and mounted by `app.py` only when `environment == "dev"`** — `db.seed`'s rule. It fixes only the FACTS and the account state (`dev_fixtures.py`) and runs the real ranking engine, composer and ladder over them. `UngroundedLLM` is the file's one stub, and it exists because §7.1's degrade is reachable only through diagram 5's grounding `fail` edge — a model that will not stop rewriting the facts is a failure no real provider produces on demand.
+- **The web's fixtures are RECORDED, never authored.** `scripts/record_today_fixtures.py` writes `apps/web/tests/__fixtures__/today/` from the real pipeline; `stub-api.mjs` replays them. Re-record after any template, ranking or ladder change — the diff is the review artefact.
+
 ## memory consolidation (M6, diagram 8) — invariants that must not regress
 - **Consolidation never deletes.** Same rule `decay.py` established: §32.4 retains "until user deletes". A duplicate is FOLDED — muted, kept in the vault, pointing at its canonical — because the user consented to each copy separately.
 - **The canonical is elected per CLUSTER, not per pair.** Pairwise folding builds chains (A→B, then B→C) that leave a duplicate pointing at a duplicate. Single-link clustering then one election makes that unrepresentable.
@@ -106,6 +118,10 @@ Bounded-context modules in one process (auth, users/profiles, localisation, astr
 - **Exactly one Beat may run.** Two would double-fire every §7.1 wave. The compose stack runs `beat` as its own single container.
 - **Every task must be safe to run twice.** §6.1 rejected a workflow engine on the strength of "Celery Beat + idempotent tasks", and `task_acks_late` means a dead worker hands the message back.
 - **The tick fans out by `send_task` name**, so the producer needs none of the consumer's imports and can run on a worker carrying no model client.
+
+## Commands (M9)
+- Re-record the web's Today fixtures: `uv run python scripts/record_today_fixtures.py`
+- The variant switcher: run the API in dev, then `/en/_dev/today` in the web app
 
 ## Commands (M6)
 - Wave simulation: `uv run python -m sitara_api.daily_guidance.simulate --users 5000`

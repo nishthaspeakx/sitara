@@ -34,10 +34,12 @@ from __future__ import annotations
 import datetime as dt
 import logging
 from collections.abc import Sequence
+from dataclasses import dataclass
 from zoneinfo import ZoneInfo
 
 from sitara_schemas.facts import (
     BhagyankValue,
+    ConfidenceState,
     DayTimingValue,
     FactSnapshot,
     FestivalObservanceValue,
@@ -51,6 +53,7 @@ from sitara_schemas.facts import (
     TithiBoundaryValue,
 )
 from sitara_schemas.modules import MorningModule
+from sitara_schemas.today import TimeBand
 
 from sitara_api.daily_guidance.ranking import RankedModule
 from sitara_api.daily_guidance.types import ComposedModule
@@ -461,6 +464,76 @@ class BriefComposer:
             resolve("brief.module.family_reminder", locale, name=name, occasion=occasion),
             [],
         )
+
+
+# ---------------------------------------------------------------------------
+# §28.2 item (2) — Tara's line
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class TarasLine:
+    """"One warm sentence for this moment (the emotional anchor, always
+    present)."
+
+    Deliberately NOT a `ComposedModule`. §34.3's seventeen is a closed set and
+    `ranking.py` carries two import-time asserts to keep it closed; Tara's line
+    is a different thing in §28.2's own anatomy — it sits above the core card,
+    it is never a card, and it is present on mornings when no module could be
+    emitted at all. Making it an eighteenth module to reuse the plumbing would
+    trade a real distinction for a small convenience.
+
+    It is cited by exactly the same machinery, though. Two registers:
+
+    * **With a nakshatra in hand** it leans on the day and cites the snapshot,
+      through `_cite`, before the full stop, like every other sentence here.
+    * **Without one** it says something warm that asserts nothing about the sky.
+      No claim, so no citation — and the grounding validator agrees, because it
+      decides claim-hood from words and there is no celestial body in it. This
+      is the register the first-session and failed-brief mornings use, and it is
+      why §28.2 can call the line "always present" without §5.3 being bent.
+    """
+
+    text: str
+    snapshots: tuple[FactSnapshot, ...] = ()
+    confidence: ConfidenceState = ConfidenceState.TRADITION_BASED_GENERAL
+
+
+def compose_taras_line(
+    snapshots: Sequence[FactSnapshot], locale: str, band: TimeBand
+) -> TarasLine | None:
+    """§28.2's emotional anchor for this moment, in this locale.
+
+    Returns None only when the locale has no catalog entry at all — §2.4 rule 7
+    forbids the silent English fallback that would otherwise be the tempting
+    answer, and a screen with no line is better than a screen that quietly
+    changes language.
+    """
+    found = _nakshatra(snapshots)
+    if found is not None:
+        snapshot, slug = found
+        name = _term("nakshatra", slug, locale)
+        if name is not None:
+            try:
+                text = resolve(f"brief.taras_line.{band.value}_nakshatra", locale, nakshatra=name)
+            except MissingString:
+                logger.warning(
+                    "taras line: no cited form for band", extra={"band": band.value}
+                )
+            else:
+                return TarasLine(
+                    text=_cite(text, snapshot),
+                    snapshots=(snapshot,),
+                    confidence=ConfidenceState.VERIFIED,
+                )
+
+    try:
+        return TarasLine(text=resolve(f"brief.taras_line.{band.value}", locale))
+    except MissingString:
+        logger.warning(
+            "taras line missing", extra={"locale": locale, "band": band.value}
+        )
+        return None
 
 
 def _ordinal(value: int, locale: str) -> str | None:

@@ -1,92 +1,51 @@
 """Shared contracts for the §7.1 morning pipeline.
 
-Every enum here is a closed set, and the closed set that matters most is not
-declared here at all: the seventeen morning modules live in `sitara_schemas`
-(§34.3) and this module imports them. A second copy is how an eighteenth
-appears.
+Every enum here is a closed set, and NONE of them is declared here. The
+seventeen morning modules live in `sitara_schemas` (§34.3); so, since M9, do
+`Density`, `Tier`, `BriefStatus` and `BriefDegradeReason` — because §28.2's
+`GET /v1/today` puts all four on the wire, and an enum that crosses a process
+boundary needs one declaration on both sides of it. A second copy is how an
+eighteenth module appears, and it is equally how a degraded morning comes to
+render as a normal one.
+
+What remains here is what is genuinely internal: the dataclasses the pipeline
+passes between its own stages.
 """
 
 from __future__ import annotations
 
 import datetime as dt
 from dataclasses import dataclass, field
-from enum import StrEnum
 
 from sitara_schemas.facts import ConfidenceState, FactSnapshot
 from sitara_schemas.modules import MorningModule
+from sitara_schemas.today import BriefDegradeReason, BriefStatus, Density, Tier
 
+#: The pipeline's own name for it, kept because "brief" is redundant inside the
+#: daily-guidance module and every M6 call site reads better without it.
+DegradeReason = BriefDegradeReason
 
-class Density(StrEnum):
-    """§28.2's three density modes.
-
-    "Density changes ranking-engine output count, never facts." The default is
-    the interest level captured at onboarding (S09), not a fixed value.
-    """
-
-    LOW = "low"  # skeptic-friendly: Tara's line + core card + practical strip
-    MED = "med"  # default: + 2 contextual cards + panchang row
-    HIGH = "high"  # devout: + timings, dasha context, extra observance cards
-
-
-class Tier(StrEnum):
-    """§7.1's priority queues: "paying users > trial > dormant".
-
-    Three queues, and the ordering is the definition: a user is PAYING if they
-    pay, else TRIAL if they are inside a trial, else DORMANT. DORMANT is the
-    residual — post-trial free and lapsed accounts — and §7.1 gives it
-    on-open generation only, "no waste". That reading is also what §28.2's
-    Free variant already implies: a post-trial user without a payment sees
-    generic panchang and locked personal cards, so there is no personalised
-    brief to pre-generate for them anyway.
-    """
-
-    PAYING = "paying"
-    TRIAL = "trial"
-    DORMANT = "dormant"
-
+__all__ = [
+    "GENERATED_TIERS",
+    "UPGRADEABLE",
+    "Brief",
+    "BriefDegradeReason",
+    "BriefStatus",
+    "BriefSubject",
+    "ComposedModule",
+    "DegradeReason",
+    "Density",
+    "Tier",
+    "WaveMember",
+    "WaveReport",
+]
 
 #: Generation order for the wave. DORMANT is absent on purpose — it is not a
 #: lower-priority queue, it is not enqueued at all.
 GENERATED_TIERS: tuple[Tier, ...] = (Tier.PAYING, Tier.TRIAL)
 
-
-class BriefStatus(StrEnum):
-    """What a `daily_briefings` row actually contains.
-
-    The three failure-shaped values are distinct because they degrade for
-    different reasons and recover differently:
-
-    * RANKING_ONLY is §7.1's COST LEVER — "if the morning queue depth breaches
-      SLO, ranking-engine-only briefs (no LLM polish) ship first and upgrade
-      lazily". Nothing is wrong; the brief is complete and unpolished, and a
-      later pass may upgrade it.
-    * VERIFIED_CORE_CARDS is §7.1's DEGRADE — "a failed brief degrades to
-      'verified core cards' (panchang + one chart theme, no LLM) rather than
-      nothing". Something failed. It does not upgrade itself.
-    * FAILED is the row that could not even reach verified core cards, which
-      means the facts were not there. §28.2's offline/degraded variants render
-      the cached brief instead.
-    """
-
-    PENDING = "pending"
-    POLISHED = "polished"
-    RANKING_ONLY = "ranking_only"
-    VERIFIED_CORE_CARDS = "verified_core_cards"
-    FAILED = "failed"
-
-
 #: Statuses §7.1's lazy upgrade may still improve.
 UPGRADEABLE: frozenset[BriefStatus] = frozenset({BriefStatus.RANKING_ONLY})
-
-
-class DegradeReason(StrEnum):
-    """Why a brief is not what it should have been. Recorded, never inferred."""
-
-    GROUNDING_FAILED = "grounding_failed"
-    LLM_UNAVAILABLE = "llm_unavailable"
-    PANCHANG_UNAVAILABLE = "panchang_unavailable"
-    CHART_UNAVAILABLE = "chart_unavailable"
-    LANGUAGE_QUALITY_FAILED = "language_quality_failed"
 
 
 @dataclass(frozen=True)

@@ -1,0 +1,109 @@
+{
+  "local_date": "2026-08-12",
+  "local_time": "08:30",
+  "timezone": "Asia/Kolkata",
+  "density": "low",
+  "tier": "paying",
+  "status": "ranking_only",
+  "degrade_reason": null,
+  "confidence": "verified",
+  "taras_line": {
+    "text": "A new morning, and I'm glad you're here.",
+    "confidence": "tradition_based_general"
+  },
+  "modules": [
+    {
+      "module": "energy_of_day",
+      "text": "Today runs on Shukla paksha, tithi 5.",
+      "confidence": "verified",
+      "trust": {
+        "plain": "computed from your chart and checked against two sources",
+        "sources_line": "Computed from your chart · verified against 2 sources",
+        "details": [
+          "Tithi · Shukla paksha 5"
+        ]
+      }
+    },
+    {
+      "module": "personal_chart_theme",
+      "text": "Moon is moving through your 10th house today.",
+      "confidence": "verified",
+      "trust": {
+        "plain": "computed from your chart and checked against two sources",
+        "sources_line": "Computed from your chart · verified against 2 sources",
+        "details": [
+          "Moon · 10th"
+        ]
+      }
+    },
+    {
+      "module": "colour",
+      "text": "Shukla paksha suits softer, warmer shades today.",
+      "confidence": "verified",
+      "trust": {
+        "plain": "computed from your chart and checked against two sources",
+        "sources_line": "Computed from your chart · verified against 2 sources",
+        "details": [
+          "Tithi · Shukla paksha 5"
+        ]
+      }
+    },
+    {
+      "module": "number",
+      "text": "Your number today is 8.",
+      "confidence": "verified",
+      "trust": {
+        "plain": "computed from your chart and checked against two sources",
+        "sources_line": "Computed from your chart · verified against 2 sources",
+        "details": [
+          "Number · 8"
+        ]
+      }
+    },
+    {
+      "module": "favourable_window",
+      "text": "A good window opens between 11:45 and 12:35.",
+      "confidence": "verified",
+      "trust": {
+        "plain": "computed from your chart and checked against two sources",
+        "sources_line": "Computed from your chart · verified against 2 sources",
+        "details": [
+          "Abhijit · 11:45–12:35"
+        ]
+      }
+    },
+    {
+      "module": "caution_window",
+      "text": "Rahu Kaal runs 09:00 to 10:30 — worth stepping around.",
+      "confidence": "verified",
+      "trust": {
+        "plain": "computed from your chart and checked against two sources",
+        "sources_line": "Computed from your chart · verified against 2 sources",
+        "details": [
+          "Rahu Kaal · 09:00–10:30"
+        ]
+      }
+    }
+  ],
+  "panchang": [
+    {
+      "label_key": "ui.panchang.tithi",
+      "value": "Shukla paksha 5"
+    }
+  ],
+  "state": {
+    "first_session": false,
+    "first_morning": false,
+    "brief_time": "07:00",
+    "travel": {
+      "active": false,
+      "city": null
+    },
+    "festival": null,
+    "birthday": false,
+    "birth_time_missing": false,
+    "trial_day": null,
+    "plan": "premium",
+    "story_ring_enabled": false
+  }
+}

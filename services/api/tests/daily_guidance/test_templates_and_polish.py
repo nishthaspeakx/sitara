@@ -13,6 +13,7 @@ import json
 
 import pytest
 from sitara_schemas.modules import MorningModule
+from sitara_schemas.today import TimeBand
 
 from sitara_api.chat_orchestration.grounding import GroundingValidator, strip_citations
 from sitara_api.chat_orchestration.llm import (
@@ -22,7 +23,11 @@ from sitara_api.chat_orchestration.llm import (
 )
 from sitara_api.daily_guidance import ranking
 from sitara_api.daily_guidance.polish import BriefPolisher
-from sitara_api.daily_guidance.templates import BriefComposer, template_id
+from sitara_api.daily_guidance.templates import (
+    BriefComposer,
+    compose_taras_line,
+    template_id,
+)
 from sitara_api.daily_guidance.types import Density
 
 LOCALES = ("en", "hi", "hi-Latn")
@@ -534,3 +539,105 @@ async def test_the_whole_brief_is_one_call(full_facts) -> None:  # noqa: ANN001
     llm = ScriptedLLM(response_for(modules, lambda m: f"Gently: {m.text}"))
     await BriefPolisher(llm).polish(modules, "en", Density.HIGH)
     assert len(llm.requests) == 1
+
+
+# --- §28.2 item (2): Tara's line -------------------------------------------
+
+
+@pytest.mark.parametrize("locale", LOCALES)
+@pytest.mark.parametrize("band", list(TimeBand))
+def test_taras_line_is_always_present(locale, band) -> None:  # noqa: ANN001
+    """§28.2 calls it "always present", and the empty-facts case is the one
+    that has to hold: first session, failed brief, panchang cell cold. A line
+    that only exists on good mornings is not an anchor."""
+    line = compose_taras_line((), locale, band)
+    assert line is not None
+    assert line.text.strip()
+
+
+@pytest.mark.parametrize("locale", LOCALES)
+@pytest.mark.parametrize("band", list(TimeBand))
+def test_a_factless_taras_line_asserts_nothing_and_needs_no_citation(locale, band) -> None:  # noqa: ANN001
+    """The register that makes "always present" compatible with §5.3.
+
+    With no facts the line makes no astrological claim, so cite-or-die has
+    nothing to bite on — and the validator, which decides claim-hood from words,
+    agrees. If a warm sentence ever drifted into naming a graha, this fails.
+    """
+    line = compose_taras_line((), locale, band)
+    assert line is not None
+    assert line.snapshots == ()
+    assert GroundingValidator().check(line.text, (), locale).ok
+
+
+@pytest.mark.parametrize("locale", LOCALES)
+@pytest.mark.parametrize("band", list(TimeBand))
+def test_a_cited_taras_line_passes_the_same_gate_as_every_module(
+    nakshatra_fact,  # noqa: ANN001
+    locale,  # noqa: ANN001
+    band,  # noqa: ANN001
+) -> None:
+    """The other register: it leans on the day, so it cites the day."""
+    line = compose_taras_line((nakshatra_fact,), locale, band)
+    assert line is not None
+    assert line.snapshots == (nakshatra_fact,)
+    assert GroundingValidator().check(line.text, line.snapshots, locale).ok
+    # §30.4: the marker is machinery, never reading material.
+    assert "[[" not in strip_citations(line.text)
+
+
+@pytest.mark.parametrize("locale", LOCALES)
+def test_taras_line_names_the_moons_nakshatra_and_no_other_bodys(locale) -> None:  # noqa: ANN001
+    """The M6 scar, re-applied to the one sentence that is not a module.
+
+    `_nakshatra` is shared, so this cannot regress independently — which is the
+    point of asserting it here rather than trusting that it is shared.
+    """
+    import datetime as dt
+
+    from sitara_schemas.facts import (
+        FactKind,
+        FactMethod,
+        FactPrecision,
+        FactSnapshot,
+        Graha,
+        Nakshatra,
+        NakshatraValue,
+        TzMethod,
+        build_fact_id,
+    )
+
+    def natal(graha: Graha, nakshatra: Nakshatra, index: int) -> FactSnapshot:
+        return FactSnapshot(
+            fact_id=build_fact_id(
+                f"natal.{graha.value}.nakshatra", "natal", "6a70000000000000000000a1", 1
+            ),
+            kind=FactKind.NATAL_GRAHA_NAKSHATRA,
+            value=NakshatraValue(
+                graha=graha, nakshatra=nakshatra, nakshatra_index=index, pada=1
+            ),
+            precision=FactPrecision(tolerance=0, unit="exact"),
+            method=FactMethod(
+                ayanamsa="lahiri",
+                tz=TzMethod(tz="Asia/Kolkata", utc_offset_seconds=19800),
+            ),
+            valid_from=dt.datetime(2026, 8, 12, tzinfo=dt.UTC),
+            valid_to=None,
+            engine_semver="0.1.0",
+            data_revision="test",
+        )
+
+    # The Sun's arrives first, exactly as the engine emits it.
+    facts = (
+        natal(Graha.SUN, Nakshatra.PURVA_BHADRAPADA, 25),
+        natal(Graha.MOON, Nakshatra.ROHINI, 4),
+    )
+    line = compose_taras_line(facts, locale, TimeBand.MORNING)
+    assert line is not None
+    assert line.snapshots == (facts[1],), "the line must cite the MOON's fact"
+
+
+def test_taras_line_declines_rather_than_falling_back_to_english() -> None:
+    """§2.4 rule 7. A locale with no catalog gets no line, not an English one —
+    the whole-app-native rule has no exception for a warm sentence."""
+    assert compose_taras_line((), "zz", TimeBand.MORNING) is None

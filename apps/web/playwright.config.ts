@@ -128,7 +128,8 @@ export default defineConfig({
   projects: [
     {
       name: "library",
-      testMatch: /library\.spec\.ts|tara-disclosure\.spec\.ts|dist-dirs\.spec\.ts|api-routing\.spec\.ts/,
+      testMatch:
+        /library\.spec\.ts|tara-disclosure\.spec\.ts|dist-dirs\.spec\.ts|api-routing\.spec\.ts|today-variant\.spec\.ts|today-fixtures\.spec\.ts/,
     },
     {
       name: "components",
@@ -142,7 +143,12 @@ export default defineConfig({
     },
     {
       name: "screens",
-      testMatch: /screens\.spec\.ts|onboarding-.*\.spec\.ts|ceremony-degradation\.spec\.ts/,
+      // `today-variant` and `today-fixtures` are deliberately NOT here: they
+      // read files off disk and belong to `library`, which needs no server. A
+      // loose `today-.*` would run them twice and make the cheap command
+      // wait on a `next start`.
+      testMatch:
+        /screens\.spec\.ts|onboarding-.*\.spec\.ts|ceremony-degradation\.spec\.ts|today-(empty|degraded|screens)\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
         viewport: { width: 390, height: 844 },

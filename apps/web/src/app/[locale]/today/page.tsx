@@ -1,31 +1,101 @@
 "use client";
 
 /**
- * S14 Today — the destination, NOT the screen.
+ * S14 Today — §28.2, wired to §7.1's pipeline.
  *
- * §28.2 specifies Today in full: sixteen variants, three densities, the
- * core-card dominance rule, a p95 render budget. None of that is M8's, and
- * building a plausible-looking approximation of it would be worse than this —
- * a screen that looks finished is a screen nobody revisits.
+ * This file is the state machine and nothing else: fetch, decide which of the
+ * three outcomes we are in, hand a resolved payload to `TodayScreen`. Every
+ * substantive rule lives somewhere it can be tested without a browser —
+ * §32.1's precedence in `lib/today-variant.ts`, the anatomy in `TodayScreen`,
+ * the sentences in the API.
  *
- * So this is an honest placeholder: the onboarding stack has to land somewhere
- * (§28.1: "onboarding … never exits to blank"), and the flow tests assert that
- * it lands here. It uses the §24.3 library like every other screen, states what
- * it is, and offers the one thing that already exists.
+ * **A failed fetch is a screen, not an error.** §28.2 has a designed variant
+ * for it ("Offline: cached brief + offline banner; practical strip marked 'as
+ * of [time]'"), so a §34.4 envelope with a cached payload behind it renders
+ * Today, offline. `ErrorState` is reserved for the one case §28.2 does not
+ * cover: no brief and nothing cached, on the app's home surface, which is the
+ * only honest thing left to show.
  */
 
-import { EmptyState, Header, TabBar } from "@/components/ui";
+import { useEffect, useState } from "react";
+
+import type { ErrorEnvelope, TodayPayload } from "@sitara/schemas";
+
+import { ErrorState, Skeleton } from "@/components/ui";
+import { TodayScreen } from "@/components/today/TodayScreen";
+import { useRouter } from "@/i18n/navigation";
+import { fetchToday, readCachedToday } from "@/lib/today";
+import { resolveChrome } from "@/lib/today-variant";
+
+type State =
+  | { kind: "loading" }
+  | { kind: "ready"; payload: TodayPayload; offline: boolean; cachedAt?: string }
+  | { kind: "error"; error: ErrorEnvelope };
 
 export default function TodayPage() {
+  const router = useRouter();
+  const [state, setState] = useState<State>({ kind: "loading" });
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const result = await fetchToday();
+      if (cancelled) return;
+      if (result.ok) {
+        setState({ kind: "ready", payload: result.data, offline: false });
+        return;
+      }
+      // §28.2's offline variant. The cached brief is a real brief that was
+      // true when it was taken, which is why it is shown with its age rather
+      // than withheld.
+      const cached = readCachedToday();
+      setState(
+        cached
+          ? {
+              kind: "ready",
+              payload: cached.payload,
+              offline: true,
+              cachedAt: cached.cachedAt,
+            }
+          : { kind: "error", error: result.error },
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (state.kind === "loading") {
+    // §28.2: "loading = skeleton mirroring anatomy". Not a spinner — the shape
+    // of what is coming is what makes a wait feel short.
+    return (
+      <div data-testid="today" data-variant="loading" className="flex min-h-screen flex-col gap-5 bg-bg-canvas p-5">
+        <Skeleton variant="brief" />
+      </div>
+    );
+  }
+
+  if (state.kind === "error") {
+    return (
+      <div data-testid="today" data-variant="error" className="flex min-h-screen items-center justify-center bg-bg-canvas p-5">
+        <ErrorState error={state.error} onRetry={() => router.refresh()} />
+      </div>
+    );
+  }
+
+  const chrome = resolveChrome({
+    state: state.payload.state,
+    localTime: state.payload.local_time,
+    status: state.payload.status,
+    offline: state.offline,
+  });
+
   return (
-    <div className="flex min-h-screen flex-col bg-bg-canvas" data-testid="today">
-      <Header variant="titled" titleKey="ui.tabs.today" />
-      <main className="flex flex-1 items-center justify-center px-6">
-        {/* The pre-first-brief empty state (§28.2's first-session variant is
-            M9's; this is the designed empty state that already exists). */}
-        <EmptyState id="saved_guidance" />
-      </main>
-      <TabBar active="today" onSelect={() => undefined} />
-    </div>
+    <TodayScreen
+      payload={state.payload}
+      chrome={chrome}
+      cachedAt={state.cachedAt}
+      onSelectTab={(tab) => router.push(`/${tab}`)}
+    />
   );
 }

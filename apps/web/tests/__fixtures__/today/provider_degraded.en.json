@@ -1,0 +1,65 @@
+{
+  "local_date": "2026-08-12",
+  "local_time": "08:30",
+  "timezone": "Asia/Kolkata",
+  "density": "med",
+  "tier": "paying",
+  "status": "verified_core_cards",
+  "degrade_reason": "grounding_failed",
+  "confidence": "tradition_based_general",
+  "taras_line": {
+    "text": "The morning opens under Rohini — a gentle place to begin.",
+    "confidence": "verified"
+  },
+  "modules": [
+    {
+      "module": "energy_of_day",
+      "text": "Today runs on Shukla paksha, tithi 5.",
+      "confidence": "verified",
+      "trust": {
+        "plain": "computed from your chart and checked against two sources",
+        "sources_line": "Computed from your chart · verified against 2 sources",
+        "details": [
+          "Tithi · Shukla paksha 5"
+        ]
+      }
+    },
+    {
+      "module": "moon_nakshatra_note",
+      "text": "The Moon sits in Rohini today.",
+      "confidence": "verified",
+      "trust": {
+        "plain": "computed from your chart and checked against two sources",
+        "sources_line": "Computed from your chart · verified against 2 sources",
+        "details": [
+          "Nakshatra · Rohini"
+        ]
+      }
+    }
+  ],
+  "panchang": [
+    {
+      "label_key": "ui.panchang.tithi",
+      "value": "Shukla paksha 5"
+    },
+    {
+      "label_key": "ui.panchang.nakshatra",
+      "value": "Rohini"
+    }
+  ],
+  "state": {
+    "first_session": false,
+    "first_morning": false,
+    "brief_time": "07:00",
+    "travel": {
+      "active": false,
+      "city": null
+    },
+    "festival": null,
+    "birthday": false,
+    "birth_time_missing": false,
+    "trial_day": null,
+    "plan": "premium",
+    "story_ring_enabled": false
+  }
+}

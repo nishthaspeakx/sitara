@@ -633,3 +633,138 @@ real Chrome against the live stack on 9 August 2026 — the same browser and sta
 that surfaced the routing defect above — so M8 closes with both halves of its
 acceptance run against live services, and nothing carried forward.
 
+
+---
+
+## CL-014 — Today's payload, and four things §28.2 could not be built without
+
+**Date:** 9 August 2026 · **Approved:** Founder (Nishtha Agarwal) ·
+**Raised by:** M9 implementation · **Touches:** §28.2, §32.1, §7.1, §30.4, §24.2
+
+M6 built §7.1's pipeline end to end and stored `daily_briefings` rows that
+**nothing could read** — there was no HTTP surface at all. `GET /v1/today` is
+that surface. Four decisions were needed to render §28.2 against it, and none
+changes a decision the spec makes.
+
+**1. Tara's line is composed, but it is not an eighteenth module.** §28.2 item
+(2) — "one warm sentence for this moment … always present" — is not one of
+§34.3's seventeen, and the enum is closed. `templates.compose_taras_line`
+writes it in two registers: cited when it leans on the day's nakshatra,
+claimless when there are no facts. The claimless register is what makes "always
+present" compatible with §5.3's cite-or-die, and it is the register a
+first-session or failed morning uses.
+
+*What it refuses:* an English fallback when a locale has no catalog entry — the
+line is simply absent, per §2.4 rule 7.
+
+*Found while building it:* a cited line must be **one sentence**. `_cite` places
+the marker before the final stop, so a two-sentence line leaves the claim in
+sentence one uncited — perfectly cited text failing its own validator, which is
+the hazard `services/api/CLAUDE.md` already records for module templates. Caught
+by running every band × locale through the grounding validator.
+
+**2. A festival is nudged into the ranking, not exempted from it.** §28.2 puts a
+festival on two surfaces: §32.1's banner (the only thing permitted above the
+core card) and a contextual card among the max four. Left at its default
+relevance, `festival_observance` sits mid-pool and loses the MED-density cut to
+`family_reminder` and `priorities` — so a festival morning rendered **no
+festival anywhere**. `service._relevance_for` raises its relevance when the fact
+is present, which is precisely what `RankingContext.relevance` was written for
+("a festival today, a family birthday tomorrow").
+
+*What it refuses:* nothing new. The module is still gated on holding a
+`FESTIVAL_OBSERVANCE` fact (§5.3) and still named in-locale or not at all (§2.4).
+
+**3. `sources_line` is derived from the confidence state, not the snapshot
+count.** The first cut read `len(module.snapshots)`, and the recorded fixtures
+made the result visible immediately: a Trust Sheet whose plain line said
+"checked against two sources" directly above a source row saying "one source
+available today". A module's snapshot count is how many **different facts** it
+stands on, not how many sources agreed on one. §32.2 already encodes
+corroboration in the confidence state, so both lines now read it and cannot
+contradict.
+
+**4. The sky gradient carries no text.** §28.2 asks the header for a "sky
+gradient matching local time"; §24.2/§34.8 freeze the palette and define no
+dawn/day/dusk sky. Rather than open a §31.3 entry for four new primitives, the
+bands are composed from existing tokens — and the header's strings were moved
+OFF the gradient after `token-lint` rejected six declared pairs, every one a
+real defect:
+
+* `ink-muted` on `gold-soft` is 3.33:1 and on `line` is 3.75:1 — the tithi line
+  would have failed AA on two of four bands in the light theme;
+* `gold-soft` is a **light** fill in the night theme too, so a morning band
+  there put light ink on cream at 1.17:1;
+* `text-inverse` means "the opposite of this theme's ink", so on a fixed dark
+  sky it is navy in the night theme — 1.02:1, invisible, in the one theme the
+  night band exists for.
+
+A gradient is the worst surface to measure against anyway: the value under a
+word depends on where the word landed. Text now sits on solid `bg-canvas`, a
+pair the matrix already verifies in both themes. This is CC-005 working as
+intended — the failures were found by the lint, before a screenshot, and none
+of them is a threshold worth relaxing.
+
+**Also recorded.**
+
+*The web's Today fixtures are recorded, never authored.* `stub-api.mjs` replays
+57 payloads produced by the real pipeline
+(`services/api/scripts/record_today_fixtures.py`). A hand-written brief in the
+stub would be a brief nobody's engine produced, and all 109 §24.8 baselines
+taken from it would stay green through any regression in ranking, composition
+or the §7.1 ladder. `tests/today-fixtures.spec.ts` re-validates every recording
+against the generated schema so one cannot be edited into fiction.
+
+*`compose_brief` was split out of `generate_for`* so §7.1's four outcomes are
+reachable with no store, queue or clock. That is what let the dev variant
+switcher run the **real** ladder instead of needing a fake `BriefStore` — and
+per CLAUDE.md a fake that accepts what the real one rejects is a defect in the
+fake, so the better answer was not to need one.
+
+*§7.1's degrade is reachable only through diagram 5's grounding `fail` edge.*
+The other stated trigger — "facts too thin" — cannot fire: `rank`'s base
+modules are a superset of what `core_cards` wants under the same `emittable`
+gate, so a fact set that yields nothing to `rank` yields nothing to
+`core_cards` either, and the brief lands on FAILED. The dev fixtures therefore
+reach VERIFIED_CORE_CARDS through a stub model that strips citations — a
+failure no real provider produces on demand. **This is a live-system
+observation, not a spec change**, and it is worth a look before beta: on the
+evidence, a thin-facts morning ships as FAILED rather than as verified core
+cards.
+
+*A variant can be "captured" without ever being rendered.* The `offline`
+baseline was, at first, an ordinary morning with the word `offline` in its
+filename: the suite served the offline fixture over a HEALTHY request, so the
+screen never entered the offline path and the picture was of the wrong screen —
+green, committed, and reviewing nothing. §28.2's offline variant is the screen's
+own state (a failed fetch over a populated cache), so the setup now reproduces
+both halves: the stub really returns 503 and `localStorage` really holds a
+previous morning. Seeding client state is not an intercept — the request still
+travels the real path and really fails (CL-013). Two smaller traps fell out of
+it: `page.addInitScript` runs on `about:blank` too, so seeding `localStorage`
+before the first navigation writes it to an origin the app never reads; and
+`cachedAt` had never been plumbed from the page to the banner, so §28.2's "as of
+[time]" would not have rendered even on the real path.
+
+*Never run `pnpm design-qa` beside a foreground screenshot run.* Both bind
+:3100/:3101, and a concurrent pair produced a baseline that passed against one
+build while the source said another — the same class of failure
+`playwright.config.ts` already documents for reused servers, arriving through
+concurrency rather than staleness. The suites are serial by nature; run them
+that way.
+
+*The three fact-free modules are unreachable in production.* `priorities`,
+`goal_check` and `family_reminder` are gated on `RankingContext.available_inputs`,
+and **nothing in `scheduling` builds that dict** — so the set is always empty and
+those three cards can never appear in a real brief. The dev switcher supplies
+them (in-locale, resolved through `start.priorities.option.*`) which is how the
+gap became visible. This is M6 wiring, not a Today defect, and it is left open
+rather than patched from the screen: the inputs are the user's own words and
+belong to whoever reads `profiles.priorities`, `goals` and the family calendar.
+
+**Residual risk.** `/today/timings` does not exist, so §28.2 item (6)'s link is
+absent rather than pointing at a 404 — the panchang summary renders, its
+destination arrives with the timings screen. The density control §28.2 calls
+"user-tunable in settings" is likewise unbuilt: density is read from
+`profiles.density` (set at S09) and the dev switcher is what exercises LOW and
+HIGH.

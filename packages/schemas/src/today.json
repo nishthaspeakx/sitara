@@ -1,0 +1,337 @@
+{
+  "$comment": "SPEC §28.2 / §32.1 — the Today payload and the closed sets it carries. The morning-brief enums live HERE rather than in services/api because both sides of the wire need them: `sitara_api.daily_guidance.types` imports them (the same discipline §34.3's MorningModule already follows) and the web renders them. A second declaration is how the two drift. NOTE: `variant` is deliberately NOT a field — §32.1's precedence is a RULE over this state, evaluated in one place on the client (apps/web/src/lib/today-variant.ts), not a value a server picks.",
+  "enums": {
+    "Density": {
+      "$comment": "§28.2's three density modes. Default = the interest level captured at onboarding (S09). Density changes ranking-engine output COUNT, never facts.",
+      "enum_name": "Density",
+      "members": [
+        {
+          "id": "low",
+          "label": "Low — skeptic-friendly"
+        },
+        {
+          "id": "med",
+          "label": "Medium — default"
+        },
+        {
+          "id": "high",
+          "label": "High — devout"
+        }
+      ],
+      "const_name": "DENSITIES"
+    },
+    "Tier": {
+      "$comment": "§7.1's priority queues: paying > trial > dormant. DORMANT is the residual (CL-008 §2), never orthogonal to payment.",
+      "enum_name": "Tier",
+      "members": [
+        {
+          "id": "paying",
+          "label": "Paying"
+        },
+        {
+          "id": "trial",
+          "label": "Trial"
+        },
+        {
+          "id": "dormant",
+          "label": "Dormant"
+        }
+      ],
+      "const_name": "TIERS"
+    },
+    "BriefStatus": {
+      "$comment": "§7.1's four outcomes plus PENDING. RANKING_ONLY is the COST LEVER (and the §8 provider-outage path); VERIFIED_CORE_CARDS is the DEGRADE; FAILED is the row that could not reach even that. They are not interchangeable.",
+      "enum_name": "BriefStatus",
+      "members": [
+        {
+          "id": "pending",
+          "label": "Pending"
+        },
+        {
+          "id": "polished",
+          "label": "Polished"
+        },
+        {
+          "id": "ranking_only",
+          "label": "Ranking only"
+        },
+        {
+          "id": "verified_core_cards",
+          "label": "Verified core cards"
+        },
+        {
+          "id": "failed",
+          "label": "Failed"
+        }
+      ],
+      "const_name": "BRIEF_STATUSES"
+    },
+    "BriefDegradeReason": {
+      "$comment": "Why a brief is not what it should have been. Recorded, never inferred. Distinct from the onboarding first-reading's own degrade reasons — a shared name would merge two different vocabularies.",
+      "enum_name": "BriefDegradeReason",
+      "members": [
+        {
+          "id": "grounding_failed",
+          "label": "Grounding failed"
+        },
+        {
+          "id": "llm_unavailable",
+          "label": "LLM unavailable"
+        },
+        {
+          "id": "panchang_unavailable",
+          "label": "Panchang unavailable"
+        },
+        {
+          "id": "chart_unavailable",
+          "label": "Chart unavailable"
+        },
+        {
+          "id": "language_quality_failed",
+          "label": "Language quality failed"
+        }
+      ],
+      "const_name": "BRIEF_DEGRADE_REASONS"
+    },
+    "PlanState": {
+      "$comment": "§28.2's four commercial variants. GRACE keeps full features (§30.3); FREE locks personal cards behind one calm CTA and never guilt-sells (§29.2).",
+      "enum_name": "PlanState",
+      "members": [
+        {
+          "id": "premium",
+          "label": "Premium — no commercial UI at all"
+        },
+        {
+          "id": "trial",
+          "label": "Trial"
+        },
+        {
+          "id": "free",
+          "label": "Free, post-trial"
+        },
+        {
+          "id": "grace",
+          "label": "Payment grace"
+        }
+      ],
+      "const_name": "PLAN_STATES"
+    }
+  },
+  "shapes": {
+    "TodayTrust": {
+      "$comment": "§30.4's three layers, already rendered. Fact IDs are absent BY SHAPE — there is no field one could travel in, which is the same guarantee TrustSheet's props give on the component side.",
+      "fields": [
+        {
+          "name": "plain",
+          "type": "string"
+        },
+        {
+          "name": "sources_line",
+          "type": "string"
+        },
+        {
+          "name": "details",
+          "type": "string[]"
+        }
+      ]
+    },
+    "TodayModule": {
+      "$comment": "One of §34.3's seventeen, composed and grounded. `text` is engine output — §5.3 forbids the LLM computing it and the composer put the citation inside the sentence before stripping it for the wire.",
+      "fields": [
+        {
+          "name": "module",
+          "type": "MorningModule"
+        },
+        {
+          "name": "text",
+          "type": "string"
+        },
+        {
+          "name": "confidence",
+          "type": "ConfidenceState"
+        },
+        {
+          "name": "trust",
+          "type": "TodayTrust"
+        }
+      ]
+    },
+    "TodayTarasLine": {
+      "$comment": "§28.2 item (2) — 'one warm sentence for this moment', the emotional anchor, always present. NOT one of the seventeen and never rendered as a card.",
+      "fields": [
+        {
+          "name": "text",
+          "type": "string"
+        },
+        {
+          "name": "confidence",
+          "type": "ConfidenceState"
+        }
+      ]
+    },
+    "TodayPanchangEntry": {
+      "$comment": "§28.2 item (6), shaped for the §24.3 PanchangStrip. `label_key` is an i18n key; `value` is a localised term the API resolved.",
+      "fields": [
+        {
+          "name": "label_key",
+          "type": "string"
+        },
+        {
+          "name": "value",
+          "type": "string"
+        }
+      ]
+    },
+    "TodayFestival": {
+      "$comment": "§28.2's festival variant — the ONLY surface allowed above the core card, and suppressed to a core-card accent when two banners already show (§32.1).",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "tradition_label",
+          "type": "string"
+        },
+        {
+          "name": "date_label",
+          "type": "string"
+        }
+      ]
+    },
+    "TodayTravel": {
+      "$comment": "§30.2 Travel Mode. `city` is the place timings were recomputed for.",
+      "fields": [
+        {
+          "name": "active",
+          "type": "boolean"
+        },
+        {
+          "name": "city",
+          "type": "string?"
+        }
+      ]
+    },
+    "TodayState": {
+      "$comment": "Everything §32.1's precedence rule reads, and nothing it does not. The rule itself lives on the client so there is exactly one implementation of it.",
+      "fields": [
+        {
+          "name": "first_session",
+          "type": "boolean"
+        },
+        {
+          "name": "first_morning",
+          "type": "boolean"
+        },
+        {
+          "name": "brief_time",
+          "type": "string"
+        },
+        {
+          "name": "travel",
+          "type": "TodayTravel"
+        },
+        {
+          "name": "festival",
+          "type": "TodayFestival?"
+        },
+        {
+          "name": "birthday",
+          "type": "boolean"
+        },
+        {
+          "name": "birth_time_missing",
+          "type": "boolean"
+        },
+        {
+          "name": "trial_day",
+          "type": "integer?"
+        },
+        {
+          "name": "plan",
+          "type": "PlanState"
+        },
+        {
+          "name": "story_ring_enabled",
+          "type": "boolean"
+        }
+      ]
+    },
+    "TodayPayload": {
+      "$comment": "What GET /v1/today serves. `local_time` is DATA, not ambient: §28.2's night takeover fires after 20:00 LOCAL, and a screen that read the browser clock would render a different variant than the brief was generated for — and would make every §24.8 baseline depend on when CI ran.",
+      "fields": [
+        {
+          "name": "local_date",
+          "type": "string"
+        },
+        {
+          "name": "local_time",
+          "type": "string"
+        },
+        {
+          "name": "timezone",
+          "type": "string"
+        },
+        {
+          "name": "density",
+          "type": "Density"
+        },
+        {
+          "name": "tier",
+          "type": "Tier"
+        },
+        {
+          "name": "status",
+          "type": "BriefStatus"
+        },
+        {
+          "name": "degrade_reason",
+          "type": "BriefDegradeReason?"
+        },
+        {
+          "name": "confidence",
+          "type": "ConfidenceState?"
+        },
+        {
+          "name": "taras_line",
+          "type": "TodayTarasLine?"
+        },
+        {
+          "name": "modules",
+          "type": "TodayModule[]"
+        },
+        {
+          "name": "panchang",
+          "type": "TodayPanchangEntry[]"
+        },
+        {
+          "name": "state",
+          "type": "TodayState"
+        }
+      ]
+    }
+  },
+  "time_bands": {
+    "$comment": "§28.2's four time-of-day bands, as START minutes local. The thresholds are DECLARED here because both sides need them and they are spec rules, not preferences: the API composes Tara's line for the band, and the client renders the night takeover — '>20:00 the whole tab transforms'. Two hand-written copies of 20:00 is how a screen goes to dusk an hour after the sentence on it did.",
+    "enum_name": "TimeBand",
+    "const_name": "TIME_BANDS",
+    "members": [
+      {
+        "id": "morning",
+        "starts_at": "00:00"
+      },
+      {
+        "id": "afternoon",
+        "starts_at": "12:00"
+      },
+      {
+        "id": "evening",
+        "starts_at": "17:00"
+      },
+      {
+        "id": "night",
+        "starts_at": "20:00"
+      }
+    ]
+  }
+}

@@ -184,6 +184,10 @@
       "10": "10th",
       "11": "11th",
       "12": "12th"
+    },
+    "tradition": {
+      "amanta": "Amanta",
+      "purnimanta": "Purnimanta"
     }
   },
   "brief": {
@@ -207,7 +211,17 @@
       "tomorrow_prep_teaser": "Tomorrow moves into tithi {tithi} — worth a little preparation tonight."
     },
     "degraded_note": "Tara has the essentials today; the full reading returns shortly.",
-    "notification_title": "Your morning with Tara"
+    "notification_title": "Your morning with Tara",
+    "taras_line": {
+      "afternoon": "Half the day is yours already. Let's see what's left in it.",
+      "afternoon_nakshatra": "The afternoon carries {nakshatra} with it.",
+      "evening": "The light is turning. A good hour to slow down.",
+      "evening_nakshatra": "The evening settles under {nakshatra}.",
+      "morning": "A new morning, and I'm glad you're here.",
+      "morning_nakshatra": "The morning opens under {nakshatra} — a gentle place to begin.",
+      "night": "The day is winding down. Nothing more is being asked of you tonight.",
+      "night_nakshatra": "The night comes in under {nakshatra}, and rest is enough."
+    }
   },
   "ui": {
     "close": "Close",
@@ -705,5 +719,58 @@
       },
       "memory_offer": "You said {priority} matters most right now."
     }
+  },
+  "festivals": {
+    "raksha_bandhan": "Raksha Bandhan"
+  },
+  "today": {
+    "aria": {
+      "screen": "Today",
+      "settings": "Settings and notifications",
+      "sky": "Today"
+    },
+    "tithi_line": "{paksha}, tithi {tithi}",
+    "recap": {
+      "title": "Your first reading",
+      "body": "What Tara found in your chart when you first met.",
+      "action": "Read it again"
+    },
+    "promise": "Your first morning brief arrives at {time}.",
+    "brief_time": {
+      "edit": "Change the time",
+      "title": "When should your morning arrive?",
+      "label": "Brief time",
+      "save": "Save"
+    },
+    "degraded": "Tara has the essentials today; the full reading returns shortly.",
+    "more": "More for today",
+    "less": "Show less",
+    "practical": "Today at a glance",
+    "panchang": {
+      "link": "Today's timings",
+      "title": "Panchang"
+    },
+    "night": {
+      "title": "The day is closing.",
+      "prompt": "What stayed with you today?",
+      "cta": "Reflect on today",
+      "archived": "This morning's brief is in your journal."
+    },
+    "banner": {
+      "grace": "Payment needs attention.",
+      "grace_action": "Sort it out",
+      "travel": "You're in {city}. Timings are recomputed for where you are.",
+      "offline": "Showing what I had at {time}."
+    },
+    "trial_pill": "Day {day} of your trial",
+    "birth_time_chip": "Add your birth time for a sharper reading",
+    "locked": {
+      "title": "Your personal cards",
+      "body": "These open with your subscription.",
+      "action": "See plans"
+    },
+    "festival_accent": "{name} today",
+    "first_morning": "Your first morning. This is how it will arrive each day.",
+    "how_it_works": "Each morning Tara reads the day against your chart, and tells you what she finds."
   }
 }

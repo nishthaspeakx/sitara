@@ -128,6 +128,7 @@ export function BriefCard({
             {onWhyThis ? (
               <button
                 type="button"
+                data-testid="why-this"
                 onClick={onWhyThis}
                 className={cn(
                   "rounded-chip px-2 py-1 text-caption text-ink-primary underline decoration-gold underline-offset-4",

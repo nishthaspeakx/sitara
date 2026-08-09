@@ -40,6 +40,27 @@ Some rules are enforced by the component's shape rather than by review, and are 
 
 **Cinemagraphs are deferred post-beta** — a scheduling decision, not a gap. `TARA_MOTION_STATUS` is the record, so no loops in the manifest reads as intent rather than unfinished work. Adding them later is a manifest change, not a component change. Both records are self-checking: `tests/tara-disclosure.spec.ts` fails if a loop appears while the deferral still says deferred, or if the pending-replacement list drifts from the states actually flagged.
 
+## Today (S14, §28.2) — `src/components/today/`
+
+Sixteen variants, three densities, one screen. What is worth knowing before changing it:
+
+- **`src/components/today/` is NOT the component library.** §24.3 is fixed at 49 and `tests/library.spec.ts` scans only `src/components/ui`. Everything here composes library components; nothing here is a new one.
+- **§32.1's precedence lives in `src/lib/today-variant.ts`, and only there.** `resolveChrome` returns an already-truncated, already-ordered banner list; `BannerStack` renders it and asks no questions. The API deliberately has no `variant` field for the same reason — two implementations would disagree on exactly the crowded morning the rule exists for (grace + travel + festival + trial). `tests/today-variant.spec.ts` runs with no server.
+- **Core-card dominance is counted, not reviewed.** Exactly one `[data-emphasis="core"]` renders, asserted on every one of the 109 baselines. The night takeover and the brief-less variants have zero — §28.2's rule is satisfied by nothing competing, not by something winning.
+- **`local_time` is DATA, from the payload.** The night takeover and the sky band never read the browser clock: a screen that did would render a different variant than the brief was generated for, and every baseline would depend on when CI ran.
+- **The sky gradient carries no text.** `sky.ts` documents the six contrast failures that established this — `ink-muted` on `gold-soft` is 3.33:1, `gold-soft` is a LIGHT fill in the night theme, and `text-inverse` inverts to navy on a fixed dark sky. Text sits on solid `bg-canvas`, a pair the matrix already verifies in both themes. No colour was added to the frozen palette.
+- **`moon_nakshatra_note` belongs to the panchang row**, not the contextual list — §28.2's densities already account for it, so listing it as contextual would spend a max-four slot and print the nakshatra twice.
+- **The practical strip is a fixed-width scroller.** Sized to content, the colour chip's sentence is wider than a 390px viewport and pushes the other three off-screen — one row, one chip.
+- **`ui.module.${module}` must be written with a BARE identifier.** `i18n-lint` matches the literal template text against `dynamic-keys.json`; `${card.module}` is a template it cannot expand and therefore cannot verify.
+- **The `offline` variant is the SCREEN's state, not a payload.** Its baseline needs a failing fetch (`today_unavailable`) over a populated `localStorage` — served over a healthy request it renders an ordinary morning with `offline` in the filename. Seed the cache AFTER the first navigation: `addInitScript` runs on `about:blank` too, and localStorage is per-origin.
+- **Never run `pnpm design-qa` beside a foreground `--project=screens` run.** Both bind :3100/:3101; a concurrent pair produced a baseline that passed against one build while the source said another.
+- **`/today/timings` does not exist yet**, so the panchang row has no link. A dead end on the app's home surface is worse than a missing affordance — and the 404 prefetch also hung every `networkidle` wait in the suite.
+
+### The fixtures are recorded, never authored
+`tests/__fixtures__/today/` holds 57 payloads produced by the REAL pipeline (`services/api/scripts/record_today_fixtures.py`) and replayed by `scripts/stub-api.mjs` over the real request path. A hand-written brief would be a brief nobody's engine produced, and every baseline taken from it would stay green through any regression in ranking, composition or the §7.1 ladder. `tests/today-fixtures.spec.ts` re-validates each one against the generated schema. **Re-record after any template, ranking or ladder change.**
+
+`src/app/[locale]/_dev/today/page.tsx` is the variant switcher — dev-only, driving `/v1/dev/today`, rendering the real `TodayScreen`.
+
 ## Storybook + the screenshot-diff gate (§24.8)
 `.storybook/preview.tsx` wraps every story in the locale × theme × motion matrix:
 - **locale** — en, hi, hi-Latn, plus `ta-Pseudo`, the Tamil-length pseudo-locale (§24.3's longest-string test: ~1.4× English, real Tamil glyphs, ICU placeholders preserved). It is generated in the harness, NOT added to `packages/i18n` — §2.4 admits a locale only through the §12 gate, and a pseudo-catalog next to the real ones is how a fake language ships by accident.
@@ -48,6 +69,8 @@ Some rules are enforced by the component's shape rather than by review, and are 
 - **motion** — `data-motion="reduced"` forces the §0.12 reduced-motion path.
 
 `tests/screenshots.spec.ts` drives the built Storybook from its own index: for each component's `AllStates` story it captures **4 locales × 2 themes**, plus a reduced-motion baseline for the components that loop. **396 baselines** (49 × 4 × 2, plus 4) live in `tests/__screenshots__/` and are committed — they are the reviewable artefact.
+
+`tests/today-screens.spec.ts` adds **109** more for S14: 16 variants × 3 locales × 2 themes (96), §32.1's own named worst case × 3 × 2 (6), LOW and HIGH density × 3 (6), and one reduced-motion night. Density is captured on `normal_morning` only — §28.2 says density changes the ranking engine's output COUNT and never its facts, so the other fifteen would differ by two cards each.
 
 The design-system faces are **vendored** into `public/fonts` by `scripts/vendor-fonts.mjs` and loaded from `src/app/fonts.css` — Fraunces, Inter and Noto per script, subset to what the eight launch languages need (§2.3). Because glyph rasterisation no longer depends on what the machine has installed, `maxDiffPixelRatio` is **0.001**: wide enough for sub-pixel antialiasing, far too narrow to hide a colour, spacing or layout regression. CI fetches nothing — the woff2 files are committed.
 
