@@ -19,10 +19,11 @@ So the zone is CORROBORATED, and the check is pessimistic:
 4. If no set can be derived, the request is REFUSED as retryable. Never a
    guess, never a fall back to client input, never UTC.
 
-Step 4 has teeth: a sign-up with no phone number and no IP country cannot be
-age-checked and does not proceed. That is the intended failure direction for a
-hard gate, and it is visible rather than silent — see the
-`auth.zone_corroboration_coverage` release gate.
+Step 4 has teeth, and §37.3 is what keeps it from biting real users: sign-up
+is PHONE-FIRST, so a new account always carries a Firebase-verified E.164
+number and the set is always derivable for a mapped calling code. What remains
+is data coverage — an unmapped country still refuses, visibly, rather than
+guessing. See the `auth.zone_corroboration_coverage` release gate.
 """
 
 from __future__ import annotations

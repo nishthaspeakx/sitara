@@ -134,6 +134,19 @@ class AuthService:
         if contact_match and await self._db.users.find_one({"$or": contact_match}):
             raise ApiError(ErrorCode.AUTH_PROVIDER_CONFLICT, "errors.auth.link_offer")
 
+        # §37.3: PHONE-FIRST. A new account is created by phone verification
+        # only; Google and Apple are linkable secondary identities (§22.5),
+        # never standalone sign-up paths. Two things follow, and the second is
+        # the reason it is a rule rather than a preference:
+        #   · §22.4's gate always has a phone country to corroborate its
+        #     timezone with, so it never needs geo-IP and never guesses;
+        #   · every account has one verified contact channel from birth,
+        #     which §23's T-class notifications assume.
+        # This is a SIGN-UP rule. An existing user signing in with a linked
+        # Google identity returned above, before this point.
+        if not identity.phone:
+            raise ApiError(ErrorCode.AUTH_FORBIDDEN, "errors.auth.phone_required")
+
         # New sign-up: §22.4 hard age gate, before any record exists.
         if date_of_birth is None:
             raise ApiError(ErrorCode.SYS_VALIDATION, "errors.auth.dob_required")

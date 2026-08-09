@@ -152,21 +152,52 @@ async def test_the_age_check_is_audited_with_its_timezone(
     assert not any("age" in str(k).lower() for k in row["zone_decision"])
 
 
-def test_a_signup_with_no_corroboratable_country_is_refused(
+def test_a_google_signup_without_a_phone_is_refused_as_policy(
     client: TestClient, verifier: FakeVerifier
 ) -> None:
-    """§37.2 fails CLOSED, and this is what that costs.
+    """§37.3: sign-up is PHONE-FIRST.
 
-    A Google sign-up carries an email and no phone, so no country can be
-    corroborated and the §22.4 gate cannot run. The request is refused as
-    RETRYABLE rather than admitted unchecked. This blocks Google sign-up
-    outright until geo-IP corroboration lands — tracked as the
-    auth.zone_corroboration_coverage release gate.
+    Google and Apple are linkable secondary identities (§22.5), never
+    standalone sign-up paths. This is a policy refusal — AUTH_FORBIDDEN with
+    an in-locale explanation and a next step — not the retryable
+    SYS_UNAVAILABLE that an unresolvable timezone produces. The distinction
+    matters to the client: one says "try again", the other says "start with
+    your phone".
     """
-    verifier.add("tok-nocountry", uid="fb-uid-nc", provider="google", email="nc@example.com")
+    verifier.add("tok-nophone", uid="fb-uid-np", provider="google", email="np@example.com")
 
-    resp = exchange(client, "tok-nocountry", dob=years_ago(30))
+    resp = exchange(client, "tok-nophone", dob=years_ago(30))
+
+    assert resp.status_code == 403
+    assert_envelope(resp.json(), "AUTH_FORBIDDEN", retryable=False)
+    assert resp.json()["message_key"] == "errors.auth.phone_required"
+
+
+def test_an_unmapped_calling_code_still_fails_closed(
+    client: TestClient, verifier: FakeVerifier
+) -> None:
+    """§37.3 guarantees a phone, not a MAPPED phone. A country outside the
+    coverage table cannot be age-checked and is refused as retryable — the
+    residual gap the auth.zone_corroboration_coverage gate tracks."""
+    verifier.add("tok-unmapped", uid="fb-uid-um", provider="phone", phone="+99912345678")
+
+    resp = exchange(client, "tok-unmapped", dob=years_ago(30))
 
     assert resp.status_code == 503
     assert_envelope(resp.json(), "SYS_UNAVAILABLE", retryable=True)
     assert resp.json()["message_key"] == "errors.auth.zone_unverified"
+
+
+def test_a_linked_google_identity_still_signs_in(
+    client: TestClient, verifier: FakeVerifier
+) -> None:
+    """§37.3 is a SIGN-UP rule. Once a google identity is linked to an account
+    created by phone, signing in with it must keep working — the phone check
+    sits after the existing-identity lookup, not before it."""
+    verifier.add("tok-phone", uid="fb-uid-pf", provider="phone", phone="+911234500077")
+    assert exchange(client, "tok-phone", dob=years_ago(30)).status_code == 200
+
+    # Same Firebase uid arriving again — the identity row already exists.
+    second = exchange(client, "tok-phone", dob=None)
+    assert second.status_code == 200
+    assert second.json()["is_new_user"] is False

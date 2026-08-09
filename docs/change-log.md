@@ -169,3 +169,26 @@ and are the reason this log exists separately from the spec.
 7. **`is_inert` treats an empty probe as a finding**, not a pass — a sweep
    that waves through what it cannot parse is not a sweep.
 8. Dead branch removed.
+
+---
+
+## CL-007 — phone-first sign-up
+**Date:** 9 August 2026 · **Approved:** Founder · **Touches:** §37.3, §22.5, §33.2
+
+Recorded in the spec as **§37.3**, not as a new subsection of §36: entry 003
+is frozen at three items, while §37 is the live entry for v3.7. A citation to
+a §36 subsection that does not exist is exactly what
+`tests/spec/test_citations_resolve.py` now fails on — including in this file.
+
+A Sitara account is created by phone verification only; Google and Apple link
+to an existing account through §22.5. This closes the POLICY half of
+`auth.zone_corroboration_coverage` — the §22.4 gate always has a phone country
+now, with no geo-IP dependency — and leaves the DATA half open: an unmapped
+calling code still fails closed.
+
+The refusal is `AUTH_FORBIDDEN` with an in-locale next step, deliberately
+distinct from the retryable `SYS_UNAVAILABLE` an unresolvable timezone
+produces. One tells the client to retry; the other tells the person what to
+do. Tests cover both, plus the case that must keep working: an existing user
+signing in with an already-linked Google identity, since the phone check sits
+after the identity lookup rather than before it.

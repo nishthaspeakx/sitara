@@ -53,7 +53,8 @@
       "forbidden": "You don't have access to that.",
       "step_up_required": "For your safety, please verify it's you before linking.",
       "no_pending_conflict": "There's nothing to resolve right now.",
-      "zone_unverified": "I couldn't confirm where you're signing up from, and I need that to check a couple of things. Please try again in a moment."
+      "zone_unverified": "I couldn't confirm where you're signing up from, and I need that to check a couple of things. Please try again in a moment.",
+      "phone_required": "Let's start with your phone number — that's how Sitara accounts are created. You can add Google afterwards from Settings."
     },
     "astro": {
       "insufficient_birth_data": "I don't have enough information to calculate this accurately — shall we complete it?",

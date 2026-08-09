@@ -121,13 +121,13 @@ def gates() -> tuple[Gate, ...]:
             id="auth.zone_corroboration_coverage",
             spec_ref="§37.2 / §22.4",
             blocks=Stage.CLOSED_BETA,
-            status="open — fails closed outside the mapped calling codes",
+            status="policy resolved (§37.3) — open on calling-code coverage only",
             detail=(
-                "The §22.4 age gate needs a corroborated timezone and derives it from the "
-                "E.164 phone country. A sign-up with no phone (Google) or an unmapped calling "
-                "code cannot be age-checked and is REFUSED as retryable. Closes when geo-IP "
-                "corroboration is wired or the coverage table reaches every market that can "
-                "reach the app."
+                "RESOLVED: sign-up is phone-first (§37.3), so the §22.4 gate always has a "
+                "phone country to corroborate its timezone with and needs no geo-IP "
+                "dependency. What remains is DATA: a phone whose calling code is outside "
+                "phone_country_zones.json still fails closed and refuses a legitimate user. "
+                "Closes when the table covers every market that can reach the app."
             ),
         ),
         Gate(
