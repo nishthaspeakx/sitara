@@ -48,7 +48,7 @@ export const ApproximateBirthTime: Story = { args: { confidence: "approximate" }
 /** Moon-chart mode: no lagna, so the diagram cannot claim one. */
 export const MoonChartMode: Story = {
   args: {
-    confidence: "tradition_general",
+    confidence: "tradition_based_general",
     houses: HOUSES.map((h) => ({ ...h, isLagna: false })),
   },
 };
@@ -71,7 +71,7 @@ export const AllStates: Story = {
         <KundliChart houses={HOUSES} confidence="approximate" />
         <KundliChart
           houses={HOUSES.map((h) => ({ ...h, isLagna: false }))}
-          confidence="tradition_general"
+          confidence="tradition_based_general"
         />
       </StateGroup>
     </StatePanel>

@@ -8,6 +8,14 @@ export const MORNING_MODULES = ["energy_of_day", "personal_chart_theme", "moon_n
 export type MorningModule = (typeof MORNING_MODULES)[number];
 
 // ---------------------------------------------------------------------------
+// SPEC §5.4 / §34.7 — the five user-visible confidence states (closed set).
+// These IDs are the WIRE format: sitara-api serves them verbatim and
+// ConfidenceChip renders them. The two drifted once (M8) — hence one source.
+// ---------------------------------------------------------------------------
+export const CONFIDENCE_STATES = ["verified", "verified_limited_birth_data", "approximate", "tradition_based_general", "cannot_calculate"] as const;
+export type ConfidenceState = (typeof CONFIDENCE_STATES)[number];
+
+// ---------------------------------------------------------------------------
 // SPEC §6.3 / §34.4 — namespaced error codes + the ONE canonical envelope.
 // ---------------------------------------------------------------------------
 export const ERROR_CODES = ["AUTH_INVALID_TOKEN", "AUTH_SESSION_EXPIRED", "AUTH_FORBIDDEN", "AUTH_UNDERAGE", "AUTH_OTP_THROTTLED", "AUTH_PROVIDER_CONFLICT", "ASTRO_INSUFFICIENT_BIRTH_DATA", "ASTRO_PLACE_UNRESOLVED", "ASTRO_ENGINE_UNAVAILABLE", "ASTRO_PROVIDER_DISPUTED", "ASTRO_NAME_UNCONFIRMED", "ASTRO_NAME_INVALID", "VOICE_PROVIDER_UNAVAILABLE", "VOICE_MINUTES_EXHAUSTED", "VOICE_SESSION_NOT_FOUND", "PAY_PAYMENT_REQUIRED", "PAY_WEBHOOK_DUPLICATE", "PAY_PROVIDER_ERROR", "SAFE_CONTENT_BLOCKED", "SAFE_REVIEW_PENDING", "SYS_VALIDATION", "SYS_RATE_LIMITED", "SYS_IDEMPOTENCY_CONFLICT", "SYS_INTERNAL", "SYS_UNAVAILABLE"] as const;

@@ -210,10 +210,13 @@ def gen_python(modules: dict, codes: dict, envelope: dict, ws: dict) -> None:
 
 # ------------------------------------------------------------ typescript
 
-def gen_typescript(modules: dict, codes: dict, envelope: dict, ws: dict) -> None:
+def gen_typescript(
+    modules: dict, codes: dict, envelope: dict, ws: dict, confidence: dict
+) -> None:
     TS_OUT.mkdir(parents=True, exist_ok=True)
     bf = ws["binary_frame"]
 
+    confidence_ids = ", ".join(f'"{m["id"]}"' for m in confidence["members"])
     module_ids = ", ".join(f'"{m["id"]}"' for m in modules["members"])
     code_ids = ", ".join(f'"{m["code"]}"' for m in codes["members"])
     event_ids = ", ".join(f'"{m["type"]}"' for m in ws["members"])
@@ -227,6 +230,14 @@ def gen_typescript(modules: dict, codes: dict, envelope: dict, ws: dict) -> None
         "// ---------------------------------------------------------------------------",
         f"export const MORNING_MODULES = [{module_ids}] as const;",
         "export type MorningModule = (typeof MORNING_MODULES)[number];",
+        "",
+        "// ---------------------------------------------------------------------------",
+        "// SPEC §5.4 / §34.7 — the five user-visible confidence states (closed set).",
+        "// These IDs are the WIRE format: sitara-api serves them verbatim and",
+        "// ConfidenceChip renders them. The two drifted once (M8) — hence one source.",
+        "// ---------------------------------------------------------------------------",
+        f"export const CONFIDENCE_STATES = [{confidence_ids}] as const;",
+        "export type ConfidenceState = (typeof CONFIDENCE_STATES)[number];",
         "",
         "// ---------------------------------------------------------------------------",
         "// SPEC §6.3 / §34.4 — namespaced error codes + the ONE canonical envelope.",
@@ -291,8 +302,10 @@ def main() -> None:
     codes = load("error-codes.json")
     envelope = load("error-envelope.json")
     ws = load("ws-events.json")
+    confidence = load("confidence-states.json")
 
     assert len(modules["members"]) == 17, "SPEC §34.3: exactly 17 morning modules"
+    assert len(confidence["members"]) == 5, "SPEC §5.4: exactly 5 confidence states"
     assert len(ws["members"]) == 15, "SPEC §34.6: closed set of 15 control events"
     for m in codes["members"]:
         assert any(m["code"].startswith(ns) for ns in codes["namespaces"]), (
@@ -300,7 +313,7 @@ def main() -> None:
         )
 
     gen_python(modules, codes, envelope, ws)
-    gen_typescript(modules, codes, envelope, ws)
+    gen_typescript(modules, codes, envelope, ws, confidence)
     print("generated: python/sitara_schemas/{__init__,modules,errors,ws_events}.py")
     print("generated: typescript/src/index.ts")
 

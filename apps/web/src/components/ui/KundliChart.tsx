@@ -78,7 +78,7 @@ export interface KundliChartProps {
   style?: KundliStyle;
   onStyleChange?: (style: KundliStyle) => void;
   /**
-   * §5.4 — `approximate` where the birth time is a window, `tradition_general`
+   * §5.4 — `approximate` where the birth time is a window, `tradition_based_general`
    * in Moon-chart mode. A chart drawn from a guessed lagna must say so.
    */
   confidence?: ConfidenceState;

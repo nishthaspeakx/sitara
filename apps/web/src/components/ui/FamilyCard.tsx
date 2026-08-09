@@ -74,7 +74,7 @@ export function FamilyCard({
         ) : null}
       </dl>
 
-      {!hasBirthDetails ? <ConfidenceChip state="tradition_general" withDescription /> : null}
+      {!hasBirthDetails ? <ConfidenceChip state="tradition_based_general" withDescription /> : null}
     </Card>
   );
 }

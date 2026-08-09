@@ -35,6 +35,29 @@ def test_seventeen_modules_everywhere() -> None:
     assert ts_const_array("MORNING_MODULES") == source_ids
 
 
+def test_five_confidence_states_everywhere() -> None:
+    """§5.4's five states must read the same in both languages.
+
+    The guard exists because they did not. `sitara_api` served
+    `verified_limited_birth_data` and `tradition_based_general` — §5.4's own
+    wording — while the M7 component library typed `verified_limited` and
+    `tradition_general`, so two of the five states the API can return could
+    never have rendered a chip. Nothing failed, because no screen consumed a
+    confidence state until S13; the first one to do so would simply have shown
+    an unstyled chip with a raw key in it.
+
+    Python's enum stays hand-written in `facts.py` (it lives among the Pydantic
+    fact models rather than being generated), so this asserts it against the
+    neutral source in both directions rather than assuming generation.
+    """
+    from sitara_schemas.facts import ConfidenceState
+
+    source_ids = [m["id"] for m in src("confidence-states.json")["members"]]
+    assert len(source_ids) == 5
+    assert sorted(c.value for c in ConfidenceState) == sorted(source_ids)
+    assert ts_const_array("CONFIDENCE_STATES") == source_ids
+
+
 def test_error_codes_parity_and_namespaces() -> None:
     source = src("error-codes.json")
     source_codes = [m["code"] for m in source["members"]]

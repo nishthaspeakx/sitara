@@ -4,9 +4,9 @@
  * ConfidenceChip — §24.3 / §34.7. ALL FIVE state treatments:
  *
  *   verified          gold outline
- *   verified_limited  soft-gold fill
+ *   verified_limited_birth_data  soft-gold fill
  *   approximate       neutral dotted outline
- *   tradition_general neutral fill
+ *   tradition_based_general neutral fill
  *   cannot_calculate  muted-ink outline + info glyph
  *
  * §34.7 is explicit that Approximate and Cannot-calculate are included and that
@@ -22,9 +22,9 @@ import { ICON_STROKE, cn, type ConfidenceState } from "./_util";
 
 const TREATMENT: Record<ConfidenceState, string> = {
   verified: "border-solid border-gold bg-transparent text-ink-primary",
-  verified_limited: "border-solid border-border-subtle bg-gold-soft text-on-gold",
+  verified_limited_birth_data: "border-solid border-border-subtle bg-gold-soft text-on-gold",
   approximate: "border-dotted border-border-strong bg-transparent text-ink-primary",
-  tradition_general: "border-solid border-border-subtle bg-surface-sunken text-ink-primary",
+  tradition_based_general: "border-solid border-border-subtle bg-surface-sunken text-ink-primary",
   cannot_calculate: "border-solid border-ink-muted bg-transparent text-ink-muted",
 };
 

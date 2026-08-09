@@ -60,12 +60,15 @@ export const TARA_STATES = [
 ] as const;
 export type TaraState = (typeof TARA_STATES)[number];
 
-/** §34.7 — all five ConfidenceChip treatments. Never caution/danger colours. */
-export const CONFIDENCE_STATES = [
-  "verified",
-  "verified_limited",
-  "approximate",
-  "tradition_general",
-  "cannot_calculate",
-] as const;
-export type ConfidenceState = (typeof CONFIDENCE_STATES)[number];
+/**
+ * §5.4/§34.7 — all five ConfidenceChip treatments. Never caution/danger colours.
+ *
+ * Re-exported from `@sitara/schemas` rather than declared here. These IDs are
+ * the WIRE format — sitara-api serves them verbatim on every guidance payload —
+ * and a second hand-written copy is exactly how they drifted: this file typed
+ * `verified_limited`/`tradition_general` for a whole milestone while the API
+ * served `verified_limited_birth_data`/`tradition_based_general`, so two of the
+ * five states could never have rendered. `packages/schemas/src/confidence-states.json`
+ * is the one source and `test_parity.py` fails on divergence.
+ */
+export { CONFIDENCE_STATES, type ConfidenceState } from "@sitara/schemas";

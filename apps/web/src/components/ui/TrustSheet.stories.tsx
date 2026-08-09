@@ -34,7 +34,7 @@ export const DetailsCollapsed: Story = {};
 /** Layer 3 open, showing readable terms rather than fact IDs. */
 export const DetailsExpanded: Story = { args: { defaultExpanded: true } };
 export const SingleSource: Story = {
-  args: { confidence: "verified_limited", sourceState: "single" },
+  args: { confidence: "verified_limited_birth_data", sourceState: "single" },
 };
 export const Disputed: Story = {
   args: { confidence: "approximate", sourceState: "disputed" },

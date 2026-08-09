@@ -22,9 +22,9 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Verified: Story = { args: { state: "verified" } };
-export const VerifiedLimited: Story = { args: { state: "verified_limited" } };
+export const VerifiedLimited: Story = { args: { state: "verified_limited_birth_data" } };
 export const Approximate: Story = { args: { state: "approximate" } };
-export const TraditionGeneral: Story = { args: { state: "tradition_general" } };
+export const TraditionGeneral: Story = { args: { state: "tradition_based_general" } };
 export const CannotCalculate: Story = { args: { state: "cannot_calculate" } };
 
 export const AllStates: Story = {

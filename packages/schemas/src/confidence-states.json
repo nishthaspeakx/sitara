@@ -1,0 +1,32 @@
+{
+  "$comment": "SPEC §5.4 — the five user-visible confidence states. CLOSED SET. Added in M8 after the two languages had drifted: `sitara_api` served `verified_limited_birth_data`/`tradition_based_general` (which §5.4's own table names) while the M7 component library typed `verified_limited`/`tradition_general`, so the API's own values could not have rendered a chip. Nothing caught it because no screen consumed a confidence state until S13. Python's enum stays hand-written in facts.py (it lives among the Pydantic fact models); this file is its neutral source and `test_parity.py` fails on any divergence in either direction.",
+  "$spec": "§5.4, §34.7",
+  "enum_name": "ConfidenceState",
+  "members": [
+    {
+      "id": "verified",
+      "trigger": "exact birth time + place, engine parity clean",
+      "treatment": "gold outline"
+    },
+    {
+      "id": "verified_limited_birth_data",
+      "trigger": "date+place, no exact time",
+      "treatment": "soft-gold fill"
+    },
+    {
+      "id": "approximate",
+      "trigger": "time window given; or disputed fact in play",
+      "treatment": "neutral dotted outline"
+    },
+    {
+      "id": "tradition_based_general",
+      "trigger": "no chart needed / panchang-only",
+      "treatment": "neutral fill"
+    },
+    {
+      "id": "cannot_calculate",
+      "trigger": "required data missing/invalid",
+      "treatment": "muted-ink outline + info glyph"
+    }
+  ]
+}

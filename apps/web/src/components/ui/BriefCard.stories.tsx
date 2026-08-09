@@ -45,7 +45,7 @@ export const AllStates: Story = {
         <BriefCard
           module="favourable_window"
           factLine={SAMPLE.factLine}
-          confidence="verified_limited"
+          confidence="verified_limited_birth_data"
           onWhyThis={() => {}}
         />
         <BriefCard module="work" factLine={SAMPLE.factLine} locked />
