@@ -497,3 +497,55 @@ frames (`TARA_APPROXIMATE_STATES_PENDING`, recorded as due "before M8 ships").
 Neither state appears in S01–S13, so M8 is not blocked on them; the record
 stands and is still self-checking.
 
+---
+
+## CL-012 — `next dev` and `next build` cannot share an output directory
+**Date:** 9 August 2026 · **Approved:** Founder (Nishtha Agarwal) ·
+**Raised by:** a dev server failing with "Cannot find the middleware module"
+after the M8 builds · **Touches:** the web build setup only; no spec section
+
+**What changed.** `apps/web` now uses three Next output directories — `.next-dev`
+for `next dev`, `.next` for `next build`, `.next-test` for the flow suite's
+build — and `next.config.ts` chooses between them by build PHASE rather than by
+an environment variable.
+
+**Why.** `next build` rewrites manifests in its output directory while a running
+`next dev` reads and rewrites the same files. Sharing one directory corrupts
+whichever is running. Next 15 reports it as "Cannot find the middleware module"
+or `__webpack_modules__ is not a function`, both of which name a symptom and not
+the cause, and **deleting the directory does not fix it**: the dev server
+rebuilds into it and the next build clobbers it again. Reproduced directly — dev
+serving 200, `pnpm build`, then 500.
+
+The collision long predates M8 and was carried as a documented gotcha. M8 made
+it fire often enough to stop being one: `design-qa` runs TWO Next builds and is
+now the routine command.
+
+**What it was not.** `.next-test` was suspected and is exonerated — a build into
+it while dev is live leaves dev untouched, and it was already a partial
+mitigation. Turbo's cache is not involved. **The build ordering in `design-qa` is
+not involved either**, which corrects the commit that introduced it: that reorder
+was about `next-env.d.ts` churn, and that file is now simply not committed.
+
+**What it now permits.** Running any build at any time with a dev server live.
+
+**What it now refuses.** `next dev` cannot be pointed at a build's directory,
+even by a stray `NEXT_DIST_DIR` in a shell — the phase decides and a caller
+cannot pass a phase. `tests/dist-dirs.spec.ts` refuses a build that collapses the
+directories, makes dev overridable again, returns the config to an env-var
+`distDir`, names a directory in the `dev`/`build` scripts, or adds a directory
+without git-ignoring it. Each assertion was verified by breaking the invariant it
+covers.
+
+**Residual risk.** Three build outputs on disk instead of one — a few hundred MB
+during development, all git-ignored. `next-env.d.ts` is no longer committed; a
+cold clone typechecks without it (verified with no output directories present),
+but a future Next version could change that, in which case `pnpm typecheck` on a
+fresh clone is where it would show.
+
+**Also fixed on the way.** The `library` Playwright project was starting both web
+servers it does not use, because Playwright starts every configured `webServer`
+regardless of which projects are selected. On a clean checkout that is a hang
+waiting for a `next start` against a `.next-test` nobody has built yet. Servers
+are now scoped to the projects that need them.
+
