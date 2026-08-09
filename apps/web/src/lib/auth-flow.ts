@@ -1,20 +1,25 @@
 /**
- * In-memory hand-off between S03 (auth) and S04 (verify) — a Firebase
- * ConfirmationResult is not serialisable, and nothing auth-related may touch
- * client storage (§34.5). A hard reload simply restarts from S03 (§24.4
- * resume-from-step behaviour arrives with the full onboarding state machine).
+ * In-memory hand-off between S03 (auth) and S04 (verify).
+ *
+ * A pending verification is not serialisable — the real one closes over a
+ * Firebase `ConfirmationResult` — and nothing auth-related may touch client
+ * storage at all (§34.5). A hard reload restarts from S03, which is correct:
+ * the code was sent to a phone, and the phone still has it.
+ *
+ * The type is the `PendingVerification` from `auth-client`, not Firebase's, so
+ * this module has no opinion about which implementation produced it.
  */
-import type { ConfirmationResult } from "firebase/auth";
+import type { PendingVerification } from "./auth-client";
 
-type PendingPhone = { phone: string; confirmation: ConfirmationResult };
+type Pending = { phone: string; confirmation: PendingVerification };
 
-let pendingPhone: PendingPhone | null = null;
+let pendingPhone: Pending | null = null;
 
-export function setPendingPhone(phone: string, confirmation: ConfirmationResult): void {
+export function setPendingPhone(phone: string, confirmation: PendingVerification): void {
   pendingPhone = { phone, confirmation };
 }
 
-export function getPendingPhone(): PendingPhone | null {
+export function getPendingPhone(): Pending | null {
   return pendingPhone;
 }
 

@@ -10,9 +10,11 @@
     "typecheck": "tsc --noEmit",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "screenshots": "playwright test tests/screenshots.spec.ts",
-    "screenshots:update": "playwright test tests/screenshots.spec.ts --update-snapshots",
-    "test": "playwright test tests/library.spec.ts"
+    "screenshots": "playwright test --project=components --project=screens",
+    "screenshots:update": "playwright test --project=components --project=screens --update-snapshots",
+    "test": "playwright test --project=library",
+    "test:screens": "playwright test --project=screens",
+    "build:test": "NEXT_PUBLIC_AUTH_ADAPTER=fake NEXT_PUBLIC_CEREMONY_DEADLINE_MS=1500 NEXT_DIST_DIR=.next-test next build"
   },
   "dependencies": {
     "@sitara/i18n": "workspace:*",
@@ -23,7 +25,8 @@
     "next": "^15.3.0",
     "next-intl": "^4.0.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "zustand": "^5.0.14"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
