@@ -17,11 +17,18 @@
  *   · She is still never called an avatar (glossary), and §29.5's usage map is
  *     unchanged: no Tara on error, fatal, safety-takeover or support surfaces.
  *
- * ── What is here ────────────────────────────────────────────────────────────
- * Stills only. The delivered kit carries no cinemagraph loops, so TaraPresence
- * never mounts a video and every surface renders the still — which is already
- * how the component behaves when `cinemagraph*` is absent. Loops join later by
- * filling those fields; no component changes.
+ * ── What is here, and what is deliberately not ──────────────────────────────
+ * Stills only. **Cinemagraphs are DEFERRED POST-BETA — a scheduling decision,
+ * not a gap in the delivery.** §25.2's twelve loops and §0.12's idle-breathing
+ * allowance both stand; they are simply not part of the beta scope. Until then
+ * TaraPresence mounts no video and every surface renders the still, which is
+ * already how the component behaves when `cinemagraph*` is absent. Loops arrive
+ * by filling those two fields per state — no component change, and the
+ * screenshot baselines will show the change as a reviewable diff.
+ *
+ * Anyone reading this file and finding no `cinemagraphH265`/`cinemagraphVp9`
+ * should stop here rather than treating it as work to be picked up:
+ * `TARA_MOTION_STATUS` below is the record.
  *
  * Responsive sets are produced by `scripts/build-tara-assets.mjs` from masters
  * that are NOT committed (~30MB PNGs — escrow material under §22.16, not repo
@@ -33,13 +40,41 @@
  * assignments, not by matching filenames. Two are approximate and are marked
  * `approximate: true` below: the delivered set contains no frame that reads as
  * "concerned but kind", and none neutral enough for the safety surface. They
- * borrow the calmest available frames. Anything reading this manifest can see
- * which states are provisional instead of assuming all twelve are exact.
+ * borrow the calmest available frames. Purpose-made replacements are in
+ * generation and land before M8 ships (`TARA_APPROXIMATE_STATES_PENDING`), at
+ * which point the flags come off. Anything reading this manifest can see which
+ * states are provisional instead of assuming all twelve are exact.
  */
 
 import type { TaraState } from "./_util";
 
 export const TARA_ASSET_STATUS: "placeholder" | "generated" = "generated";
+
+/**
+ * Why there are no loops. Deferred, not missed — see the header.
+ *
+ * When cinemagraphs land, fill `cinemagraphH265`/`cinemagraphVp9` per state and
+ * set `deferred: false`; `TaraPresence` needs no change, and §0.12 still allows
+ * exactly one loop (her idle breathing) and nothing else.
+ */
+export const TARA_MOTION_STATUS = {
+  cinemagraphs: "deferred",
+  until: "post-beta",
+  deferred: true,
+  reason: "scheduling decision, 9 Aug 2026 — the beta ships on stills",
+} as const;
+
+/**
+ * The two states carrying a borrowed frame rather than a purpose-made one.
+ * Replacements are in generation and land **before M8 ships**; until they do,
+ * `approximate: true` on those entries is the honest signal, and this is the
+ * record that it is temporary rather than the permanent state of the kit.
+ */
+export const TARA_APPROXIMATE_STATES_PENDING = {
+  states: ["concerned_kind", "safety"],
+  status: "in generation",
+  due: "before M8 ships",
+} as const;
 
 /** How the likeness was produced. Read by the disclosure test and the docs. */
 export const TARA_LIKENESS = {

@@ -3,7 +3,12 @@ import path from "node:path";
 
 import { expect, test } from "@playwright/test";
 
-import { TARA_ASSETS, TARA_LIKENESS } from "../src/components/ui/tara-assets";
+import {
+  TARA_APPROXIMATE_STATES_PENDING,
+  TARA_ASSETS,
+  TARA_LIKENESS,
+  TARA_MOTION_STATUS,
+} from "../src/components/ui/tara-assets";
 import { TARA_STATES } from "../src/components/ui/_util";
 
 /**
@@ -128,6 +133,33 @@ test("every presence state resolves to a real asset set", () => {
     expect(asset.circleJpeg).toContain(".jpg");
     expect(asset.portraitWebp).toContain("-full-");
   }
+});
+
+/**
+ * The two records that say "this is a decision, not an oversight" only work if
+ * they stay true. Both of these fail the moment reality moves past them, which
+ * is the point: a stale deferral note is indistinguishable from a forgotten one.
+ */
+test("the cinemagraph deferral matches what is actually in the manifest", () => {
+  const withLoops = TARA_STATES.filter(
+    (s) => TARA_ASSETS[s].cinemagraphH265 || TARA_ASSETS[s].cinemagraphVp9,
+  );
+  if (TARA_MOTION_STATUS.deferred) {
+    expect(
+      withLoops,
+      "a state carries a cinemagraph while TARA_MOTION_STATUS still says deferred — flip `deferred` to false",
+    ).toEqual([]);
+  } else {
+    expect(withLoops.length, "deferral is lifted but no state carries a loop").toBeGreaterThan(0);
+  }
+});
+
+test("the pending-replacement record matches the states still flagged approximate", () => {
+  const flagged = TARA_STATES.filter((s) => TARA_ASSETS[s].approximate).sort();
+  expect(
+    flagged,
+    "TARA_APPROXIMATE_STATES_PENDING has drifted from the manifest — when a replacement lands, drop the flag AND the pending entry",
+  ).toEqual([...TARA_APPROXIMATE_STATES_PENDING.states].sort());
 });
 
 test("the placeholder posters are gone", () => {
