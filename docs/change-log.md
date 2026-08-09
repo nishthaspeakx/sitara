@@ -192,3 +192,86 @@ produces. One tells the client to retry; the other tells the person what to
 do. Tests cover both, plus the case that must keep working: an existing user
 signing in with an already-linked Google identity, since the phone check sits
 after the identity lookup rather than before it.
+
+---
+
+## CL-008 — the morning wave: five decisions §7.1 implies but does not state
+**Date:** 9 August 2026 · **Approved:** pending founder review ·
+**Raised by:** M6 implementation (§7.1 pipeline build) ·
+**Touches:** §7.1, §7.2, §23.4, §28.2, §32.13, §32.7, diagram 5
+
+Five decisions the §7.1 build had to make. **None changes what the spec says**;
+each writes down a reading the spec permits and the implementation had to pick
+between. Items 1 and 2 are the ones a reviewer should disagree with first —
+they are readings, not deductions, and the alternative reading is coherent.
+
+**1. The lead window is a SCHEDULE, not a filter.** §7.1 says two things: the
+tick selects users "whose local brief_time falls 90–30 min ahead", and "waves
+spread across the 60-min lead window hashed by user_id". Taken as membership
+alone, a 60-minute window sampled every 15 minutes contains each user for FOUR
+consecutive ticks, so every user is enqueued four times and §32.13's key throws
+three away — correct, and it wastes three quarters of the wave's queue traffic
+at exactly the moment §7.1 is trying to smooth. **Final: the hash assigns each
+user one stable lead in [30, 90) minutes and they fire at the single tick that
+lead lands in.** Membership becomes a consequence rather than a test. The
+5,000-user simulation is the evidence: the 07:00 band spreads 24.5/23.4/25.9/
+24.8/1.5% across five ticks, every one of the sixty lead slots is occupied, and
+no user is selected twice in a day (`simulate` raises if one is).
+
+**2. Dormancy is the RESIDUAL tier, not a second dimension.** §7.1 writes
+"paying users > trial > dormant" without saying whether dormancy is crossed
+with entitlement. Read as orthogonal ("has not opened the app lately"), a
+paying subscriber who takes a fortnight's holiday comes home to no brief,
+having paid for one every day of it. **Final: PAYING if they pay, else TRIAL if
+inside a trial, else DORMANT.** §7.1's justification for skipping dormant users
+is "no waste", and there is none to save on someone who is paying; §28.2's Free
+variant already says the residual tier sees generic panchang and locked
+personal cards, so there is no personalised brief to pre-generate for them.
+Payment-grace and past-due stay PAYING (§22.13, §28.2's grace variant).
+
+**3. §32.13's key carries three components; the unique index carries two.** Not
+a contradiction — it is the mechanism §32.7 needs. If locale were part of
+uniqueness, a user who switched language at 06:50 would end the morning holding
+two briefs for one local date and §32.13's "one brief per user-local calendar
+date" would be false. **Final: `(user_id, date)` stays unique and the locale
+rides inside the stored key**, so a generator comparing computed key against
+stored key learns the row is for the wrong language and §32.7 has something to
+act on. The collapse key (§23.4) deliberately omits locale for the same reason
+in reverse: a regenerated brief must REPLACE its push, not add a second one.
+
+**4. The brief enforces a citation rule the chat pipeline cannot.**
+`GroundingValidator` decides claim-hood from vocabulary, which is the only
+signal free-form conversation has — so "A good window opens between 11:48 and
+12:36" names no graha, rashi or tradition term and passes uncited. In a
+template that is not an edge case, it is every morning. **Final: a module
+composed FROM snapshots must come back citing at least one of them, checked
+structurally before the vocabulary test runs.** The chat validator is unchanged
+and still owns "is this id one we served?".
+
+**5. Where a preference lives.** §6.4 has no `preferences` row and §7.1 needs a
+per-user `brief_time`; §23.5's picker, §28.2's density mode and §30.2's
+follow-timezone toggle are the same shape. **Final: on `profiles`**, which is
+already the 1:1 settings row, with `brief_time` stored as zero-padded local
+"HH:MM" so a string range scan on the new index answers the lead-window query
+(the padding is load-bearing: unpadded, "7:00" sorts after "10:00" and the wave
+silently misses a band). `brief_place` joins them for the §7.2 cache cell.
+
+**Also recorded (no decision required).** `local_instant` returns UTC because
+PEP 495 makes an aware datetime that is AMBIGUOUS in its zone compare unequal
+to its own instant elsewhere while comparing neither less nor greater —
+trichotomy fails, and any `==`, `in`, dict key or sort over such a value is
+quietly wrong on fall-back days. Consolidation's dedupe elects one canonical
+per CLUSTER rather than per pair: pairwise folding builds chains (A→B→C) in
+which a duplicate points at another duplicate. The morning-brief templates and
+the closed-set term names ship as drafts carrying
+`review_status: "draft — awaiting §14 named native reviewer"`, surfaced as the
+`i18n.brief_templates_and_terms` release gate — and §2.4's no-silent-fallback
+rule means an unreviewed locale shows up as a THINNER brief (the card is
+dropped) rather than as English in a Hindi brief.
+
+**Residual risk.** Chart facts are not wired: the astrology facade still
+declines `NATAL_CHART`/`TRANSITS` (M5), so `personal_chart_theme`, `work` and
+`relationship` cannot be composed in production today and the brief degrades
+through §7.1's stated path. Named rather than stubbed, so the gap is visible in
+`BriefFacts.missing` and in the degrade reason rather than hidden behind
+plausible-looking data.

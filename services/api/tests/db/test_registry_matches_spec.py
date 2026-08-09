@@ -235,8 +235,26 @@ def test_memory_embedding_is_not_encrypted() -> None:
     well would silently disable §32.5 vector retrieval — you cannot cosine-search
     ciphertext."""
     spec = registry.BY_NAME["memories"]
-    assert spec.encrypted_paths == {"content"}
+    assert "embedding" not in spec.encrypted_paths
+    assert "embedding_model" not in spec.encrypted_paths
     assert spec.vector_index is not None
+
+
+def test_every_content_derived_memory_field_is_encrypted() -> None:
+    """The other half of §6.4's `field-level: content` mark.
+
+    `content` is the obvious one. `theme_label` is the one that could slip: it
+    is written by the nightly consolidation (diagram 8) and it is a SUMMARY of
+    what the user told Tara, so leaving it in the clear would put memory
+    content in the clear by the side door. Consolidation's other outputs live
+    under `consolidation` and are deliberately metadata only — cluster id,
+    size, run stamp — because the explicit codec reaches top-level paths and
+    not nested ones (§36.3), so a nested label would never be encrypted at all.
+    """
+    spec = registry.BY_NAME["memories"]
+    assert {"content", "theme_label"} <= spec.encrypted_paths
+    assert "consolidation" in spec.fields
+    assert "consolidation" not in spec.encrypted_paths
 
 
 def test_stories_are_dark() -> None:

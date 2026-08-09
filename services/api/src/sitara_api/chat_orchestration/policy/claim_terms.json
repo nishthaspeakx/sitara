@@ -144,7 +144,7 @@
     "$comment": "An ordinal next to a house word is always a claim — '3 things to do' is not.",
     "en": "\\b(\\d{1,2})(?:st|nd|rd|th)\\s+house\\b",
     "hi": "\\b(\\d{1,2})\\s*(?:वें|वाँ|वा)?\\s*भाव\\b",
-    "hi-Latn": "\\b(\\d{1,2})(?:st|nd|rd|th)?\\s+(?:house|bhaav)\\b"
+    "hi-Latn": "\\b(\\d{1,2})(?:st|nd|rd|th|ve|vein|va|vaan)?\\s*(?:house|bhaav|bhav)\\b"
   },
   "$exemption_comment": "A sentence carrying a STRONG term is exempt from citation only when ALL FIVE hold: no number, no clock value, no second-person reference, no temporal deixis, and no celestial entity asserted to be doing or being anything. That last clause is why `celestial` and `state_motion` exist. Category terms (choghadiya, muhurat, tithi, rahu kaal as CONCEPTS) may be glossed uncited — §2.3 requires that gloss — but a named body is never uncited. Devanagari and Hinglish celestial names are listed per locale because the sitara_schemas enums are English identifiers only; without them 'शुक्र वक्री है' would slip through the exemption it is meant to fail.",
   "celestial": {

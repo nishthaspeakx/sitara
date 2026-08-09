@@ -64,6 +64,18 @@ def _glossary_review_status() -> str:
     return glossary_review_status()
 
 
+def _brief_copy_review_status() -> str:
+    """§7.1's morning-brief copy. The strings live in `packages/i18n/messages`
+    where every user-facing string lives; this reads the review status off the
+    manifest that describes them."""
+    path = Path(__file__).parent / "daily_guidance" / "policy" / "brief_copy.json"
+    if not path.exists():
+        return "missing — brief_copy.json not found"
+    return json.loads(path.read_text(encoding="utf-8")).get(
+        "review_status", "missing — no review_status field"
+    )
+
+
 def _policy_review_status(filename: str) -> str:
     path = POLICY_DIR / filename
     if not path.exists():
@@ -149,6 +161,22 @@ def gates() -> tuple[Gate, ...]:
             detail=(
                 "Per-locale L1 detection patterns. §14 requires the named native safety "
                 "reviewer per locale; a language ships only behind their sign-off."
+            ),
+        ),
+        Gate(
+            id="i18n.brief_templates_and_terms",
+            spec_ref="§7.1 / §2.4 / §14",
+            blocks=Stage.CLOSED_BETA,
+            status=_brief_copy_review_status(),
+            detail=(
+                "The §34.3 module templates and the closed-set term names (nakshatra, "
+                "graha, day-timing, choghadiya, paksha) that the morning brief "
+                "interpolates. These are the words Tara says every morning in three "
+                "locales, and §2.4 forbids a silent English fallback — a term missing "
+                "in-locale DROPS its card rather than rendering English, so an "
+                "unreviewed catalog shows up as a thinner brief, not as an error. "
+                "Drafts until the §14 named native reviewer signs off, same as the "
+                "safety corpora."
             ),
         ),
         Gate(

@@ -1,0 +1,20 @@
+{
+  "$comment": "SPEC §7.1 / §34.3 / §2.4 — the review status of the morning-brief copy. The strings themselves live in packages/i18n/messages/{locale}.json under `terms.*` and `brief.*`, which is where every user-facing string lives (root CLAUDE.md). This file exists so `release_gates` has an artefact to read a review status off, in the same shape as the §9 safety corpora and glossary.json.",
+  "review_status": "draft — awaiting §14 named native reviewer",
+  "covers": {
+    "brief.module.*": "the 17 §34.3 module templates, per locale",
+    "terms.nakshatra.*": "27 nakshatra names",
+    "terms.graha.*": "9 graha names",
+    "terms.day_timing.*": "6 sunrise-anchored day divisions",
+    "terms.choghadiya.*": "7 choghadiya names",
+    "terms.paksha.*": "2 lunar fortnights",
+    "brief.degraded_note": "§28.2's provider-degraded line",
+    "brief.notification_title": "§23 Class-D push title"
+  },
+  "reviewer_notes": [
+    "Devanagari and Hinglish forms of the closed-set terms are standard transliterations and were not authored by a native reviewer; they are the highest-risk entries here because they are the words a devout user will notice first.",
+    "The templates deliberately carry NO fear-selling register (§9, §13): no consequence-if-you-do-not, no urgency, no prediction of harm. A reviewer changing wording must keep that property — the fear-selling lint runs on the polished output, not on these templates.",
+    "Slots are filled from FactSnapshot values only. A reviewer may reorder or reword around a slot; removing a slot changes what the sentence asserts and needs the composer changed with it.",
+    "§2.4: a term missing in a locale DROPS its module rather than falling back to English. An incomplete catalog therefore shows up as a thinner brief, never as an English sentence in a Hindi brief."
+  ]
+}

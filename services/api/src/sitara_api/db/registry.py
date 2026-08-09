@@ -230,9 +230,34 @@ SPECS: tuple[CollectionSpec, ...] = (
             "priorities": ARR,
             "honorific_prefs": OBJ,
             "name_pronunciation": OBJ,
+            # --- the §23.5 preference centre, and what §7.1 schedules from ---
+            # §6.4 gives no `preferences` row, and these are 1:1 with the user
+            # exactly as `persona` is. `brief_time` is "HH:MM" LOCAL, zero
+            # padded, so the string sorts as the clock does and the index below
+            # answers the §7.1 lead-window range query without a second field
+            # to drift against it.
+            "brief_time": STR,
+            # §7.1's panchang facts are computed FOR a place, and §30.2 makes
+            # that place explicit rather than inferred: the coordinate the
+            # user's morning timings are computed at, which Travel Mode moves
+            # and `follow_timezone` decides whether to move.
+            "brief_place": [OBJ, "null"],
+            "density": STR,
+            "quiet_hours": OBJ,
+            "notification_prefs": OBJ,
+            "follow_timezone": BOOL,
         },
         required=("user_id",),
-        indexes=(IndexSpec(_asc("user_id"), unique=True),),
+        indexes=(
+            IndexSpec(_asc("user_id"), unique=True),
+            IndexSpec(
+                _asc("brief_time"),
+                cite=(
+                    "§7.1 — the 15-minute tick selects users whose local brief_time "
+                    "falls 90–30 minutes ahead; without this the wave scans every profile"
+                ),
+            ),
+        ),
     ),
     CollectionSpec(
         name="birth_details",
@@ -505,10 +530,26 @@ SPECS: tuple[CollectionSpec, ...] = (
             "type": STR,
             "content": [STR, OBJ, BIN],
             "embedding": [ARR, BIN, "null"],
+            # §32.5: a vector is only comparable to vectors from the same
+            # model, so the space it came from travels with it. Written since
+            # M5-P6b; declared here so the registry stops lagging the writer.
+            "embedding_model": [STR, "null"],
             "consent": OBJ,
             "visibility": OBJ,
             "source_message_id": [OID, "null"],
             "decay_score": NUM,
+            # Diagram 8's "nightly consolidation: dedupe · decay stale · theme
+            # extraction". Decay writes `decay_score` above; the other two write
+            # here. Metadata only — cluster id, size, run stamp, and the id of
+            # the memory a duplicate was folded into. Nothing derived from
+            # content sits in this object, because it is NOT encrypted.
+            "consolidation": [OBJ, "null"],
+            # The one content-derived output of theme extraction, and therefore
+            # top-level and encrypted like `content` itself: a theme name is a
+            # summary of what the user told Tara. Nested fields are not reached
+            # by the explicit codec (§36.3), which is why this cannot live
+            # inside `consolidation`.
+            "theme_label": [STR, BIN, "null"],
         },
         required=("user_id", "type", "consent"),
         indexes=(
@@ -521,7 +562,10 @@ SPECS: tuple[CollectionSpec, ...] = (
         # §6.4 marks `content` and only `content`. The embedding stays in the
         # clear deliberately: Atlas Vector Search cannot search ciphertext, so
         # encrypting it would silently disable §32.5 retrieval.
-        encrypted=(EncryptedField("content", key_class="memory"),),
+        encrypted=(
+            EncryptedField("content", key_class="memory"),
+            EncryptedField("theme_label", key_class="memory"),
+        ),
         vector_index=VectorIndexSpec(
             field="embedding",
             dimensions=1024,  # §32.5 — Cohere embed-multilingual-v3
@@ -546,8 +590,22 @@ SPECS: tuple[CollectionSpec, ...] = (
             "audio_ref": [STR, "null"],
             "opened_at": [DT, "null"],
             "status": STR,
+            # §32.13: "idempotency key = user + local-date + locale". The
+            # UNIQUE index stays (user_id, date) — §32.13 also says one brief
+            # per user-local date — so a locale change does not mint a second
+            # row for the day. It rewrites this one, and this field is what
+            # tells the generator the stored row is for the wrong locale
+            # (§32.7: the old-locale brief is discarded, not delivered).
+            "idempotency_key": STR,
+            # §28.2: density changes the ranking engine's output COUNT, never
+            # its facts. Stored so a brief can be explained after the fact.
+            "density": STR,
+            "tier": STR,
+            "generated_at": [DT, "null"],
+            #: Set only when §7.1's degrade ran. Null on a normal brief.
+            "degrade_reason": [STR, "null"],
         },
-        required=("user_id", "date", "locale", "status"),
+        required=("user_id", "date", "locale", "status", "idempotency_key"),
         indexes=(
             IndexSpec(_asc("user_id", "date"), unique=True),
             IndexSpec(_asc("date", "status")),
@@ -628,12 +686,48 @@ SPECS: tuple[CollectionSpec, ...] = (
             "opened": BOOL,
             "status": STR,
             "expires_at": DT,
+            # §23.7: "the notification worker writes a single source-of-truth
+            # `notifications` doc per message (status … provider ids, trigger
+            # id, class, locale, template version)". These are those.
+            "message_id": STR,
+            "message_class": STR,
+            "template_version": [STR, "null"],
+            "trigger_id": [STR, "null"],
+            "provider_message_id": [STR, "null"],
+            # §23.4: "Collapse keys ensure a re-generated brief replaces, never
+            # duplicates, its push."
+            "collapse_key": [STR, "null"],
         },
-        required=("user_id", "channel", "template_id", "locale", "scheduled_at", "expires_at"),
+        required=(
+            "user_id",
+            "channel",
+            "template_id",
+            "locale",
+            "scheduled_at",
+            "expires_at",
+            "message_id",
+            "message_class",
+        ),
         indexes=(
             IndexSpec(_asc("user_id", "scheduled_at")),
             IndexSpec(_asc("status", "scheduled_at")),
             IndexSpec(_asc("expires_at"), ttl_seconds=0),
+            IndexSpec(
+                _asc("user_id", "message_id"),
+                unique=True,
+                cite=(
+                    "§23.4 — \"delivery is idempotent on `user+message_id` end-to-end\"; "
+                    "a duplicate delivery is a release-blocking defect (§23.9)"
+                ),
+            ),
+            IndexSpec(
+                _asc("user_id", "collapse_key"),
+                partial={"collapse_key": {"$type": "string"}},
+                cite=(
+                    "§23.4 — the collapse key is looked up to REPLACE a queued push "
+                    "when its brief is regenerated (§7.1, §32.7)"
+                ),
+            ),
         ),
     ),
     CollectionSpec(

@@ -108,5 +108,91 @@
     "budget": {
       "daily_soft_cap": "आज हमने काफ़ी बात कर ली — मैं जारी रखूँगी, बस थोड़ा संक्षेप में।"
     }
+  },
+  "terms": {
+    "nakshatra": {
+      "ashwini": "अश्विनी",
+      "bharani": "भरणी",
+      "krittika": "कृत्तिका",
+      "rohini": "रोहिणी",
+      "mrigashira": "मृगशिरा",
+      "ardra": "आर्द्रा",
+      "punarvasu": "पुनर्वसु",
+      "pushya": "पुष्य",
+      "ashlesha": "आश्लेषा",
+      "magha": "मघा",
+      "purva_phalguni": "पूर्वा फाल्गुनी",
+      "uttara_phalguni": "उत्तरा फाल्गुनी",
+      "hasta": "हस्त",
+      "chitra": "चित्रा",
+      "swati": "स्वाति",
+      "vishakha": "विशाखा",
+      "anuradha": "अनुराधा",
+      "jyeshtha": "ज्येष्ठा",
+      "mula": "मूल",
+      "purva_ashadha": "पूर्वाषाढ़ा",
+      "uttara_ashadha": "उत्तराषाढ़ा",
+      "shravana": "श्रवण",
+      "dhanishta": "धनिष्ठा",
+      "shatabhisha": "शतभिषा",
+      "purva_bhadrapada": "पूर्वा भाद्रपदा",
+      "uttara_bhadrapada": "उत्तरा भाद्रपदा",
+      "revati": "रेवती"
+    },
+    "graha": {
+      "sun": "सूर्य",
+      "moon": "चंद्र",
+      "mars": "मंगल",
+      "mercury": "बुध",
+      "jupiter": "गुरु",
+      "venus": "शुक्र",
+      "saturn": "शनि",
+      "rahu": "राहु",
+      "ketu": "केतु"
+    },
+    "day_timing": {
+      "rahu_kaal": "राहु काल",
+      "yamaganda": "यमगण्ड",
+      "gulikai": "गुलिक",
+      "abhijit": "अभिजित",
+      "choghadiya_day": "दिन का चौघड़िया",
+      "choghadiya_night": "रात का चौघड़िया"
+    },
+    "choghadiya": {
+      "udveg": "उद्वेग",
+      "char": "चर",
+      "labh": "लाभ",
+      "amrit": "अमृत",
+      "kaal": "काल",
+      "shubh": "शुभ",
+      "rog": "रोग"
+    },
+    "paksha": {
+      "shukla": "शुक्ल पक्ष",
+      "krishna": "कृष्ण पक्ष"
+    }
+  },
+  "brief": {
+    "module": {
+      "energy_of_day": "आज {paksha} है, तिथि {tithi}।",
+      "personal_chart_theme": "{graha} आज आपके {house}वें भाव से गुज़र रहे हैं।",
+      "moon_nakshatra_note": "चंद्रमा आज {nakshatra} में हैं।",
+      "colour": "{paksha} में आज हल्के, गर्म रंग अच्छे रहेंगे।",
+      "number": "आज आपका अंक {number} है।",
+      "favourable_window": "{start} से {end} तक अच्छा समय है।",
+      "caution_window": "{timing} {start} से {end} तक है — इस समय को छोड़ देना बेहतर।",
+      "priorities": "आपने कहा था कि अभी {priority} सबसे ज़रूरी है।",
+      "what_to_avoid": "{start} से {end} के बीच कुछ नया शुरू करने की ज़रूरत नहीं।",
+      "food_and_drink": "{paksha}, तिथि {tithi} — आज हल्का भोजन ठीक रहेगा।",
+      "work": "{graha} आपके {house}वें भाव में हैं — नए मोर्चे के बजाय चलता काम बेहतर।",
+      "relationship": "{graha} आपके {house}वें भाव में हैं — आज गहरी बात आसान है।",
+      "family_reminder": "{name} — आज {occasion}।",
+      "festival_observance": "आज {festival} है।",
+      "goal_check": "आपका लक्ष्य — {goal} — आज देखने लायक है।",
+      "spiritual_practice": "{paksha}, तिथि {tithi}: आज आपके नियम के लिए अच्छा दिन है।",
+      "tomorrow_prep_teaser": "कल तिथि {tithi} आ रही है — आज रात थोड़ी तैयारी ठीक रहेगी।"
+    },
+    "degraded_note": "आज तारा के पास ज़रूरी बातें हैं; पूरी रीडिंग थोड़ी देर में।",
+    "notification_title": "तारा के साथ आपकी सुबह"
   }
 }

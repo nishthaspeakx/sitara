@@ -82,5 +82,65 @@ services:
       timeout: 5s
       retries: 5
 
+  # §6.1: "Celery + Celery Beat on Redis for schedules/queues". Beat and the
+  # workers are separate containers because they scale on different axes and
+  # fail differently: exactly ONE beat may run (two would double-fire every
+  # §7.1 wave), while workers scale out freely.
+  beat:
+    build:
+      context: ..
+      dockerfile: services/api/Dockerfile
+    command:
+      ["celery", "-A", "sitara_api.scheduling.celery_app:app", "beat", "--loglevel=info"]
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/sitara
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+
+  # §7.1's generation queues, paying before trial (§23.7's per-class ordering
+  # applies to the notification queues the delivery worker will own).
+  worker-brief:
+    build:
+      context: ..
+      dockerfile: services/api/Dockerfile
+    command:
+      [
+        "celery", "-A", "sitara_api.scheduling.celery_app:app", "worker",
+        "-Q", "brief.paying,brief.trial", "--concurrency=2", "--loglevel=info",
+      ]
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/sitara
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+
+  # The tick itself, the panchang pre-job and the nightly memory consolidation.
+  # Kept off the brief queues so a long consolidation cannot sit in front of
+  # somebody's morning.
+  worker-maintenance:
+    build:
+      context: ..
+      dockerfile: services/api/Dockerfile
+    command:
+      [
+        "celery", "-A", "sitara_api.scheduling.celery_app:app", "worker",
+        "-Q", "maintenance", "--concurrency=1", "--loglevel=info",
+      ]
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/sitara
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+
 volumes:
   mongo-data:

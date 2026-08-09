@@ -79,6 +79,40 @@ Bounded-context modules in one process (auth, users/profiles, localisation, astr
 - Record the §32.5 recall vectors: `COHERE_API_KEY=... uv run python -m tests.memory.crosslingual.record`
 - Redact legacy age targets (§13): `uv run python -m sitara_api.db.redact_age_targets --dry-run`
 
+## daily_guidance module (M6, §7.1) — invariants that must not regress
+- **`windows.py` is pure and clock-driven.** No database, no Celery, no network — a DST boundary at the date line is a hard case to reason about and a trivial one to reproduce. `tests/daily_guidance/test_windows.py` IS §23.9's timezone matrix for the selection half.
+- **The lead window is a SCHEDULE, not a filter** (CL-008 §1). A 60-minute window sampled every 15 minutes contains each user for FOUR ticks; the `lead_minutes` hash picks the ONE tick they fire on. `blake2b`, never `hash()` — the built-in is salted per process, so every worker would draw a different slot and the smoothing would become noise.
+- **`local_instant` returns UTC, always.** PEP 495 makes an aware datetime that is AMBIGUOUS in its zone compare unequal to its own instant elsewhere while comparing neither less nor greater — trichotomy fails and every `==`, `in`, dict key and sort over it is quietly wrong twice a year. The test demonstrates the hazard before asserting the guard.
+- **The ranking engine emits ONLY `MorningModule`** (§34.3) and only where the evidence is in hand (§5.3). `MODULE_FACT_KINDS` declares what each of the seventeen may stand on; two import-time asserts keep every module reachable from exactly one density bucket and gated by a declared requirement. **Density caps the COUNT, never the facts** (§28.2).
+- **Composition happens before the model, from facts alone.** That is what makes §7.1's degrade cheap: falling back to composed text can never ship an uncited claim, because composed text is where the citations come from. `tests/…/test_templates_and_polish.py` runs the engine's own sentences through the chat pipeline's grounding validator, in all three locales.
+- **The citation goes INSIDE the sentence**, before the full stop. The validator splits on punctuation, so a trailing marker is a second "sentence" and the claim reads as uncited — perfectly cited text failing its own gate.
+- **A module composed from snapshots must come back citing one** (CL-008 §4). Structural, checked before the vocabulary test: `GroundingValidator` decides claim-hood from words, so a times-only sentence passes uncited — an edge case in chat, every morning in a template.
+- **Four outcomes, and they are not interchangeable.** POLISHED · RANKING_ONLY (§7.1's COST LEVER, and the §8 provider-outage path) · VERIFIED_CORE_CARDS (§7.1's DEGRADE — diagram 5's `fail` edge, or facts too thin) · FAILED. **An outage is not a grounding failure** — `PolishReport.all_rejected` excludes it deliberately.
+- **§32.13's key has three components; the unique index has two** (CL-008 §3). Locale rides inside the stored key so §32.7 can tell a stale-language row from a current one; `(user_id, date)` stays unique so a locale change REPLACES rather than duplicates. The §23.4 collapse key omits locale for the mirror-image reason.
+- **`brief_time` is zero-padded local "HH:MM"** and the padding is load-bearing: the §7.1 index does a STRING range scan, and unpadded "7:00" sorts after "10:00".
+- **Dormancy is the residual tier** (CL-008 §2), never orthogonal to payment — a paying subscriber on holiday must not lose the mornings they paid for.
+- **The pre-job works over CELLS, not users.** §7.2's key carries no user by construction, so a city of ten thousand costs what a city of one costs. A pre-job iterating users would produce identical output at ten thousand times the price and nothing downstream would notice.
+- **Chart facts are NOT wired** — the astrology facade still declines `NATAL_CHART`/`TRANSITS` (M5). `BriefFacts.missing` names the gap so the brief degrades through §7.1's stated path instead of through a stub that looks like data.
+
+## memory consolidation (M6, diagram 8) — invariants that must not regress
+- **Consolidation never deletes.** Same rule `decay.py` established: §32.4 retains "until user deletes". A duplicate is FOLDED — muted, kept in the vault, pointing at its canonical — because the user consented to each copy separately.
+- **The canonical is elected per CLUSTER, not per pair.** Pairwise folding builds chains (A→B, then B→C) that leave a duplicate pointing at a duplicate. Single-link clustering then one election makes that unrepresentable.
+- **A muted memory is never folded into** — unmuting must not restore a pointer.
+- **`theme_label` is TOP-LEVEL and encrypted**; everything else consolidation writes lives in `consolidation` and is metadata only. The explicit codec reaches top-level paths and not nested ones (§36.3), so a nested label would silently never be encrypted — and a theme name is memory content in summary form.
+- **No model, no label.** An unlabelled theme is a real theme; an invented one would be a summary of the user's life that nobody wrote.
+- **Nothing crosses an embedding space or a §32.4 type** — cosine across spaces is noise, and noise that clusters looks exactly like insight.
+
+## scheduling module (M6, §6.1/§23.7)
+- **Exactly one Beat may run.** Two would double-fire every §7.1 wave. The compose stack runs `beat` as its own single container.
+- **Every task must be safe to run twice.** §6.1 rejected a workflow engine on the strength of "Celery Beat + idempotent tasks", and `task_acks_late` means a dead worker hands the message back.
+- **The tick fans out by `send_task` name**, so the producer needs none of the consumer's imports and can run on a worker carrying no model client.
+
+## Commands (M6)
+- Wave simulation: `uv run python -m sitara_api.daily_guidance.simulate --users 5000`
+- Nightly consolidation: `uv run python -m sitara_api.memory.consolidation --dry-run`
+- Beat: `celery -A sitara_api.scheduling.celery_app:app beat`
+- Workers: `celery -A sitara_api.scheduling.celery_app:app worker -Q brief.paying,brief.trial`
+
 ## Commands (M4)
 - Build/repair schema: `uv run python -m sitara_api.db.migrate --phase expand`
 - Seed dev data: `uv run python -m sitara_api.db.seed --wipe`
