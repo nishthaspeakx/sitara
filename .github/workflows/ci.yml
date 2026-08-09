@@ -24,6 +24,39 @@ jobs:
       - run: pnpm token-lint
       - run: pnpm i18n-lint
 
+  design-system:
+    # §24.8's design-QA gate + §14 Language QA. Separate job because it needs a
+    # browser; the screenshot suite is release-blocking per §31.6, so it runs on
+    # every PR rather than on demand.
+    name: library contract · per-locale screenshot diff
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # the design-system faces are vendored in the repo, so the baselines
+      # rasterise the same here as they do locally — nothing is fetched
+      - name: Install Playwright chromium
+        run: pnpm --filter web exec playwright install --with-deps chromium
+      - name: Library contract + CC-008 disclosure
+        run: pnpm --filter web test
+      - run: pnpm --filter web build-storybook
+        env:
+          STORYBOOK_DISABLE_TELEMETRY: "1"
+      - name: Per-locale screenshot diff (49 × 4 locales × 2 themes)
+        run: pnpm --filter web screenshots
+      - name: Upload screenshot diffs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshot-diffs
+          path: apps/web/test-results/
+          retention-days: 7
+
   py:
     name: ruff · pytest (${{ matrix.package }})
     runs-on: ubuntu-latest
