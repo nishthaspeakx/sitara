@@ -481,16 +481,19 @@ IS but not when the short one runs. It runs when a ceremony has already played
 today, per §0.19: a 5.5s arrival on every app open is the product asking for
 attention rather than giving something.
 
-**The live-path run was partial.** The engine half ran fully against live
-services — real birth details written through §13's facade, a real 29-fact natal
-chart, real panchang — and confirmed the CL-009 shape is still live: the engine
-emits the SUN's nakshatra first, and the composer correctly named the Moon's
-(`bharani`) citing the Moon's fact. The browser half could not complete: Firebase
-phone auth never fires in the in-app preview browser (no reCAPTCHA, no
-identitytoolkit request), so **sign-in against live Firebase with the test number
-is NOT yet verified for the rebuilt S03/S04**. The auth logic is M1's and
-unchanged, but the rebuilt markup has only been exercised against the fake
-adapter. This is an open item for the M8 sign-off, not a closed one.
+**The live-path run — now complete. CLOSED 9 August 2026.** The engine half ran
+fully against live services — real birth details written through §13's facade, a
+real 29-fact natal chart, real panchang — and confirmed the CL-009 shape is still
+live: the engine emits the SUN's nakshatra first, and the composer correctly
+named the Moon's (`bharani`) citing the Moon's fact.
+
+The browser half could not complete at the time of writing: Firebase phone auth
+never fires in the in-app preview browser (no reCAPTCHA, no identitytoolkit
+request), so sign-in against live Firebase was recorded as an OPEN item for the
+M8 sign-off rather than quietly assumed. **The founder has since verified S03 and
+S04 end to end in real Chrome against the live stack, and the item is closed.**
+Both halves of §24.4's acceptance have now run against live services, which is
+what CLAUDE.md requires before a milestone closes.
 
 **Tara's approximate states.** `concerned_kind` and `safety` still carry borrowed
 frames (`TARA_APPROXIMATE_STATES_PENDING`, recorded as due "before M8 ships").
@@ -622,4 +625,11 @@ serves that build, which failed five design-qa tests that pass in isolation.
 in the browser rather than at build time. The three-way agreement is asserted by
 a test rather than derived from one source, because Next requires the middleware
 matcher to be a static literal it can analyse at build time.
+
+**M8's last open item is closed.** CL-011 recorded that sign-in against live
+Firebase was unverified for the rebuilt S03/S04, because phone auth does not fire
+in the in-app preview browser. The founder verified both screens end to end in
+real Chrome against the live stack on 9 August 2026 — the same browser and stack
+that surfaced the routing defect above — so M8 closes with both halves of its
+acceptance run against live services, and nothing carried forward.
 
