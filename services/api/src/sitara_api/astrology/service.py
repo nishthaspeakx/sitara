@@ -48,7 +48,7 @@ from sitara_api.astrology.chart_adapter import (
     ChartEngineUnavailable,
     InsufficientBirthData,
 )
-from sitara_api.db.documents import stamp
+from sitara_api.db.documents import stamp, utcnow
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +66,72 @@ CHART_VERSIONS_KEPT = 3
 #: CITED, and a brief cites the period it spoke about; the deeper tree is a
 #: recomputation away and is not the system of record for anything.
 CHART_SIZE_BUDGET_BYTES = 40 * 1024
+
+
+#: §10-6's four honest answers, and the only four. They are stored rather than
+#: derived because "I know it to the half hour" and "I only know it was the
+#: morning" both produce a time and mean different things — §5.4 renders a
+#: different confidence state for each, and a `time` column alone cannot tell
+#: them apart.
+TIME_ACCURACY = ("exact", "approximate", "part_of_day", "unknown")
+
+#: Where a part-of-day answer lands when the engine needs an instant. These are
+#: MIDPOINTS of the named window, and they exist so that a part-of-day chart is
+#: computed at a declared, reviewable point rather than at whatever the caller
+#: felt like. They never upgrade the confidence state: a chart built on one of
+#: these is `approximate` and says so (§5.4).
+PART_OF_DAY_MIDPOINT = {
+    "morning": dt.time(9, 0),
+    "afternoon": dt.time(15, 0),
+    "evening": dt.time(19, 0),
+    "night": dt.time(0, 30),
+}
+
+
+@dataclass(frozen=True)
+class BirthDetailsInput:
+    """What S06 + S07 capture. The write-side mirror of `BirthInput`.
+
+    Deliberately NOT the `birth_details` document either: the row also carries
+    rectification notes (§30.2's P2 tease) that onboarding never writes, and
+    keeping the write surface to what a screen collects is what stops a future
+    caller reaching past the facade to set one.
+    """
+
+    date: dt.date
+    place_label: str
+    lat: float
+    lon: float
+    tz: str
+    time_accuracy: str
+    time: dt.time | None = None
+    part_of_day: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.time_accuracy not in TIME_ACCURACY:
+            raise ValueError(f"time_accuracy must be one of {TIME_ACCURACY}")
+        # §5.3: we never guess at what we were not told. "exact" without a time
+        # is a caller bug, and admitting it would produce a chart claiming a
+        # precision nobody supplied.
+        if self.time_accuracy in ("exact", "approximate") and self.time is None:
+            raise ValueError(f"{self.time_accuracy} birth time requires a time")
+        if self.time_accuracy == "part_of_day" and self.part_of_day not in PART_OF_DAY_MIDPOINT:
+            raise ValueError("part_of_day must name one of the four windows")
+
+    @property
+    def effective_time(self) -> dt.time | None:
+        """The instant the engine is given, or None for an unknown time.
+
+        `unknown` returns None on purpose — §5.4's "no exact time" state reads
+        the Moon chart, and substituting noon here would hand the engine a
+        lagna it has no basis for while every downstream confidence chip went
+        on saying `verified`.
+        """
+        if self.time_accuracy == "unknown":
+            return None
+        if self.time_accuracy == "part_of_day":
+            return PART_OF_DAY_MIDPOINT[self.part_of_day or ""]
+        return self.time
 
 
 @dataclass(frozen=True)
@@ -132,6 +198,77 @@ class AstrologyFacade:
             lon=float(place["lon"]),
             tz=place["tz"],
             fold=doc.get("fold"),
+        )
+
+    async def set_birth_details(self, user_id: str, details: BirthDetailsInput) -> None:
+        """Write one user's birth row. The ONLY write path there is.
+
+        This belongs on the facade for the same reason `birth_input` does. §6.4
+        says `birth_details` is "reachable only through the astrology facade, no
+        generic query path", and a write helper on a repository would BE that
+        generic path — the read door would be guarded while the write door
+        stood open beside it, sharing a collection and a key class.
+
+        Two things happen here that a plain upsert would not do, and both are
+        §30.2's "correcting birth details" rule rather than convenience:
+
+        * the row is encrypted through the same `birth_details` codec the read
+          side decrypts with, so a field added to the registry is covered
+          without this method changing;
+        * every cached `charts` row for the subject is dropped. A chart is
+          derived data with a permanent §7.2 key; leaving it in place after the
+          birth time changed would serve a stale chart forever, and "forever" is
+          exactly how long the key says it is valid for.
+
+        Guidance already written is deliberately NOT touched — §30.2: "Your
+        guidance history stays as written; new guidance uses the corrected chart
+        from now." The §34.2 snapshot embedded in each artefact is what keeps
+        that honest rather than merely tolerable.
+        """
+        from sitara_api.db.registry import BY_NAME
+
+        subject = ObjectId(user_id)
+        document = stamp(
+            {
+                "user_id": subject,
+                "family_member_id": None,
+                "date": details.date.isoformat(),
+                "time": details.effective_time.isoformat() if details.effective_time else None,
+                "time_accuracy": details.time_accuracy,
+                "place": {
+                    "name": details.place_label,
+                    "label": details.place_label,
+                    "lat": details.lat,
+                    "lon": details.lon,
+                    "tz": details.tz,
+                },
+                # §5.2: the zone is captured AT ENTRY, not looked up later. A
+                # tzdb update that moves a historical offset must not silently
+                # move someone's chart out from under the reading they were
+                # given.
+                "tz_snapshot": {
+                    "tz": details.tz,
+                    "resolved_at": utcnow().isoformat(),
+                    "source": "gazetteer",
+                },
+                "rectification_notes": None,
+            }
+        )
+        if self._crypto is not None:
+            document = await self._crypto.encrypt_document(BY_NAME["birth_details"], document)
+        created_at = document.pop("created_at")
+        await self._db.birth_details.update_one(
+            {"user_id": subject, "family_member_id": None},
+            {"$set": document, "$setOnInsert": {"created_at": created_at}},
+            upsert=True,
+        )
+        # Derived data outlives its source unless something removes it.
+        await self._db.charts.delete_many({"subject_id": subject})
+        logger.info(
+            "birth details written",
+            # §13: the accuracy is a category, not a birth detail. The date,
+            # the time and the place are never logged, here or anywhere.
+            extra={"user_id": user_id, "time_accuracy": details.time_accuracy},
         )
 
     # -- the chart ---------------------------------------------------------

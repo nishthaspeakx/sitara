@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from sitara_api import __version__
+from sitara_api.astrology import AstroChartAdapter, AstrologyFacade
 from sitara_api.auth.firebase import FirebaseAdminVerifier
 from sitara_api.auth.router import router as auth_router
 from sitara_api.chat_orchestration import ChatSettings, build_pipeline
@@ -28,6 +29,7 @@ from sitara_api.panchang.cache import PanchangCache
 from sitara_api.panchang.places import default_resolver
 from sitara_api.panchang.registry import build_registry
 from sitara_api.panchang.router import router as panchang_router
+from sitara_api.onboarding.router import router as onboarding_router
 from sitara_api.panchang.service import PanchangService
 
 
@@ -43,6 +45,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # §13 CSFLE. Returns None only in dev with encryption switched off;
         # anywhere else a missing key is an error, not a silent plaintext fallback.
         app.state.field_crypto = await build_crypto(client, settings)
+        # §13's single door to birth details, built here because it needs both
+        # the database and the CSFLE codec above it. Without the codec the
+        # facade would read ciphertext and hand the engine nonsense, so it is
+        # built AFTER `field_crypto` and given it — never before.
+        app.state.astrology = AstrologyFacade(
+            db=db,
+            adapter=AstroChartAdapter(
+                settings.astro_base_url, settings.astro_timeout_seconds
+            ),
+            crypto=app.state.field_crypto,
+        )
         # The §7.2 caches need the database, so the panchang service is built
         # here rather than at import time.
         app.state.panchang_cache = PanchangCache(
@@ -84,6 +97,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     app.state.chat_settings = ChatSettings()
     app.state.memory_settings = MemorySettings()
+    app.state.astrology = None
     app.state.chat_pipeline = None
     app.state.memory_service = None
     # §2.4: the service renders §9's safety and decline strings itself. A
@@ -109,6 +123,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(panchang_router)
     app.include_router(chat_router)
     app.include_router(memory_router)
+    app.include_router(onboarding_router)
 
     @app.get("/healthz")
     def healthz() -> dict[str, str]:

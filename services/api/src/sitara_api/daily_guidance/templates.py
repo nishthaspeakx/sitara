@@ -187,6 +187,23 @@ def _term(kind: str, slug: str, locale: str) -> str | None:
         return None
 
 
+# ---------------------------------------------------------------------------
+# Public selectors — for composers OUTSIDE the morning brief
+# ---------------------------------------------------------------------------
+# The first-reading ceremony (§24.4 S13) selects its facts with EXACTLY these
+# readers rather than its own. That is not tidiness: `_nakshatra`'s graha check
+# is the M6 fix for a sentence that read "The Moon sits in Purva Bhadrapada"
+# while citing the SUN's nakshatra — true-shaped, correctly cited, and false.
+# A second composer re-deriving "find the nakshatra-ish value" is exactly how
+# that defect returns, on the one screen where a first impression is formed.
+#
+# Aliases rather than renames, so the brief's call sites and their tests stay
+# untouched and there is still only one implementation of each rule.
+moon_nakshatra = _nakshatra
+graha_house = _house
+localised_term = _term
+
+
 #: Sentence-final punctuation the citation must go BEFORE. The danda is in the
 #: set because a Hindi sentence ends with it and nothing else.
 _TERMINAL_PUNCTUATION = ".!?।"
