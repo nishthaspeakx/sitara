@@ -388,3 +388,112 @@ defect:
 The M6 acceptance run is why: three defects that a green suite could not see —
 a true-shaped citation to the wrong body, scheduled briefs silently losing their
 panchang, and a regenerate cancelling the push it was meant to replace.
+
+---
+
+## CL-011 — the onboarding stack, and two defects the M8 acceptance found
+**Date:** 9 August 2026 · **Approved:** Founder (Nishtha Agarwal) ·
+**Raised by:** M8 implementation and its live-path run ·
+**Touches:** §5.4, §30.4, §24.8, §2.4, §0.11
+
+M8 built S01–S13 on the §24.3 library. Four decisions and two defects are worth
+recording; the rest is in the commits.
+
+### 1. The two languages had drifted on §5.4's confidence vocabulary
+
+`sitara_api` serves §5.4's own wording — `verified_limited_birth_data`,
+`tradition_based_general` — on every guidance payload. The M7 component library
+typed `verified_limited` and `tradition_general`. **Two of the five states the
+API can return could never have rendered a chip**, and nothing failed because no
+screen consumed a confidence state until S13.
+
+**Final:** `packages/schemas/src/confidence-states.json` is the one source, the
+TS side is generated from it, and `test_parity.py` asserts it against the
+hand-written Python enum in both directions. No spec decision moves — §5.4's
+five states and §34.7's five treatments are unchanged; only the slug the two
+languages agree on.
+
+**Residual risk:** none known. The guard fails on divergence in either
+direction, and the enum stays hand-written in `facts.py` so the test checks
+rather than assumes generation.
+
+### 2. The first reading claimed two sources when one had answered — LIVE FINDING
+
+The M8 acceptance run against live services found the ceremony rendering
+"computed from your chart · verified against 2 sources ✓" with a `verified`
+chip, while both panchang vendors were unreachable and the calendar layer had
+come from Layer A alone.
+
+Every fact was real. Every citation resolved. The §30.4 badge was hardcoded,
+and the confidence state was computed from the birth time without reference to
+how many sources had actually agreed. **No test could have caught it** — the
+fixtures supply facts, not provider health, and the sentence is true of the
+facts it cites while being false about their provenance.
+
+**Final:** `FirstReading` carries a `source_state` derived from the
+`PanchangResult`'s own `sources`/`degraded`/`disputed`, S13 renders it rather
+than assuming `default`, and a reading is never more confident than its thinnest
+half — §5.4's Verified row wants "engine parity clean", which one source cannot
+demonstrate. `tests/onboarding/test_reading.py` now covers all four cases.
+
+**Residual risk:** the same shape exists anywhere else a `VerifiedSourceRow` is
+rendered with a literal state. M8 ships the only such surface; M9's Today and
+Trust Sheet must take theirs from the payload.
+
+### 3. `i18n-lint`'s namespace list is the gate's blind spot
+
+Gate 2 scans app source for literal keys using a hardcoded namespace
+alternation. A namespace absent from it is not scanned at all, so the gate keeps
+reporting OK while the app references keys nobody wrote. Adding `start` and
+`launch` was not housekeeping: without it the **entire** onboarding string set
+would have escaped the check, and the user-visible failure mode is a raw dotted
+key on screen in Hindi.
+
+**Final:** the list is extended and the reason is now a comment above it, so the
+next person adding a namespace knows the gate does not find it on its own.
+
+**Residual risk:** the list still has to be maintained by hand. A future
+improvement is to derive it from the catalogs' top-level keys.
+
+### 4. What S13 is allowed to do, and what it never does
+
+Written as tests before the screen existed. Four invariants hold on every path:
+no `aria-busy` survives the client deadline, what replaces the skeleton is a
+real localised sentence or an honest ErrorState, no raw i18n key can leak (the
+API returns line IDs from a closed set, never message keys — a server-supplied
+key is invisible to `i18n-lint`), and "meet your mornings" always works.
+
+The ceremony is composed template-only, with no model. §7.1's polish is a good
+trade for a brief read every day and a bad one inside a moment §0.17 measures in
+seconds, where it adds a round trip and a second failure mode to the screen
+whose whole job is not failing.
+
+### Also recorded (no decision required)
+
+**S01 ships silent.** §0.11's "Sitara Arrival" is a W10 deliverable and does not
+exist. §0.11 already specifies the silent path — "the animation is composed to
+work perfectly mute" — so the gesture check and the audio hook ship, the file
+does not, and the analytics event records `audio: "silent"` as a path rather
+than a failure. All five §0.11 paths are otherwise built and covered.
+
+**The short form's trigger is a product judgement.** §0.11 fixes what each form
+IS but not when the short one runs. It runs when a ceremony has already played
+today, per §0.19: a 5.5s arrival on every app open is the product asking for
+attention rather than giving something.
+
+**The live-path run was partial.** The engine half ran fully against live
+services — real birth details written through §13's facade, a real 29-fact natal
+chart, real panchang — and confirmed the CL-009 shape is still live: the engine
+emits the SUN's nakshatra first, and the composer correctly named the Moon's
+(`bharani`) citing the Moon's fact. The browser half could not complete: Firebase
+phone auth never fires in the in-app preview browser (no reCAPTCHA, no
+identitytoolkit request), so **sign-in against live Firebase with the test number
+is NOT yet verified for the rebuilt S03/S04**. The auth logic is M1's and
+unchanged, but the rebuilt markup has only been exercised against the fake
+adapter. This is an open item for the M8 sign-off, not a closed one.
+
+**Tara's approximate states.** `concerned_kind` and `safety` still carry borrowed
+frames (`TARA_APPROXIMATE_STATES_PENDING`, recorded as due "before M8 ships").
+Neither state appears in S01–S13, so M8 is not blocked on them; the record
+stands and is still self-checking.
+
