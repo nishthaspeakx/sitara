@@ -200,6 +200,133 @@ def test_fact_free_modules_compose_without_a_citation() -> None:
     assert verdict.ok, verdict.reasons
 
 
+@pytest.mark.parametrize("locale", LOCALES)
+def test_house_ordinals_are_words_not_digit_plus_suffix(locale) -> None:  # noqa: ANN001
+    """All twelve houses, in every locale (§2.3).
+
+    The first cut appended a fixed suffix inside the template — "{house}वें
+    भाव" — which is right for ten houses and wrong for two: Hindi wants
+    "पहले भाव" and "दूसरे भाव". A rule wrong for two of twelve is not a rule,
+    so the forms are catalogued. English keeps digits because that is what
+    English writes.
+    """
+    from sitara_api.daily_guidance.templates import _ordinal
+
+    forms = [_ordinal(house, locale) for house in range(1, 13)]
+    assert all(f is not None for f in forms), f"{locale}: a house has no ordinal form"
+    assert len(set(forms)) == 12, f"{locale}: two houses share a form — {forms}"
+
+    if locale == "en":
+        assert forms[0] == "1st" and forms[4] == "5th"
+        return
+    # No Hindi/Hinglish ordinal may be digits with a suffix bolted on.
+    for house, form in enumerate(forms, start=1):
+        assert form is not None and not form.startswith(str(house)), (
+            f"{locale}: house {house} renders as {form!r} — digit+suffix, not a word"
+        )
+    if locale == "hi":
+        assert forms[0] == "पहले" and forms[1] == "दूसरे" and forms[2] == "तीसरे"
+    else:
+        assert forms[0] == "pehle" and forms[1] == "doosre"
+
+
+@pytest.mark.parametrize("locale", LOCALES)
+@pytest.mark.parametrize("house", list(range(1, 13)))
+def test_every_house_composes_and_stays_grounded(locale, house) -> None:  # noqa: ANN001
+    """The house word has to survive the round trip: composed into a sentence,
+    and still checkable by §5.3's numbers-verbatim rule."""
+    import datetime as dt
+
+    from sitara_schemas.facts import (
+        FactKind,
+        FactMethod,
+        FactPrecision,
+        FactSnapshot,
+        Graha,
+        HouseAssignmentValue,
+        TzMethod,
+        build_fact_id,
+    )
+
+    fact = FactSnapshot(
+        fact_id=build_fact_id(
+            "transit.saturn.house", "2026-08-12", "6a70000000000000000000a1", 1
+        ),
+        kind=FactKind.TRANSIT_GRAHA_HOUSE,
+        value=HouseAssignmentValue(graha=Graha.SATURN, whole_sign_house=house, bhava=house),
+        precision=FactPrecision(tolerance=0, unit="exact"),
+        method=FactMethod(
+            ayanamsa="lahiri",
+            tz=TzMethod(tz="Asia/Kolkata", utc_offset_seconds=19800),
+        ),
+        valid_from=dt.datetime(2026, 8, 12, tzinfo=dt.UTC),
+        valid_to=dt.datetime(2026, 8, 12, 23, 59, tzinfo=dt.UTC),
+        engine_semver="0.1.0",
+        data_revision="test",
+    )
+    ranked = ranking.RankedModule(
+        module=MorningModule.PERSONAL_CHART_THEME, snapshots=(fact,)
+    )
+    composed = BriefComposer().compose(ranked, locale)
+    assert composed is not None
+    verdict = GroundingValidator().check(composed.text, composed.snapshots, locale)
+    assert verdict.ok, f"{locale} house {house}: {verdict.reasons}"
+
+
+@pytest.mark.parametrize("locale", LOCALES)
+def test_a_rewritten_house_is_still_caught_in_every_locale(locale) -> None:  # noqa: ANN001
+    """The reason the validator had to learn the word forms.
+
+    Switching Hindi and Hinglish to words would otherwise have retired the
+    §5.3 house check for those two locales — the pattern matched digits only,
+    so "सातवें भाव" rewritten as "पहले भाव" would have sailed through while the
+    English equivalent was caught.
+    """
+    import datetime as dt
+
+    from sitara_schemas.facts import (
+        FactKind,
+        FactMethod,
+        FactPrecision,
+        FactSnapshot,
+        Graha,
+        HouseAssignmentValue,
+        TzMethod,
+        build_fact_id,
+    )
+
+    from sitara_api.daily_guidance.templates import _ordinal
+
+    fact = FactSnapshot(
+        fact_id=build_fact_id(
+            "transit.saturn.house", "2026-08-12", "6a70000000000000000000a1", 1
+        ),
+        kind=FactKind.TRANSIT_GRAHA_HOUSE,
+        value=HouseAssignmentValue(graha=Graha.SATURN, whole_sign_house=7, bhava=7),
+        precision=FactPrecision(tolerance=0, unit="exact"),
+        method=FactMethod(
+            ayanamsa="lahiri",
+            tz=TzMethod(tz="Asia/Kolkata", utc_offset_seconds=19800),
+        ),
+        valid_from=dt.datetime(2026, 8, 12, tzinfo=dt.UTC),
+        valid_to=dt.datetime(2026, 8, 12, 23, 59, tzinfo=dt.UTC),
+        engine_semver="0.1.0",
+        data_revision="test",
+    )
+    ranked = ranking.RankedModule(
+        module=MorningModule.PERSONAL_CHART_THEME, snapshots=(fact,)
+    )
+    honest = BriefComposer().compose(ranked, locale)
+    assert honest is not None
+    assert GroundingValidator().check(honest.text, honest.snapshots, locale).ok
+
+    # The model moves Saturn from the 7th house to the 1st.
+    tampered = honest.text.replace(_ordinal(7, locale) or "", _ordinal(1, locale) or "")
+    assert tampered != honest.text, "the rewrite must actually change the sentence"
+    verdict = GroundingValidator().check(tampered, honest.snapshots, locale)
+    assert not verdict.ok, f"{locale}: a rewritten house slipped past §5.3"
+
+
 def test_template_ids_are_versioned(full_facts) -> None:  # noqa: ANN001
     """§23.8 reports per template version; two renderings must be tellable apart."""
     for module in compose(full_facts, "en"):

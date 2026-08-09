@@ -347,3 +347,44 @@ houses 1–2 — the templates render `{house}वें भाव`, so house 1 r
 where Hindi wants "पहले भाव". Visible in the live run. It is inside the
 `i18n.brief_templates_and_terms` gate, which is what that gate is for, and is
 called out here so the §14 reviewer is looking for it rather than at it.
+
+---
+
+## CL-010 — house ordinals as words, and the rule the Moon/Sun defect earned
+**Date:** 9 August 2026 · **Approved:** Founder · **Touches:** §2.3, §5.3 step 9,
+§7.1, §14
+
+**What changed.** House ordinals render as this locale's own WORD — `पहले भाव`,
+`pehle bhaav`, `1st house` — for all twelve houses in all three locales, from a
+`terms.ordinal_house` catalogue. The first cut appended a fixed suffix inside
+each template (`{house}वें भाव`), which is right for ten houses and wrong for
+two: Hindi wants `पहले` and `दूसरे`, not `1वें` and `2वें`. A rule wrong for two
+of twelve is not a rule, so the forms are data like every other closed set here.
+
+**The part worth reading.** Switching to words would have quietly RETIRED the
+§5.3 house check for Hindi and Hinglish. `ordinal_house_patterns` matched digits
+only, so once the templates stopped emitting digits, a polished line that moved
+a graha from the 7th house to the 1st would have passed in two of three locales
+while the English equivalent was caught. The patterns now carry the word forms
+and `ordinal_house_words` maps them back to a number, so the numbers-verbatim
+check still runs; an unmapped form fails closed. Editing an ordinal word means
+editing both files, and the gate's reviewer notes say so.
+
+The copy stays draft behind `i18n.brief_templates_and_terms`. The notes now open
+with ORDINALS and name what to look at: the oblique agreement with `भाव`, the
+spelling of पाँचवें / छठे / नौवें, and the twelve Hinglish transliterations —
+written by the implementer, not a native speaker.
+
+**The rule.** Root `CLAUDE.md` gains a non-negotiable, earned by CL-009's first
+defect:
+
+> Every milestone's acceptance includes an end-to-end run of the real path
+> against live services with real data — the test suite alone never closes a
+> milestone. A citation gate verifies a sentence stands on a fact; only
+> role-aware fact selection and live-path runs verify it stands on the RIGHT
+> fact. When a module consumes a fact, it must select by role/entity, never by
+> "first matching shape."
+
+The M6 acceptance run is why: three defects that a green suite could not see —
+a true-shaped citation to the wrong body, scheduled briefs silently losing their
+panchang, and a regenerate cancelling the push it was meant to replace.

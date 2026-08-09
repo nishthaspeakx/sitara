@@ -170,12 +170,26 @@
     "paksha": {
       "shukla": "Shukla paksha",
       "krishna": "Krishna paksha"
+    },
+    "ordinal_house": {
+      "1": "pehle",
+      "2": "doosre",
+      "3": "teesre",
+      "4": "chauthe",
+      "5": "paanchve",
+      "6": "chhathe",
+      "7": "saatve",
+      "8": "aathve",
+      "9": "nauve",
+      "10": "dasve",
+      "11": "gyarahve",
+      "12": "barahve"
     }
   },
   "brief": {
     "module": {
       "energy_of_day": "Aaj {paksha} hai, tithi {tithi}.",
-      "personal_chart_theme": "{graha} aaj aapke {house}ve bhaav se guzar rahe hain.",
+      "personal_chart_theme": "{graha} aaj aapke {house} bhaav se guzar rahe hain.",
       "moon_nakshatra_note": "Chandra aaj {nakshatra} mein hain.",
       "colour": "{paksha} mein aaj halke, gehre-garm rang achhe rahenge.",
       "number": "Aaj aapka number {number} hai.",
@@ -184,8 +198,8 @@
       "priorities": "Aapne kaha tha ki abhi {priority} sabse zaroori hai.",
       "what_to_avoid": "{start} se {end} ke beech kuch naya shuru karne ki zarurat nahin.",
       "food_and_drink": "{paksha}, tithi {tithi} — aaj halka khaana theek rahega.",
-      "work": "{graha} aapke {house}ve bhaav mein hain — naye morche ke bajaay chalta kaam behtar.",
-      "relationship": "{graha} aapke {house}ve bhaav mein hain — aaj gehri baat aasaan hai.",
+      "work": "{graha} aapke {house} bhaav mein hain — naye morche ke bajaay chalta kaam behtar.",
+      "relationship": "{graha} aapke {house} bhaav mein hain — aaj gehri baat aasaan hai.",
       "family_reminder": "{name} — aaj {occasion}.",
       "festival_observance": "Aaj {festival} hai.",
       "goal_check": "Aapka lakshya — {goal} — aaj dekhne layak hai.",

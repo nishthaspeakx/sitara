@@ -170,12 +170,26 @@
     "paksha": {
       "shukla": "शुक्ल पक्ष",
       "krishna": "कृष्ण पक्ष"
+    },
+    "ordinal_house": {
+      "1": "पहले",
+      "2": "दूसरे",
+      "3": "तीसरे",
+      "4": "चौथे",
+      "5": "पाँचवें",
+      "6": "छठे",
+      "7": "सातवें",
+      "8": "आठवें",
+      "9": "नौवें",
+      "10": "दसवें",
+      "11": "ग्यारहवें",
+      "12": "बारहवें"
     }
   },
   "brief": {
     "module": {
       "energy_of_day": "आज {paksha} है, तिथि {tithi}।",
-      "personal_chart_theme": "{graha} आज आपके {house}वें भाव से गुज़र रहे हैं।",
+      "personal_chart_theme": "{graha} आज आपके {house} भाव से गुज़र रहे हैं।",
       "moon_nakshatra_note": "चंद्रमा आज {nakshatra} में हैं।",
       "colour": "{paksha} में आज हल्के, गर्म रंग अच्छे रहेंगे।",
       "number": "आज आपका अंक {number} है।",
@@ -184,8 +198,8 @@
       "priorities": "आपने कहा था कि अभी {priority} सबसे ज़रूरी है।",
       "what_to_avoid": "{start} से {end} के बीच कुछ नया शुरू करने की ज़रूरत नहीं।",
       "food_and_drink": "{paksha}, तिथि {tithi} — आज हल्का भोजन ठीक रहेगा।",
-      "work": "{graha} आपके {house}वें भाव में हैं — नए मोर्चे के बजाय चलता काम बेहतर।",
-      "relationship": "{graha} आपके {house}वें भाव में हैं — आज गहरी बात आसान है।",
+      "work": "{graha} आपके {house} भाव में हैं — नए मोर्चे के बजाय चलता काम बेहतर।",
+      "relationship": "{graha} आपके {house} भाव में हैं — आज गहरी बात आसान है।",
       "family_reminder": "{name} — आज {occasion}।",
       "festival_observance": "आज {festival} है।",
       "goal_check": "आपका लक्ष्य — {goal} — आज देखने लायक है।",

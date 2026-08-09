@@ -328,10 +328,11 @@ class BriefComposer:
             return None
         snapshot, graha_slug, house = found
         graha = _term("graha", graha_slug, locale)
-        if graha is None:
+        ordinal = _ordinal(house, locale)
+        if graha is None or ordinal is None:
             return None
         text = resolve(
-            f"brief.module.{key.value}", locale, graha=graha, house=_ordinal(house, locale)
+            f"brief.module.{key.value}", locale, graha=graha, house=ordinal
         )
         return _cite(text, snapshot), [snapshot]
 
@@ -445,18 +446,23 @@ class BriefComposer:
         )
 
 
-#: English ordinals only where the locale's grammar wants one. The Hindi and
-#: Hinglish templates carry their own suffix ("10वें", "10ve"), so the number
-#: goes in bare and the sentence stays grammatical in its own language rather
-#: than in a translated English one (§2.3).
-def _ordinal(value: int, locale: str) -> str:
-    if locale != "en":
-        return str(value)
-    if 10 <= value % 100 <= 20:
-        suffix = "th"
-    else:
-        suffix = {1: "st", 2: "nd", 3: "rd"}.get(value % 10, "th")
-    return f"{value}{suffix}"
+def _ordinal(value: int, locale: str) -> str | None:
+    """The house ordinal as this locale's own WORD (§2.3, §2.4).
+
+    Data, not arithmetic. The first cut appended a fixed suffix inside each
+    template — "{house}वें भाव" — which is right for most houses and wrong for
+    the first two: Hindi wants "पहले भाव" and "दूसरे भाव", not "1वें" and
+    "2वें". A rule that is wrong for two of twelve cases is not a rule, so the
+    twelve forms are catalogued per locale like every other closed set here.
+
+    English keeps digits ("5th house") because that is what English writes; the
+    catalogue carries those too, so this function has one shape for all three
+    locales rather than a special case that drifts.
+
+    Returns None when the locale has no form for this house, which drops the
+    module — §2.4's rule, the same as a missing nakshatra name.
+    """
+    return _term("ordinal_house", str(value), locale)
 
 
 _BUILDERS = {

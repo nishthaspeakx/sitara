@@ -9,9 +9,12 @@
     "terms.choghadiya.*": "7 choghadiya names",
     "terms.paksha.*": "2 lunar fortnights",
     "brief.degraded_note": "§28.2's provider-degraded line",
-    "brief.notification_title": "§23 Class-D push title"
+    "brief.notification_title": "§23 Class-D push title",
+    "terms.ordinal_house.*": "12 house ordinals per locale, as WORDS in hi/hi-Latn"
   },
   "reviewer_notes": [
+    "ORDINALS — look here first. The first cut rendered house ordinals as digit+suffix ('{house}वें भाव'), which is wrong for houses 1 and 2: Hindi wants 'पहले भाव' and 'दूसरे भाव'. All twelve are now catalogued as words per locale (terms.ordinal_house), in the OBLIQUE form that agrees with 'भाव' in 'आपके … भाव में/से'. Please check the agreement and the spelling of पाँचवें / छठे / नौवें in particular, and the Hinglish transliterations (pehle, doosre, teesre, chauthe, paanchve, chhathe, saatve, aathve, nauve, dasve, gyarahve, barahve) — those were written by the implementer, not by a native speaker.",
+    "Changing an ordinal WORD means changing `ordinal_house_words` in chat_orchestration/policy/claim_terms.json too. The grounding validator maps the word back to a house number so §5.3's numbers-verbatim check still catches a polished line that moved a graha from the 7th house to the 1st; a form the map does not know fails closed, which is loud but is a broken gate until it is fixed.",
     "Devanagari and Hinglish forms of the closed-set terms are standard transliterations and were not authored by a native reviewer; they are the highest-risk entries here because they are the words a devout user will notice first.",
     "The templates deliberately carry NO fear-selling register (§9, §13): no consequence-if-you-do-not, no urgency, no prediction of harm. A reviewer changing wording must keep that property — the fear-selling lint runs on the polished output, not on these templates.",
     "Slots are filled from FactSnapshot values only. A reviewer may reorder or reword around a slot; removing a slot changes what the sentence asserts and needs the composer changed with it.",

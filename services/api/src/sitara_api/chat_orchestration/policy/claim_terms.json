@@ -141,10 +141,10 @@
     }
   },
   "ordinal_house_patterns": {
-    "$comment": "An ordinal next to a house word is always a claim — '3 things to do' is not.",
+    "$comment": "An ordinal next to a house word is always a claim — '3 things to do' is not. Each pattern's group(1) is the ordinal TOKEN, digits or word; `ordinal_house_words` maps the word forms back to a number so the §5.3 numbers-verbatim check still runs. Hindi and Hinglish carry word forms because that is what the §7.1 brief templates render (पहले भाव, never 1वें).",
     "en": "\\b(\\d{1,2})(?:st|nd|rd|th)\\s+house\\b",
-    "hi": "\\b(\\d{1,2})\\s*(?:वें|वाँ|वा)?\\s*भाव\\b",
-    "hi-Latn": "\\b(\\d{1,2})(?:st|nd|rd|th|ve|vein|va|vaan)?\\s*(?:house|bhaav|bhav)\\b"
+    "hi": "((?:\\d{1,2}\\s*(?:वें|वाँ|वा)?)|ग्यारहवें|ग्यारहवाँ|पाँचवें|पाँचवाँ|पांचवें|पांचवाँ|बारहवें|बारहवाँ|सातवें|सातवाँ|दूसरे|दूसरा|तीसरे|तीसरा|आठवें|आठवाँ|नौवें|नौवाँ|दसवें|दसवाँ|पहले|पहला|चौथे|चौथा|छठे|छठा)\\s*भाव",
+    "hi-Latn": "\\b((?:\\d{1,2}(?:st|nd|rd|th|ve|vein|va|vaan)?)|paanchve|gyarahve|chauthe|chautha|panchve|chhathe|barahve|doosre|doosra|teesre|teesra|chhata|saatve|saatva|aathve|aathva|pehle|pehla|dusre|nauve|nauva|dasve|dasva)\\s*(?:house|bhaav|bhav)\\b"
   },
   "$exemption_comment": "A sentence carrying a STRONG term is exempt from citation only when ALL FIVE hold: no number, no clock value, no second-person reference, no temporal deixis, and no celestial entity asserted to be doing or being anything. That last clause is why `celestial` and `state_motion` exist. Category terms (choghadiya, muhurat, tithi, rahu kaal as CONCEPTS) may be glossed uncited — §2.3 requires that gloss — but a named body is never uncited. Devanagari and Hinglish celestial names are listed per locale because the sitara_schemas enums are English identifiers only; without them 'शुक्र वक्री है' would slip through the exemption it is meant to fail.",
   "celestial": {
@@ -447,5 +447,62 @@
       "ketu kaal",
       "guru purnima"
     ]
+  },
+  "ordinal_house_words": {
+    "$comment": "Word ordinal -> house number, so a polished line that rewrote 'सातवें भाव' as 'पहले भाव' is still caught by the numeric check.",
+    "hi": {
+      "पहले": 1,
+      "पहला": 1,
+      "दूसरे": 2,
+      "दूसरा": 2,
+      "तीसरे": 3,
+      "तीसरा": 3,
+      "चौथे": 4,
+      "चौथा": 4,
+      "पाँचवें": 5,
+      "पाँचवाँ": 5,
+      "पांचवें": 5,
+      "पांचवाँ": 5,
+      "छठे": 6,
+      "छठा": 6,
+      "सातवें": 7,
+      "सातवाँ": 7,
+      "आठवें": 8,
+      "आठवाँ": 8,
+      "नौवें": 9,
+      "नौवाँ": 9,
+      "दसवें": 10,
+      "दसवाँ": 10,
+      "ग्यारहवें": 11,
+      "ग्यारहवाँ": 11,
+      "बारहवें": 12,
+      "बारहवाँ": 12
+    },
+    "hi-Latn": {
+      "pehle": 1,
+      "pehla": 1,
+      "doosre": 2,
+      "doosra": 2,
+      "dusre": 2,
+      "teesre": 3,
+      "teesra": 3,
+      "chauthe": 4,
+      "chautha": 4,
+      "paanchve": 5,
+      "panchve": 5,
+      "chhathe": 6,
+      "chhata": 6,
+      "saatve": 7,
+      "saatva": 7,
+      "aathve": 8,
+      "aathva": 8,
+      "nauve": 9,
+      "nauva": 9,
+      "dasve": 10,
+      "dasva": 10,
+      "gyarahve": 11,
+      "barahve": 12
+    },
+    "en": {}
   }
 }

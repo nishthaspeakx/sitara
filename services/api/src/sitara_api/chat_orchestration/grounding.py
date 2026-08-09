@@ -120,6 +120,7 @@ class GroundingValidator:
         self._source = terms or config.claim_terms()
         self._lexicons: dict[str, tuple[re.Pattern[str], re.Pattern[str]]] = {}
         self._ordinals: dict[str, re.Pattern[str] | None] = {}
+        self._ordinal_word_maps: dict[str, dict[str, int]] = {}
         self._markers_by_locale: dict[str, _Markers] = {}
         self._dates: dict[str, re.Pattern[str] | None] = {}
 
@@ -160,7 +161,10 @@ class GroundingValidator:
 
             house_pattern = self._ordinal_pattern(locale)
             for problem in _numeric_mismatches(
-                bare, [served[fid] for fid in known], house_pattern
+                bare,
+                [served[fid] for fid in known],
+                house_pattern,
+                self._ordinal_words(locale),
             ):
                 mismatches.append(problem)
                 reasons.append(
@@ -305,6 +309,26 @@ class GroundingValidator:
             self._lexicons[key] = (_alternation(strong), _alternation(weak))
         return self._lexicons[key]
 
+    def _ordinal_words(self, locale: str) -> dict[str, int]:
+        """Word ordinal → house number, per locale.
+
+        Needed because the §7.1 brief templates render house ordinals as WORDS
+        in Hindi and Hinglish ("पहले भाव", not "1वें भाव" — a suffix rule is
+        wrong for the first two houses). Without this map the pattern would
+        still mark the sentence a claim, but the §5.3 numbers-verbatim check
+        would have nothing to compare, and a polished line that rewrote
+        "सातवें भाव" as "पहले भाव" would pass.
+        """
+        key = self._key(locale)
+        if key not in self._ordinal_word_maps:
+            block = self._source.get("ordinal_house_words", {}).get(key, {})
+            self._ordinal_word_maps[key] = {
+                word.lower(): number
+                for word, number in block.items()
+                if not word.startswith("$")
+            }
+        return self._ordinal_word_maps[key]
+
     def _ordinal_pattern(self, locale: str) -> re.Pattern[str] | None:
         key = self._key(locale)
         if key not in self._ordinals:
@@ -354,10 +378,27 @@ def _schema_terms() -> frozenset[str]:
 # --------------------------------------------------------------------------
 
 
+def _house_number(token: str, words: dict[str, int]) -> str | None:
+    """The house a matched ordinal token names — digits or word.
+
+    None means "matched the pattern but resolves to no house", which the caller
+    treats as a mismatch. Failing closed is right here: the token got past a
+    pattern built from the locale's own ordinal list, so an unresolvable one is
+    a lexicon that has drifted from the templates, and waving it through would
+    silently retire the house check for that locale.
+    """
+    digits = "".join(ch for ch in token if ch.isdigit())
+    if digits:
+        return digits
+    number = words.get(token.strip().lower())
+    return str(number) if number is not None else None
+
+
 def _numeric_mismatches(
     sentence: str,
     snapshots: Sequence[FactSnapshot],
     house_pattern: re.Pattern[str] | None = None,
+    house_words: dict[str, int] | None = None,
 ) -> list[str]:
     """Every number in a cited sentence must come from a cited snapshot.
 
@@ -375,9 +416,10 @@ def _numeric_mismatches(
     if house_pattern is not None:
         for match in house_pattern.finditer(normalised):
             house_spans.append(match.span())
-            house = match.group(1)
-            if not _number_matches(house, value_numbers):
-                problems.append(house)
+            token = match.group(1)
+            house = _house_number(token, house_words or {})
+            if house is None or not _number_matches(house, value_numbers):
+                problems.append(token)
 
     for match in _CLOCK_RE.finditer(normalised):
         if _clock_candidates(match) & allowed_clocks:
