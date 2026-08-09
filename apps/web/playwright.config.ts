@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+import { DIST_DIRS } from "./scripts/dist-dirs.mjs";
+
 /**
  * §24.8's design-QA gate, both halves.
  *
@@ -19,6 +21,28 @@ import { defineConfig, devices } from "@playwright/test";
  */
 const STORYBOOK_PORT = 6100;
 const APP_PORT = 3100;
+
+/**
+ * Which servers this run actually needs.
+ *
+ * Playwright starts every configured `webServer` regardless of which projects
+ * are selected, and the `library` project needs neither: it reads files off
+ * disk. Without this, `pnpm --filter web test` on a clean checkout waits for a
+ * `next start` against a `.next-test` that has not been built yet — a hang with
+ * no obvious cause, in the one command that is supposed to be cheap.
+ */
+function selectedProjects(argv: string[]): string[] {
+  const names: string[] = [];
+  argv.forEach((arg, i) => {
+    if (arg.startsWith("--project=")) names.push(arg.slice("--project=".length));
+    else if (arg === "--project" && argv[i + 1]) names.push(argv[i + 1]!);
+  });
+  return names;
+}
+
+const selected = selectedProjects(process.argv);
+/** No `--project` means every project, so every server is needed. */
+const needs = (project: string) => selected.length === 0 || selected.includes(project);
 
 /**
  * The ceremony deadline the test BUILD carries (see `build:test`). Published to
@@ -54,26 +78,31 @@ export default defineConfig({
     },
   },
   webServer: [
-    {
-      command: `node scripts/serve-static.mjs storybook-static ${STORYBOOK_PORT}`,
-      url: `http://127.0.0.1:${STORYBOOK_PORT}/index.json`,
-      reuseExistingServer: !process.env.CI,
-      timeout: 60_000,
-    },
-    {
-      command: `pnpm exec next start --port ${APP_PORT}`,
-      url: `http://127.0.0.1:${APP_PORT}/en`,
-      reuseExistingServer: !process.env.CI,
-      timeout: 120_000,
-      // The fake adapter and the short deadline are baked into `.next-test`
-      // by `build:test`; NEXT_DIST_DIR is what points `next start` at it.
-      env: { NEXT_DIST_DIR: ".next-test" },
-    },
+    ...(needs("components")
+      ? [{
+          command: `node scripts/serve-static.mjs storybook-static ${STORYBOOK_PORT}`,
+          url: `http://127.0.0.1:${STORYBOOK_PORT}/index.json`,
+          reuseExistingServer: !process.env.CI,
+          timeout: 60_000,
+        }]
+      : []),
+    ...(needs("screens")
+      ? [{
+          command: `pnpm exec next start --port ${APP_PORT}`,
+          url: `http://127.0.0.1:${APP_PORT}/en`,
+          reuseExistingServer: !process.env.CI,
+          timeout: 120_000,
+          // The fake adapter and the short deadline are baked into the test
+          // output by `build:test`; NEXT_DIST_DIR points `next start` at it.
+          // `next dev` cannot be redirected this way — see next.config.ts.
+          env: { NEXT_DIST_DIR: DIST_DIRS.test },
+        }]
+      : []),
   ],
   projects: [
     {
       name: "library",
-      testMatch: /library\.spec\.ts|tara-disclosure\.spec\.ts/,
+      testMatch: /library\.spec\.ts|tara-disclosure\.spec\.ts|dist-dirs\.spec\.ts/,
     },
     {
       name: "components",

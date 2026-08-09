@@ -51,6 +51,21 @@ Some rules are enforced by the component's shape rather than by review, and are 
 
 The design-system faces are **vendored** into `public/fonts` by `scripts/vendor-fonts.mjs` and loaded from `src/app/fonts.css` — Fraunces, Inter and Noto per script, subset to what the eight launch languages need (§2.3). Because glyph rasterisation no longer depends on what the machine has installed, `maxDiffPixelRatio` is **0.001**: wide enough for sub-pixel antialiasing, far too narrow to hide a colour, spacing or layout regression. CI fetches nothing — the woff2 files are committed.
 
+## Three output directories, one per mode
+`next build` rewrites manifests in its output directory while a running `next dev` reads and rewrites the same files. Sharing one directory corrupts whichever is running, and Next reports it as **"Cannot find the middleware module"** or **`__webpack_modules__ is not a function`** — both name a symptom, not the cause. Deleting the directory does not help: the dev server rebuilds into it and the next build clobbers it again, which is why the failure feels unkillable.
+
+So the modes are disjoint by construction (`scripts/dist-dirs.mjs`):
+
+| mode | directory | notes |
+|---|---|---|
+| `dev` | `.next-dev` | never deployed, never built into |
+| `build` | `.next` | the deployable artefact |
+| `build:test` | `.next-test` | carries `NEXT_PUBLIC_AUTH_ADAPTER=fake`, inlined at BUILD time — a separate directory is what stops it becoming the deployed one |
+
+**`next.config.ts` picks by build PHASE, not by an env var.** `next dev` therefore cannot be pointed at a build's directory even by a stray `NEXT_DIST_DIR` in a shell; only a build honours the override, which is how `build:test` and the flow suite's `next start` select the test output.
+
+`tests/dist-dirs.spec.ts` (in the `library` project, no server needed) asserts the three stay distinct, that dev stays non-overridable, that the config still keys off the phase, and that all three are git-ignored. `next-env.d.ts` is **not committed** — every `next` command rewrites it to name whichever directory ran last, and a cold clone typechecks without it.
+
 ## Commands
 - Dev: `pnpm --filter web dev` (http://localhost:3000/en) · Build: `pnpm --filter web build`
 - Lint: `pnpm --filter web lint` · Types: `pnpm --filter web typecheck`
