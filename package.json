@@ -13,7 +13,7 @@
     "test": "turbo run test",
     "token-lint": "node packages/tokens/scripts/token-lint.mjs",
     "i18n-lint": "node packages/i18n/scripts/i18n-lint.mjs",
-    "design-qa": "pnpm --filter @sitara/tokens build && pnpm token-lint && pnpm i18n-lint && pnpm --filter web typecheck && pnpm --filter web lint && pnpm --filter web test && pnpm --filter web build-storybook && pnpm --filter web screenshots",
+    "design-qa": "pnpm --filter @sitara/tokens build && pnpm token-lint && pnpm i18n-lint && pnpm --filter web typecheck && pnpm --filter web lint && pnpm --filter web test && pnpm --filter web build-storybook && pnpm --filter web build && pnpm --filter web build:test && pnpm --filter web screenshots",
     "storybook": "pnpm --filter web storybook"
   },
   "devDependencies": {

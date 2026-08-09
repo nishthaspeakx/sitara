@@ -11,6 +11,8 @@ const config = [
   {
     ignores: [
       ".next/**",
+      // the fake-auth build the flow suite runs against (package.json build:test)
+      ".next-test/**",
       "node_modules/**",
       "next-env.d.ts",
       "*.cjs",

@@ -1,16 +1,32 @@
 import { defineConfig, devices } from "@playwright/test";
 
 /**
- * The per-locale screenshot-diff suite (§14 Language QA, gated by §24.8).
+ * §24.8's design-QA gate, both halves.
  *
- * §24.8: "the per-locale screenshot-diff suite runs on component stories
- * (Storybook) AND full screens." This config covers the component half; the
- * screen half joins it when the §29.1 matrix is built.
+ * The comment this file used to carry said the screen half "joins it when the
+ * §29.1 matrix is built". M8 built S01–S13, so it joins now, and the config
+ * grows from one project over Storybook to three over two servers:
  *
- * It runs against the BUILT Storybook, served by a dependency-free static
- * server, so a CI run fetches nothing at test time.
+ *   library     the §24.3 manifest contract — pure Node, no server needed
+ *   components  per-component × locale × theme baselines, over built Storybook
+ *   screens     S01–S13 × 3 locales × 2 themes, plus the flow, back-navigation
+ *               and ceremony-degradation suites, over a built Next app
+ *
+ * The screens server runs with `NEXT_PUBLIC_AUTH_ADAPTER=fake` so the flow tests
+ * drive the real screens without a live Firebase project, and with a short
+ * ceremony deadline so the S13 timeout path is testable in seconds rather than
+ * in the six the product actually waits.
  */
-const PORT = 6100;
+const STORYBOOK_PORT = 6100;
+const APP_PORT = 3100;
+
+/**
+ * The ceremony deadline the test BUILD carries (see `build:test`). Published to
+ * the test process too, so the spec waits the same amount the screen does
+ * instead of guessing.
+ */
+const CEREMONY_DEADLINE_MS = "1500";
+process.env.NEXT_PUBLIC_CEREMONY_DEADLINE_MS = CEREMONY_DEADLINE_MS;
 
 export default defineConfig({
   testDir: "./tests",
@@ -21,7 +37,6 @@ export default defineConfig({
   retries: 0,
   reporter: process.env.CI ? [["github"], ["list"]] : [["list"]],
   use: {
-    baseURL: `http://127.0.0.1:${PORT}`,
     deviceScaleFactor: 1,
   },
   expect: {
@@ -38,17 +53,46 @@ export default defineConfig({
       maxDiffPixelRatio: 0.001,
     },
   },
-  webServer: {
-    command: `node scripts/serve-static.mjs storybook-static ${PORT}`,
-    url: `http://127.0.0.1:${PORT}/index.json`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 60_000,
-  },
+  webServer: [
+    {
+      command: `node scripts/serve-static.mjs storybook-static ${STORYBOOK_PORT}`,
+      url: `http://127.0.0.1:${STORYBOOK_PORT}/index.json`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 60_000,
+    },
+    {
+      command: `pnpm exec next start --port ${APP_PORT}`,
+      url: `http://127.0.0.1:${APP_PORT}/en`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+      // The fake adapter and the short deadline are baked into `.next-test`
+      // by `build:test`; NEXT_DIST_DIR is what points `next start` at it.
+      env: { NEXT_DIST_DIR: ".next-test" },
+    },
+  ],
   projects: [
     {
-      name: "chromium",
+      name: "library",
+      testMatch: /library\.spec\.ts|tara-disclosure\.spec\.ts/,
+    },
+    {
+      name: "components",
+      testMatch: /screenshots\.spec\.ts/,
       // 390×844 sits inside the 360–430 design target (§24.5)
-      use: { ...devices["Desktop Chrome"], viewport: { width: 390, height: 844 } },
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 390, height: 844 },
+        baseURL: `http://127.0.0.1:${STORYBOOK_PORT}`,
+      },
+    },
+    {
+      name: "screens",
+      testMatch: /screens\.spec\.ts|onboarding-.*\.spec\.ts|ceremony-degradation\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 390, height: 844 },
+        baseURL: `http://127.0.0.1:${APP_PORT}`,
+      },
     },
   ],
 });
