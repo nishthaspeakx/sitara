@@ -69,13 +69,19 @@ if (runSource) {
       if (!file.includes(`${path.sep}src${path.sep}`)) continue;
       const rel = path.relative(repoRoot, file);
       const lines = readFileSync(file, "utf-8").split("\n");
-      lines.forEach((line, i) => {
-        if (line.includes("token-lint-disable-line")) return;
+      lines.forEach((rawLine, i) => {
+        if (rawLine.includes("token-lint-disable-line")) return;
         // A spec citation in a comment ("§24.1 fixes the chip at 56px") is prose,
         // not a hardcoded style. Skip whole-line comments — doc blocks, JSX
         // comments and continuation lines — rather than pushing authors to
         // paraphrase the numbers the spec actually states.
-        if (/^\s*(\/\/|\/\*|\*|\{\/\*)/.test(line)) return;
+        if (/^\s*(\/\/|\/\*|\*|\{\/\*)/.test(rawLine)) return;
+        // …and a TRAILING citation is the same prose in a different column.
+        // `speed: 8 + n * 6, // §0.11: 8–14px/s` was being reported as a raw
+        // px length; the alternative is an author who stops writing the
+        // citation, which costs more than the lint saves. `(?<!:)` keeps
+        // `https://` out of it.
+        const line = rawLine.replace(/(?<!:)\/\/.*$/, "");
         for (const m of line.matchAll(HEX)) {
           violations.push(`${rel}:${i + 1}  raw hex ${m[0]}`);
         }

@@ -134,6 +134,17 @@ StyleDictionary.registerFormat({
         // names (e.g. candle) need their own utility entry.
         const key = rest.slice(1).join("-");
         if (!(key in colors)) colors[key] = ref;
+      } else if (cat === "color" && t.path[1] === "launch") {
+        // §0.11's sequence palette. Theme-invariant by construction: the CSS
+        // format strips only `light`/`night` from a var name and routes
+        // everything else to the common :root block, so the night theme never
+        // overrides these. Addressed as `bg-launch-sky-top`,
+        // `text-launch-wordmark`. Gold is
+        // `restrictedAsText` on the app's own surfaces (CC-005) and stays so —
+        // `launch-wordmark` is a distinct token on a distinct background, and
+        // the contrast matrix declares the pair so the difference is verified
+        // numerically rather than argued.
+        colors[rest.join("-")] = ref;
       } else if (cat === "space") {
         spacing[rest.join("-")] = ref;
       } else if (cat === "radius") {

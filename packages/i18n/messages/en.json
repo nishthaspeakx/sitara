@@ -288,12 +288,12 @@
     "confidence": {
       "verified": "Verified",
       "verified_desc": "computed from your chart and checked against two sources",
-      "verified_limited": "Verified — limited",
-      "verified_limited_desc": "checked against one source today",
+      "verified_limited_birth_data": "Verified — limited",
+      "verified_limited_birth_data_desc": "checked against one source today",
       "approximate": "Approximate",
       "approximate_desc": "your birth time is a window, so this is close rather than exact",
-      "tradition_general": "From tradition",
-      "tradition_general_desc": "general to the tradition, not calculated from your chart",
+      "tradition_based_general": "From tradition",
+      "tradition_based_general_desc": "general to the tradition, not calculated from your chart",
       "cannot_calculate": "Can't calculate",
       "cannot_calculate_desc": "I don't have enough to work this out honestly"
     },
@@ -518,6 +518,192 @@
         "rahu": "Rahu",
         "ketu": "Ketu"
       }
+    }
+  },
+  "launch": {
+    "welcome": "Welcome to Sitara",
+    "skip": "Skip",
+    "wordmark": "Sitara"
+  },
+  "start": {
+    "continue": "Continue",
+    "back": "Back",
+    "skip": "Skip for now",
+    "saved": "Saved",
+    "exit": {
+      "title": "Leave for now?",
+      "body": "Your answers are saved. You can pick up right here.",
+      "stay": "Keep going",
+      "leave": "Leave"
+    },
+    "language": {
+      "title": "Choose your language",
+      "subtitle": "Tara speaks it with you from here on.",
+      "greeting_hint": "Tap to hear Tara say hello.",
+      "name": {
+        "en": "English",
+        "hi": "हिन्दी",
+        "hi-Latn": "Hinglish",
+        "gu": "ગુજરાતી",
+        "pa": "ਪੰਜਾਬੀ",
+        "mr": "मराठी",
+        "ta": "தமிழ்",
+        "te": "తెలుగు"
+      }
+    },
+    "consent": {
+      "title": "What you're agreeing to",
+      "subtitle": "Plain language, and only what Sitara actually needs.",
+      "policy_link": "Read the full privacy policy",
+      "item": {
+        "essential": {
+          "label": "Running Sitara for you",
+          "body": "Your account, your guidance, and keeping it working. Sitara can't run without this."
+        },
+        "birth_data": {
+          "label": "Your birth details",
+          "body": "Your date, time and place of birth are the most personal thing you'll give Sitara. They're encrypted, they're only ever used to calculate your chart, and they're never sold or shared for advertising."
+        },
+        "marketing": {
+          "label": "Occasional news from Sitara",
+          "body": "Product news and offers. Off unless you turn it on, and you can turn it off any time."
+        }
+      }
+    },
+    "birth": {
+      "title": "Where did you begin?",
+      "subtitle": "Your chart is built from these three things — nothing else.",
+      "date_label": "Date of birth",
+      "place_label": "Place of birth",
+      "place_placeholder": "City or town",
+      "place_hint": "Start typing and pick from the list — it sets your time zone too.",
+      "place_empty": "No place by that name yet. Try the nearest larger town.",
+      "why_ask": "Why we ask",
+      "why_body": "Date, time and place are what a chart is calculated from. Without the place, the timings would be someone else's."
+    },
+    "birth_time": {
+      "title": "Do you know the time?",
+      "subtitle": "It's fine if you don't. Tara will say what she can and can't tell you.",
+      "time_label": "Time of birth",
+      "window_label": "Part of the day",
+      "option": {
+        "exact": "I know it exactly",
+        "exact_help": "From a certificate or a record.",
+        "approximate": "Within about half an hour",
+        "approximate_help": "Someone remembers roughly when.",
+        "part_of_day": "Only the part of the day",
+        "part_of_day_help": "Morning, afternoon, evening or night.",
+        "unknown": "I don't know",
+        "unknown_help": "Tara will read your Moon chart instead, and say so."
+      },
+      "part": {
+        "morning": "Morning",
+        "afternoon": "Afternoon",
+        "evening": "Evening",
+        "night": "Night"
+      }
+    },
+    "city": {
+      "title": "Where are you now?",
+      "subtitle": "Today's timings are calculated for where you actually are.",
+      "use_location": "Use my location",
+      "manual_label": "Or type your city",
+      "manual_placeholder": "City",
+      "permission": {
+        "title": "Tara needs your location for this",
+        "body": "Only to work out sunrise and today's timings where you are. Typing your city works exactly as well.",
+        "allow": "Allow location",
+        "skip": "I'll type it instead"
+      }
+    },
+    "interest": {
+      "title": "How much of this do you want?",
+      "subtitle": "This changes how Tara talks, never what's true.",
+      "option": {
+        "curious": "Keep it light",
+        "curious_help": "Plain language, no jargon, the short version.",
+        "balanced": "A bit of both",
+        "balanced_help": "The reading, plus the reasoning when it matters.",
+        "devout": "Give me everything",
+        "devout_help": "Full timings, dasha context, the observances."
+      }
+    },
+    "name": {
+      "title": "What should Tara call you?",
+      "subtitle": "The name you're actually called — that's the one numerology uses.",
+      "name_label": "Your name",
+      "name_placeholder": "The name people use",
+      "transliteration": {
+        "title": "Have we read that right?",
+        "body": "We read your name as “{latin}”. Numerology is calculated from the spelling as it's spoken.",
+        "confirm": "Yes, that's right",
+        "edit": "Let me fix it",
+        "latin_label": "Spelling as spoken"
+      },
+      "moolank": {
+        "title": "Your number is {number}",
+        "body": "This is your moolank — it comes from the day you were born."
+      }
+    },
+    "priorities": {
+      "title": "What's on your mind this year?",
+      "subtitle": "Pick up to three. Tara leans towards these without ignoring the rest.",
+      "hint": "{count, plural, =0 {Pick up to three} one {# chosen · pick up to three} other {# chosen · pick up to three}}",
+      "option": {
+        "career": "Work & career",
+        "relationships": "Love & relationships",
+        "family": "Family",
+        "health": "Health",
+        "money": "Money",
+        "study": "Study",
+        "spiritual": "Spiritual practice",
+        "peace": "Peace of mind"
+      }
+    },
+    "voice": {
+      "title": "This is Tara's voice",
+      "subtitle": "She'll say your name. Tell her if she gets it wrong.",
+      "play": "Hear her say it",
+      "replay": "Say it again",
+      "fix_pronunciation": "That's not how it sounds",
+      "voice_on_label": "Tara speaks out loud",
+      "voice_on_help": "You can always read instead. Change this any time in settings."
+    },
+    "reading": {
+      "title": "Your first reading",
+      "subtitle": "Everything below is calculated from your chart.",
+      "continue": "Meet your mornings",
+      "line": {
+        "moon_nakshatra": "Your Moon was in {nakshatra} when you were born.",
+        "panchang": "Today runs on {paksha}, tithi {tithi}."
+      },
+      "observation": {
+        "1": "{graha} sits in your first house — you're read as certain even on the days you aren't, aren't you?",
+        "2": "{graha} sits in your second house — you measure safety in what you've put aside, don't you?",
+        "3": "{graha} sits in your third house — you talk yourself into the brave thing, then do it.",
+        "4": "{graha} sits in your fourth house — home is where you go to become yourself again.",
+        "5": "{graha} sits in your fifth house — you make things, and you mind more than you admit whether they're seen.",
+        "6": "{graha} sits in your sixth house — you handle what everyone else lets slide, don't you?",
+        "7": "{graha} sits in your seventh house — you read the room before you read yourself.",
+        "8": "{graha} sits in your eighth house — you'd rather know the hard thing than be spared it.",
+        "9": "{graha} sits in your ninth house — you keep looking for the bigger reason behind it all.",
+        "10": "{graha} sits in your tenth house — being seen as capable matters to you more than you say.",
+        "11": "{graha} sits in your eleventh house — you carry your people's hopes alongside your own.",
+        "12": "{graha} sits in your twelfth house — you need a room nobody can reach you in."
+      },
+      "degraded": {
+        "timeout": "Your full reading is taking longer than it should. Here's what Tara has so far — the rest will be waiting on your Today screen.",
+        "insufficient_birth_data": "Without your birth time Tara reads your Moon chart, which is honest but less exact. You can add the time whenever you find it.",
+        "engine_unavailable": "Tara can't reach your chart this minute, so this is today's panchang only — true, but not yet personal.",
+        "panchang_unavailable": "Today's panchang hasn't come through yet. Your chart reading is below, and the day's timings will fill in shortly."
+      },
+      "add_birth_time": "Add my birth time",
+      "brief_time": {
+        "title": "Shall I bring your day to you?",
+        "body": "Tara reads your morning at the time you choose.",
+        "label": "Morning brief time"
+      },
+      "memory_offer": "You said {priority} matters most right now."
     }
   }
 }

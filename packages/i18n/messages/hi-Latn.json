@@ -288,12 +288,12 @@
     "confidence": {
       "verified": "Verified",
       "verified_desc": "Aapki kundli se ganana, do sources se milaan",
-      "verified_limited": "Verified — limited",
-      "verified_limited_desc": "Aaj ek hi source se milaan ho saka",
+      "verified_limited_birth_data": "Verified — limited",
+      "verified_limited_birth_data_desc": "Aaj ek hi source se milaan ho saka",
       "approximate": "Anumaanit",
       "approximate_desc": "Aapka birth time ek window hai, isliye yeh lagbhag hai, bilkul exact nahin",
-      "tradition_general": "Parampara se",
-      "tradition_general_desc": "Parampara ki general baat, aapki kundli se ganana nahin",
+      "tradition_based_general": "Parampara se",
+      "tradition_based_general_desc": "Parampara ki general baat, aapki kundli se ganana nahin",
       "cannot_calculate": "Ganana nahin ho saki",
       "cannot_calculate_desc": "Ise imaandaari se nikalne ke liye mere paas poori jaankari nahin hai"
     },
@@ -518,6 +518,192 @@
         "rahu": "Rahu",
         "ketu": "Ketu"
       }
+    }
+  },
+  "launch": {
+    "welcome": "Sitara mein aapka swagat hai",
+    "skip": "Chhodein",
+    "wordmark": "Sitara"
+  },
+  "start": {
+    "continue": "Aage badhein",
+    "back": "Peeche",
+    "skip": "Abhi nahin",
+    "saved": "Save ho gaya",
+    "exit": {
+      "title": "Abhi ke liye chhodein?",
+      "body": "Aapke jawab save ho gaye hain. Aap yahin se aage badh sakti hain.",
+      "stay": "Jaari rakhein",
+      "leave": "Chhodein"
+    },
+    "language": {
+      "title": "Apni bhasha chunein",
+      "subtitle": "Tara ab se aapse isi mein baat karengi.",
+      "greeting_hint": "Tara ka abhivaadan sunne ke liye tap karein.",
+      "name": {
+        "en": "English",
+        "hi": "हिन्दी",
+        "hi-Latn": "Hinglish",
+        "gu": "ગુજરાતી",
+        "pa": "ਪੰਜਾਬੀ",
+        "mr": "मराठी",
+        "ta": "தமிழ்",
+        "te": "తెలుగు"
+      }
+    },
+    "consent": {
+      "title": "Aap kis baat ke liye sahmati de rahi hain",
+      "subtitle": "Seedhi bhasha mein, aur sirf wahi jo Sitara ko sach mein chahiye.",
+      "policy_link": "Poori privacy policy padhein",
+      "item": {
+        "essential": {
+          "label": "Sitara ko aapke liye chalana",
+          "body": "Aapka account, aapka margdarshan, aur inhein chalte rehna. Iske bina Sitara chal hi nahin sakta."
+        },
+        "birth_data": {
+          "label": "Aapke janm ka vivaran",
+          "body": "Aapki janm tithi, samay aur sthaan — yahi sabse niji baat hai jo aap Sitara ko dengi. Ye encrypt hokar rakhe jaate hain, sirf aapki kundli ganana ke liye istemaal hote hain, aur advertising ke liye kabhi beche ya share nahin kiye jaate."
+        },
+        "marketing": {
+          "label": "Sitara se kabhi-kabhaar khabrein",
+          "body": "Nayi suvidhaayein aur offers. Jab tak aap chaalu na karein, band rahega — aur kabhi bhi band kiya ja sakta hai."
+        }
+      }
+    },
+    "birth": {
+      "title": "Aapki shuruaat kahan hui?",
+      "subtitle": "Aapki kundli inhi teen baaton se banti hai — aur kisi se nahin.",
+      "date_label": "Janm tithi",
+      "place_label": "Janm sthaan",
+      "place_placeholder": "Sheher ya qasba",
+      "place_hint": "Likhna shuru karein aur list mein se chunein — isse aapka time zone bhi tay ho jaata hai.",
+      "place_empty": "Is naam ka koi sthaan abhi nahin mila. Paas ka koi bada sheher aazmayein.",
+      "why_ask": "Hum yeh kyun poochhte hain",
+      "why_body": "Kundli tithi, samay aur sthaan se hi banti hai. Sthaan ke bina samay-ganana kisi aur ki hogi."
+    },
+    "birth_time": {
+      "title": "Kya aapko samay pata hai?",
+      "subtitle": "Pata na ho to bhi theek hai. Tara wahi kahengi jo woh sach mein bata sakti hain.",
+      "time_label": "Janm ka samay",
+      "window_label": "Din ka kaun-sa hissa",
+      "option": {
+        "exact": "Mujhe theek-theek pata hai",
+        "exact_help": "Kisi certificate ya document se.",
+        "approximate": "Lagbhag aadhe ghante ke bheetar",
+        "approximate_help": "Kisi ko mote taur par yaad hai.",
+        "part_of_day": "Sirf din ka hissa",
+        "part_of_day_help": "Subah, dopahar, shaam ya raat.",
+        "unknown": "Mujhe nahin pata",
+        "unknown_help": "Tara tab aapki chandra kundli padhengi, aur yeh bata bhi dengi."
+      },
+      "part": {
+        "morning": "Subah",
+        "afternoon": "Dopahar",
+        "evening": "Shaam",
+        "night": "Raat"
+      }
+    },
+    "city": {
+      "title": "Is samay aap kahan hain?",
+      "subtitle": "Aaj ki samay-ganana wahin ke liye hoti hai jahan aap sach mein hain.",
+      "use_location": "Mera location istemaal karein",
+      "manual_label": "Ya apna sheher likhein",
+      "manual_placeholder": "Sheher",
+      "permission": {
+        "title": "Iske liye Tara ko aapka location chahiye",
+        "body": "Sirf yeh jaanne ke liye ki aapke yahan sooryoday kab hai aur aaj ki samay-ganana kya hai. Sheher likhna bhi utna hi kaam karta hai.",
+        "allow": "Location ki anumati dein",
+        "skip": "Main likhkar bataungi"
+      }
+    },
+    "interest": {
+      "title": "Aap ismein se kitna chahti hain?",
+      "subtitle": "Isse Tara ke kehne ka dhang badalta hai, sach nahin.",
+      "option": {
+        "curious": "Halka-phulka rakhein",
+        "curious_help": "Seedhi bhasha, koi jargon nahin, chhota jawab.",
+        "balanced": "Thoda dono",
+        "balanced_help": "Padhai bhi, aur zaroori ho to uska kaaran bhi.",
+        "devout": "Sab kuchh bataiye",
+        "devout_help": "Poori samay-ganana, dasha ka sandarbh, vrat-tyohaar."
+      }
+    },
+    "name": {
+      "title": "Tara aapko kya kehkar bulayein?",
+      "subtitle": "Wahi naam jisse aapko sach mein bulaya jaata hai — numerology usi se chalta hai.",
+      "name_label": "Aapka naam",
+      "name_placeholder": "Jis naam se log bulate hain",
+      "transliteration": {
+        "title": "Kya humne sahi padha?",
+        "body": "Humne aapka naam “{latin}” padha. Numerology usi spelling se gina jaata hai jaise naam bola jaata hai.",
+        "confirm": "Haan, yahi sahi hai",
+        "edit": "Main theek kar deti hoon",
+        "latin_label": "Jaise bola jaata hai, waisi spelling"
+      },
+      "moolank": {
+        "title": "Aapka ank {number} hai",
+        "body": "Yeh aapka moolank hai — yeh aapke janm ke din se aata hai."
+      }
+    },
+    "priorities": {
+      "title": "Is saal aapke man mein kya hai?",
+      "subtitle": "Teen tak chunein. Tara inhi ki or jhukengi, baaki ko chhode bina.",
+      "hint": "{count, plural, =0 {Teen tak chunein} one {# chuna · teen tak chun sakti hain} other {# chune · teen tak chun sakti hain}}",
+      "option": {
+        "career": "Kaam aur career",
+        "relationships": "Prem aur rishte",
+        "family": "Parivaar",
+        "health": "Sehat",
+        "money": "Dhan",
+        "study": "Padhai",
+        "spiritual": "Saadhana",
+        "peace": "Man ki shanti"
+      }
+    },
+    "voice": {
+      "title": "Yeh Tara ki aawaaz hai",
+      "subtitle": "Woh aapka naam lengi. Galat lage to bata dijiye.",
+      "play": "Unse suniye",
+      "replay": "Phir se kahein",
+      "fix_pronunciation": "Yeh aise nahin bola jaata",
+      "voice_on_label": "Tara bolkar batayein",
+      "voice_on_help": "Aap hamesha padh bhi sakti hain. Ise kabhi bhi settings mein badla ja sakta hai."
+    },
+    "reading": {
+      "title": "Aapka pehla paath",
+      "subtitle": "Neeche jo kuchh hai, woh aapki kundli se gina gaya hai.",
+      "continue": "Apni subah se miliye",
+      "line": {
+        "moon_nakshatra": "Aapke janm ke samay Chandrama {nakshatra} mein the.",
+        "panchang": "Aaj {paksha}, tithi {tithi} chal rahi hai."
+      },
+      "observation": {
+        "1": "{graha} aapke pehle bhaav mein hain — jin dinon aap nishchit nahin hotin, un dinon bhi aapko nishchit hi samjha jaata hai, hai na?",
+        "2": "{graha} aapke doosre bhaav mein hain — aap suraksha ko usi se naapti hain jo aapne bachakar rakha hai, hai na?",
+        "3": "{graha} aapke teesre bhaav mein hain — aap khud ko himmat wali baat ke liye mana leti hain, aur phir kar bhi deti hain.",
+        "4": "{graha} aapke chauthe bhaav mein hain — ghar wahi jagah hai jahan aap phir se apni ho jaati hain.",
+        "5": "{graha} aapke paanchvein bhaav mein hain — aap kuchh rachti hain, aur yeh bhi maayne rakhta hai ki woh dekha jaaye, chahe aap kahein na.",
+        "6": "{graha} aapke chhathe bhaav mein hain — jo sab taal dete hain, woh aap sambhaal leti hain, hai na?",
+        "7": "{graha} aapke saatvein bhaav mein hain — aap apne se pehle saamne wale ka man padh leti hain.",
+        "8": "{graha} aapke aathvein bhaav mein hain — kathin sach chhipaye jaane se behtar aapko jaan lena lagta hai.",
+        "9": "{graha} aapke nauvein bhaav mein hain — aap har baat ke peeche ka bada kaaran dhoondhti rehti hain.",
+        "10": "{graha} aapke dasvein bhaav mein hain — saksham dikhna aapke liye usse zyada maayne rakhta hai jitna aap kehti hain.",
+        "11": "{graha} aapke gyaarahvein bhaav mein hain — aap apnon ki ummeedein apni ummeedon ke saath uthaye chalti hain.",
+        "12": "{graha} aapke baarahvein bhaav mein hain — aapko ek aisa kona chahiye jahan koi pahunch na sake."
+      },
+      "degraded": {
+        "timeout": "Aapka poora paath apeksha se zyada samay le raha hai. Abhi tak Tara ke paas jo hai, woh yahan hai — baaki aapki Today screen par milega.",
+        "insufficient_birth_data": "Janm samay ke bina Tara aapki chandra kundli padhti hain — yeh sachcha hai, par utna sateek nahin. Samay jab mil jaaye, tab jod sakti hain.",
+        "engine_unavailable": "Tara is samay aapki kundli tak nahin pahunch pa rahin, isliye yeh sirf aaj ka panchang hai — sach, par abhi aapka apna nahin.",
+        "panchang_unavailable": "Aaj ka panchang abhi nahin aaya hai. Aapki kundli ka paath neeche hai, aur din ki samay-ganana kuchh hi der mein bhar jaayegi."
+      },
+      "add_birth_time": "Apna janm samay jodein",
+      "brief_time": {
+        "title": "Kya main aapka din aap tak le aaun?",
+        "body": "Tara aapki subah usi samay padhengi jo aap chunein.",
+        "label": "Subah ke saar ka samay"
+      },
+      "memory_offer": "Aapne kaha ki abhi {priority} sabse zyada maayne rakhta hai."
     }
   }
 }

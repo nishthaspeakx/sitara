@@ -5,18 +5,18 @@
       "$spec": "§34.7 — the five ConfidenceChip treatments",
       "values": [
         "verified",
-        "verified_limited",
+        "verified_limited_birth_data",
         "approximate",
-        "tradition_general",
+        "tradition_based_general",
         "cannot_calculate"
       ]
     },
     "ui.confidence.${state}_desc": {
       "values": [
         "verified",
-        "verified_limited",
+        "verified_limited_birth_data",
         "approximate",
-        "tradition_general",
+        "tradition_based_general",
         "cannot_calculate"
       ]
     },
@@ -179,6 +179,133 @@
         "saturn",
         "rahu",
         "ketu"
+      ]
+    },
+    "start.language.name.${code}": {
+      "$spec": "§10-3 — the eight language cards, each labelled in its own script",
+      "values": [
+        "en",
+        "hi",
+        "hi-Latn",
+        "gu",
+        "pa",
+        "mr",
+        "ta",
+        "te"
+      ]
+    },
+    "start.consent.item.${item.id}.label": {
+      "$spec": "§10-5 — essential, birth-data sensitivity, marketing (default off). Memory consent is DEFERRED to the first chip and voice consent to first voice use, so neither is a card here.",
+      "values": [
+        "essential",
+        "birth_data",
+        "marketing"
+      ]
+    },
+    "start.consent.item.${item.id}.body": {
+      "values": [
+        "essential",
+        "birth_data",
+        "marketing"
+      ]
+    },
+    "start.birth_time.option.${option}": {
+      "$spec": "§10-6 — the four honest options: exact / ±30min / part-of-day / unknown",
+      "values": [
+        "exact",
+        "approximate",
+        "part_of_day",
+        "unknown"
+      ]
+    },
+    "start.birth_time.option.${option}_help": {
+      "values": [
+        "exact",
+        "approximate",
+        "part_of_day",
+        "unknown"
+      ]
+    },
+    "start.birth_time.part.${part}": {
+      "values": [
+        "morning",
+        "afternoon",
+        "evening",
+        "night"
+      ]
+    },
+    "start.interest.option.${option}": {
+      "$spec": "§10-8 — tunes Tara's register, never the facts; maps to profiles.density",
+      "values": [
+        "curious",
+        "balanced",
+        "devout"
+      ]
+    },
+    "start.interest.option.${option}_help": {
+      "values": [
+        "curious",
+        "balanced",
+        "devout"
+      ]
+    },
+    "start.priorities.option.${option}": {
+      "$spec": "§24.4 S11 — life priorities, at most three",
+      "values": [
+        "career",
+        "relationships",
+        "family",
+        "health",
+        "money",
+        "study",
+        "spiritual",
+        "peace"
+      ]
+    },
+    "start.reading.line.${line.id}": {
+      "$spec": "§24.4 S13. The API returns a line ID, never a message key — a server-supplied key cannot be verified by this gate, and the client must not render a string the catalogs never declared.",
+      "values": [
+        "moon_nakshatra",
+        "panchang"
+      ]
+    },
+    "start.reading.observation.${line.house}": {
+      "$spec": "§0.17 — the minute-3 observation is house-specific so it is SPECIFIC; only the graha is a computed slot",
+      "values": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12"
+      ]
+    },
+    "start.reading.degraded.${degrade}": {
+      "$spec": "§24.6 — one honest line per degradation path, and the ceremony has exactly four",
+      "values": [
+        "timeout",
+        "insufficient_birth_data",
+        "engine_unavailable",
+        "panchang_unavailable"
+      ]
+    },
+    "start.priorities.option.${priorities[0]}": {
+      "$spec": "§24.4 S11 — life priorities, at most three",
+      "values": [
+        "career",
+        "relationships",
+        "family",
+        "health",
+        "money",
+        "study",
+        "spiritual",
+        "peace"
       ]
     }
   }

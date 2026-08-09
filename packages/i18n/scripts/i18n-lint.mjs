@@ -88,7 +88,15 @@ function expand(template, decl) {
 }
 
 // `"ui.tabs.today"` and `` `ui.tabs.${tab}` ``
-const LITERAL_KEY = /"((?:ui|errors|auth|verify|dob|home|app|chat|panchang|numerology|terms|memory)\.[a-z0-9_.]+)"/g;
+//
+// The namespace list is the gate's blind spot and has to be maintained: a key
+// whose namespace is absent here is simply not scanned, so gate 2 keeps
+// reporting OK while the app references a key nobody wrote. M8 added `start`
+// and `launch` (the S01–S13 stack); forgetting them would have hidden the
+// entire onboarding string set from this check, and the user-visible failure
+// mode is a raw dotted key on screen in Hindi.
+const LITERAL_KEY =
+  /"((?:ui|errors|auth|verify|dob|home|app|chat|panchang|numerology|terms|memory|start|launch|brief)\.[a-z0-9_.]+)"/g;
 const TEMPLATE_KEY = /`([a-z0-9_.]+\.\$\{[^`]+)`/g;
 
 const referenced = new Set();

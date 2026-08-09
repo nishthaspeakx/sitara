@@ -322,6 +322,31 @@
         "fg": "text-on-gold",
         "bg": "gold-soft",
         "role": "body"
+      },
+      {
+        "fg": "launch-wordmark",
+        "bg": "launch-sky-top",
+        "role": "body"
+      },
+      {
+        "fg": "launch-wordmark",
+        "bg": "launch-sky-bottom",
+        "role": "body"
+      },
+      {
+        "fg": "launch-star",
+        "bg": "launch-sky-top",
+        "role": "nonText"
+      },
+      {
+        "fg": "launch-star-dim",
+        "bg": "launch-sky-bottom",
+        "role": "nonText"
+      },
+      {
+        "fg": "launch-line",
+        "bg": "launch-sky-bottom",
+        "role": "nonText"
       }
     ],
     "night": [
@@ -514,6 +539,31 @@
         "fg": "text-on-gold",
         "bg": "gold-soft",
         "role": "body"
+      },
+      {
+        "fg": "launch-wordmark",
+        "bg": "launch-sky-top",
+        "role": "body"
+      },
+      {
+        "fg": "launch-wordmark",
+        "bg": "launch-sky-bottom",
+        "role": "body"
+      },
+      {
+        "fg": "launch-star",
+        "bg": "launch-sky-top",
+        "role": "nonText"
+      },
+      {
+        "fg": "launch-star-dim",
+        "bg": "launch-sky-bottom",
+        "role": "nonText"
+      },
+      {
+        "fg": "launch-line",
+        "bg": "launch-sky-bottom",
+        "role": "nonText"
       }
     ]
   }
