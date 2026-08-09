@@ -7,6 +7,8 @@ allowBuilds:
   '@firebase/util': false
   '@parcel/watcher': true
   '@swc/core': true
+  core-js-pure: false
+  esbuild: true
   protobufjs: false
   sharp: true
   style-dictionary: false

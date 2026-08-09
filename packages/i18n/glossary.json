@@ -3,18 +3,26 @@
   "terms": [
     {
       "term": "Tara",
-      "rule": "never translated, never 'avatar' — 'Tara · AI guide' disclosure is permanent",
+      "rule": "never translated, never 'avatar' — 'Tara · AI guide' disclosure is permanent. Her likeness is AI-generated and exclusively owned (CC-008): no string, alt text or marketing copy may describe her as a real person, a photograph of someone, a model, or a licensed likeness. Enforced by apps/web/tests/tara-disclosure.spec.ts.",
       "forbidden_renderings": {
         "en": [
           "avatar",
           "assistant persona",
-          "the bot"
+          "the bot",
+          "licensed face model",
+          "real person",
+          "photograph of",
+          "actress"
         ],
         "hi": [
-          "अवतार"
+          "अवतार",
+          "असली व्यक्ति",
+          "हमारी मॉडल"
         ],
         "hi-Latn": [
-          "avatar"
+          "avatar",
+          "asli vyakti",
+          "licensed model"
         ]
       }
     },

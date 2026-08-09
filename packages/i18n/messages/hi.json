@@ -208,5 +208,316 @@
     },
     "degraded_note": "आज तारा के पास ज़रूरी बातें हैं; पूरी रीडिंग थोड़ी देर में।",
     "notification_title": "तारा के साथ आपकी सुबह"
+  },
+  "ui": {
+    "close": "बंद करें",
+    "cancel": "रहने दें",
+    "back": "पीछे",
+    "retry": "फिर कोशिश करें",
+    "loading": "आ रहा है…",
+    "why_this": "यह क्यों?",
+    "button": {
+      "loading": "हो रहा है…"
+    },
+    "toggle": {
+      "on": "चालू",
+      "off": "बंद"
+    },
+    "progress": {
+      "step": "चरण {current} / {total}"
+    },
+    "search": {
+      "label": "खोजें",
+      "placeholder": "अपनी डायरी में खोजें",
+      "clear": "खोज हटाएँ"
+    },
+    "select": {
+      "choose": "चुनें"
+    },
+    "tabs": {
+      "label": "मुख्य नेविगेशन",
+      "today": "आज",
+      "ask": "तारा से पूछें",
+      "journal": "डायरी",
+      "you": "आप"
+    },
+    "tara": {
+      "ai_label": "तारा · AI मार्गदर्शक",
+      "state": {
+        "warm_neutral": "तारा",
+        "listening": "तारा, सुन रही हैं",
+        "speaking_soft": "तारा, बोल रही हैं",
+        "smile": "तारा, मुस्कुराते हुए",
+        "full_smile": "तारा, खुलकर मुस्कुराते हुए",
+        "thoughtful": "तारा, सोचते हुए",
+        "concerned_kind": "तारा, ध्यान से सुनते हुए",
+        "celebration": "तारा, खुशी मनाते हुए",
+        "night": "तारा, रात में",
+        "festival": "तारा, त्योहार के लिए तैयार",
+        "reading": "तारा, आपकी कुंडली देखते हुए",
+        "safety": "तारा"
+      }
+    },
+    "module": {
+      "energy_of_day": "दिन की ऊर्जा",
+      "personal_chart_theme": "आपकी कुंडली आज",
+      "moon_nakshatra_note": "चंद्रमा और नक्षत्र",
+      "colour": "रंग",
+      "number": "अंक",
+      "favourable_window": "शुभ समय",
+      "caution_window": "संभलकर चलने का समय",
+      "priorities": "प्राथमिकताएँ",
+      "what_to_avoid": "किससे बचें",
+      "food_and_drink": "खान-पान",
+      "work": "काम",
+      "relationship": "रिश्ते",
+      "family_reminder": "परिवार की याद",
+      "festival_observance": "त्योहार और व्रत",
+      "goal_check": "लक्ष्य की जाँच",
+      "spiritual_practice": "साधना",
+      "tomorrow_prep_teaser": "कल के लिए"
+    },
+    "brief": {
+      "locked": "यह कार्ड सदस्यता के साथ खुलता है।"
+    },
+    "trust": {
+      "title": "यह सलाह क्यों?",
+      "details_show": "विस्तार से देखें",
+      "details_hide": "विस्तार छिपाएँ"
+    },
+    "confidence": {
+      "verified": "सत्यापित",
+      "verified_desc": "आपकी कुंडली से गणना, दो स्रोतों से मिलान",
+      "verified_limited": "सत्यापित — सीमित",
+      "verified_limited_desc": "आज एक ही स्रोत से मिलान हो सका",
+      "approximate": "अनुमानित",
+      "approximate_desc": "आपका जन्म-समय एक अवधि है, इसलिए यह लगभग है, बिल्कुल सटीक नहीं",
+      "tradition_general": "परंपरा से",
+      "tradition_general_desc": "परंपरा की सामान्य बात, आपकी कुंडली से गणना नहीं",
+      "cannot_calculate": "गणना नहीं हो सकी",
+      "cannot_calculate_desc": "इसे ईमानदारी से निकालने के लिए मेरे पास पूरी जानकारी नहीं है"
+    },
+    "source": {
+      "verified_two": "आपकी कुंडली से गणना · 2 स्रोतों से सत्यापित",
+      "single": "आपकी कुंडली से गणना · आज एक ही स्रोत उपलब्ध",
+      "disputed": "हमारे दोनों स्रोत यहाँ अलग हैं — हम जाँच रहे हैं"
+    },
+    "memory": {
+      "offer": "क्या मैं यह याद रखूँ?",
+      "accept": "हाँ, याद रखें",
+      "decline": "नहीं, रहने दें",
+      "accepted": "याद रखा गया",
+      "declined": "याद नहीं रखा",
+      "forget": "यह याद न रखें",
+      "source_turn": "यह कहाँ से आया",
+      "consent_stamp": "आपने {date} को सहमति दी",
+      "type": {
+        "life_fact": "जीवन की बात",
+        "relationship": "रिश्ता",
+        "preference": "पसंद",
+        "goal": "लक्ष्य",
+        "concern": "चिंता",
+        "health_context": "सेहत का संदर्भ",
+        "belief_practice": "आस्था और साधना",
+        "important_date": "ख़ास तारीख़",
+        "name_pronunciation": "नाम का उच्चारण",
+        "language_style": "भाषा और शैली",
+        "conversation_thread": "बातचीत का सिलसिला"
+      }
+    },
+    "voice": {
+      "idle": "बोलने के लिए दबाए रखें",
+      "listening": "सुन रही हूँ",
+      "processing": "सोच रही हूँ",
+      "speaking": "तारा बोल रही हैं",
+      "error": "वह पहुँच नहीं पाया — एक बार फिर कहिए",
+      "barge_in": "रोककर बोलें",
+      "mic_denied": "माइक्रोफ़ोन बंद है। टाइप करना भी हमेशा चलता है।",
+      "mic_help": "माइक्रोफ़ोन कैसे चालू करें"
+    },
+    "chat": {
+      "open_trust": "तारा ने “{text}” क्यों कहा",
+      "retry": "फिर भेजें"
+    },
+    "audio": {
+      "play": "चलाएँ",
+      "pause": "रोकें",
+      "stop_recording": "रिकॉर्डिंग रोकें",
+      "seek": "ब्रीफ़ में आगे-पीछे जाएँ",
+      "position": "{duration} में से {elapsed}",
+      "speed": "चलने की गति",
+      "speed_value": "{speed}×",
+      "transcript": "लिखा हुआ पढ़ें",
+      "transcript_pending": "लिखा जा रहा है…",
+      "transcript_failed": "इसे लिखा नहीं जा सका — ऑडियो फिर भी चलेगा।",
+      "expires_on": "यह रिकॉर्डिंग {date} तक रहेगी, फिर मिटा दी जाएगी।",
+      "unavailable": "आज का ऑडियो नहीं आ पाया। आपकी ब्रीफ़ पढ़ने के लिए यहीं है।"
+    },
+    "call": {
+      "mute": "म्यूट करें",
+      "unmute": "म्यूट हटाएँ",
+      "end": "समाप्त",
+      "speaker_on": "स्पीकर चालू",
+      "speaker_off": "स्पीकर बंद",
+      "captions": "कैप्शन",
+      "minutes_left": "{minutes, plural, one {# मिनट बाकी} other {# मिनट बाकी}}",
+      "privacy_line": "कॉल कभी रिकॉर्ड नहीं होतीं।"
+    },
+    "panchang": {
+      "label": "आज का पंचांग",
+      "tithi": "तिथि",
+      "nakshatra": "नक्षत्र",
+      "yoga": "योग",
+      "karana": "करण",
+      "vaara": "वार",
+      "unavailable": "आज का पंचांग अभी मुझ तक नहीं पहुँचा। आते ही जोड़ दूँगी।"
+    },
+    "timing": {
+      "chart_label": "दिन के समय",
+      "place": "{place} के लिए समय",
+      "favourable": "शुभ",
+      "care": "संभलकर",
+      "neutral": "सामान्य"
+    },
+    "family": {
+      "city": "शहर",
+      "upcoming": "आने वाला",
+      "language": "भाषा"
+    },
+    "reflection": {
+      "position": "सवाल {index} / {total}",
+      "placeholder": "जितना कहना चाहें, उतना",
+      "save": "सहेज लें",
+      "skip": "आज नहीं"
+    },
+    "festival": {
+      "open": "{name} खोलें"
+    },
+    "story": {
+      "unviewed": "तारा के पास आज कुछ नया है",
+      "viewed": "आज की कहानी आप देख चुकी हैं"
+    },
+    "empty": {
+      "memories": "अभी कोई याद नहीं — तारा वही याद रखती हैं जो आप कहें।",
+      "memories_action": "तारा से बात करें",
+      "journal": "आपकी डायरी आपकी पहली सुबह से शुरू होगी।",
+      "journal_action": "आज देखें",
+      "chat_history": "अभी यहाँ कुछ नहीं — तारा से कुछ भी पूछिए।",
+      "chat_history_action": "तारा से पूछें",
+      "search_results": "इससे कुछ नहीं मिला।",
+      "search_results_action": "खोज हटाएँ",
+      "family": "उन लोगों को जोड़िए जिनकी तारीख़ें तारा याद रखे।",
+      "family_action": "किसी को जोड़ें",
+      "saved_guidance": "अभी कुछ सहेजा नहीं गया।",
+      "saved_guidance_action": "आज देखें",
+      "reflections": "आपकी शामें यहाँ जमा होंगी।",
+      "reflections_action": "आज रात से शुरू करें",
+      "receipts": "अभी कोई भुगतान नहीं।",
+      "receipts_action": "प्लान देखें",
+      "notifications": "आपके लिए कुछ रुका नहीं है।",
+      "notifications_action": "चुनें कि किस बारे में सुनना है"
+    },
+    "error": {
+      "title": "तारा अभी लौटती हैं",
+      "fatal_title": "तारा अभी लौटती हैं",
+      "copy_trace": "सहायता के लिए यह कोड कॉपी करें",
+      "trace_copied": "कोड कॉपी हो गया",
+      "status_link": "हमारा स्टेटस पेज देखें"
+    },
+    "offline": {
+      "title": "आप ऑफ़लाइन हैं।",
+      "cached_at": "{time} की जानकारी दिखा रही हूँ।",
+      "queued": "{count, plural, one {# भेजने को रुका है} other {# भेजने को रुके हैं}}"
+    },
+    "toast": {
+      "dismiss": "हटाएँ"
+    },
+    "paywall": {
+      "title": "आपके साथ बने रहना",
+      "tara_line": "मैं आपके साथ चलती रहना चाहूँगी।",
+      "plans": "प्लान",
+      "continue": "आगे बढ़ें",
+      "gift": "उपहार में दें",
+      "restore": "पुरानी खरीद वापस लाएँ"
+    },
+    "price": {
+      "total_with_tax": "कुल {total}, कर सहित",
+      "founding_offer": "फ़ाउंडिंग क़ीमत"
+    },
+    "receipt": {
+      "paid": "भुगतान हुआ",
+      "pending": "आपके बैंक का इंतज़ार",
+      "failed": "पूरा नहीं हुआ",
+      "refunded": "वापस किया गया",
+      "invoice": "रसीद"
+    },
+    "consent": {
+      "required": "सितारा के चलने के लिए ज़रूरी है।",
+      "granted_on": "{date} को सहमति",
+      "policy_version": "नीति {version}",
+      "read_policy": "नीति पढ़ें"
+    },
+    "notif": {
+      "channel": {
+        "push": "पुश",
+        "whatsapp": "WhatsApp",
+        "email": "ईमेल"
+      },
+      "always_on": "हमेशा चालू — ये आपके खाते और पैसे से जुड़ी हैं।",
+      "unavailable": "चालू करना होगा",
+      "class": {
+        "transactional": "खाता और भुगतान",
+        "daily": "आपकी सुबह की ब्रीफ़",
+        "conversational": "तारा के जवाब",
+        "marketing": "सितारा की ख़बरें"
+      }
+    },
+    "rating": {
+      "helpful": "यह काम आया",
+      "not_relevant": "मेरे लिए नहीं",
+      "looks_wrong": "यह ग़लत लग रहा है",
+      "ack": {
+        "helpful": "शुक्रिया — नोट कर लिया।",
+        "not_relevant": "नोट कर लिया — अब यह कम दिखेगा।",
+        "looks_wrong": "शुक्रिया। हम इसे दो स्वतंत्र स्रोतों से जाँच रहे हैं और आपको बताएँगे।"
+      }
+    },
+    "kundli": {
+      "title": "आपकी कुंडली",
+      "style_label": "चार्ट शैली",
+      "style": {
+        "north": "उत्तर भारतीय",
+        "south": "दक्षिण भारतीय"
+      },
+      "house": "भाव {house}",
+      "lagna": "लग्न",
+      "pending": "आरेख अगली रिलीज़ में आएगा। आपकी ग्रह-स्थितियाँ नीचे दी हैं, ठीक वैसी जैसी आपकी कुंडली से निकलीं।",
+      "pending_label": "कुंडली आरेख, अगली रिलीज़ में",
+      "rashi": {
+        "1": "मेष",
+        "2": "वृषभ",
+        "3": "मिथुन",
+        "4": "कर्क",
+        "5": "सिंह",
+        "6": "कन्या",
+        "7": "तुला",
+        "8": "वृश्चिक",
+        "9": "धनु",
+        "10": "मकर",
+        "11": "कुंभ",
+        "12": "मीन"
+      },
+      "graha": {
+        "sun": "सूर्य",
+        "moon": "चंद्र",
+        "mars": "मंगल",
+        "mercury": "बुध",
+        "jupiter": "गुरु",
+        "venus": "शुक्र",
+        "saturn": "शनि",
+        "rahu": "राहु",
+        "ketu": "केतु"
+      }
+    }
   }
 }

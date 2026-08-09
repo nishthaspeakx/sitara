@@ -1,0 +1,185 @@
+{
+  "$comment": "SPEC §2.4 — no silent English fallback, ever. A key a component builds at runtime (`ui.module.${module}`) cannot be checked by reading the source, so every such template declares its domain here and scripts/i18n-lint.mjs expands it and verifies every resulting key exists in every catalog. A template found in app source with no entry here FAILS: an undeclared dynamic key is exactly how a missing translation reaches a user as a raw key.",
+  "templates": {
+    "ui.confidence.${state}": {
+      "$spec": "§34.7 — the five ConfidenceChip treatments",
+      "values": [
+        "verified",
+        "verified_limited",
+        "approximate",
+        "tradition_general",
+        "cannot_calculate"
+      ]
+    },
+    "ui.confidence.${state}_desc": {
+      "values": [
+        "verified",
+        "verified_limited",
+        "approximate",
+        "tradition_general",
+        "cannot_calculate"
+      ]
+    },
+    "ui.empty.${id}": {
+      "$spec": "§24.6 — the nine designed empty states",
+      "values": [
+        "memories",
+        "journal",
+        "chat_history",
+        "search_results",
+        "family",
+        "saved_guidance",
+        "reflections",
+        "receipts",
+        "notifications"
+      ]
+    },
+    "ui.empty.${id}_action": {
+      "values": [
+        "memories",
+        "journal",
+        "chat_history",
+        "search_results",
+        "family",
+        "saved_guidance",
+        "reflections",
+        "receipts",
+        "notifications"
+      ]
+    },
+    "ui.memory.type.${type}": {
+      "$spec": "§32.4 — the 11 memory types",
+      "values": [
+        "life_fact",
+        "relationship",
+        "preference",
+        "goal",
+        "concern",
+        "health_context",
+        "belief_practice",
+        "important_date",
+        "name_pronunciation",
+        "language_style",
+        "conversation_thread"
+      ]
+    },
+    "ui.module.${module}": {
+      "$spec": "§7.1/§34.3 — the 17 morning modules; sourced from the schema so the two cannot drift",
+      "valuesFrom": "packages/schemas/src/modules.json"
+    },
+    "ui.notif.channel.${channel}": {
+      "$spec": "§23.5",
+      "values": [
+        "push",
+        "whatsapp",
+        "email"
+      ]
+    },
+    "ui.rating.${id}": {
+      "$spec": "§30.4",
+      "values": [
+        "helpful",
+        "not_relevant",
+        "looks_wrong"
+      ]
+    },
+    "ui.rating.ack.${value}": {
+      "values": [
+        "helpful",
+        "not_relevant",
+        "looks_wrong"
+      ]
+    },
+    "ui.receipt.${status}": {
+      "$spec": "§30.3",
+      "values": [
+        "paid",
+        "pending",
+        "failed",
+        "refunded"
+      ]
+    },
+    "ui.story.${state}": {
+      "$spec": "§25.5 — `none` renders no ring and needs no label",
+      "values": [
+        "unviewed",
+        "viewed"
+      ]
+    },
+    "ui.tabs.${tab}": {
+      "$spec": "§24.1 — four tabs, and only four",
+      "values": [
+        "today",
+        "ask",
+        "journal",
+        "you"
+      ]
+    },
+    "ui.tara.state.${state}": {
+      "$spec": "§4.3 — the 12 presence states",
+      "values": [
+        "warm_neutral",
+        "listening",
+        "speaking_soft",
+        "smile",
+        "full_smile",
+        "thoughtful",
+        "concerned_kind",
+        "celebration",
+        "night",
+        "festival",
+        "reading",
+        "safety"
+      ]
+    },
+    "ui.timing.${band.quality}": {
+      "$spec": "§29.4 — never encoded by colour alone",
+      "values": [
+        "favourable",
+        "care",
+        "neutral"
+      ]
+    },
+    "ui.voice.${state}": {
+      "$spec": "§25.3",
+      "values": [
+        "idle",
+        "listening",
+        "processing",
+        "speaking",
+        "error"
+      ]
+    },
+    "ui.kundli.rashi.${h.rashi}": {
+      "$spec": "CC-007 KundliChart — the 12 rashis, Mesha = 1",
+      "values": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12"
+      ]
+    },
+    "ui.kundli.graha.${g}": {
+      "$spec": "CC-007 KundliChart — the nine grahas, Rahu and Ketu included",
+      "values": [
+        "sun",
+        "moon",
+        "mars",
+        "mercury",
+        "jupiter",
+        "venus",
+        "saturn",
+        "rahu",
+        "ketu"
+      ]
+    }
+  }
+}

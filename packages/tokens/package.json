@@ -6,7 +6,8 @@
   "type": "module",
   "exports": {
     "./css": "./dist/css/tokens.css",
-    "./tailwind-preset": "./dist/tailwind.preset.cjs"
+    "./tailwind-preset": "./dist/tailwind.preset.cjs",
+    "./tokens.json": "./src/tokens.json"
   },
   "scripts": {
     "build": "node build.mjs",
@@ -16,6 +17,7 @@
     "style-dictionary": "^4.3.0"
   },
   "files": [
-    "dist"
+    "dist",
+    "src"
   ]
 }

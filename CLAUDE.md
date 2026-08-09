@@ -1,4 +1,4 @@
-# Sitara — build rules (spec = docs/spec/SPEC.md, FROZEN v3.7)
+# Sitara — build rules (spec = docs/spec/SPEC.md, FROZEN v3.8)
 NEVER change a frozen decision. If a task seems to require it, STOP and say so.
 
 ## Non-negotiables (spec §)
@@ -14,7 +14,9 @@ NEVER change a frozen decision. If a task seems to require it, STOP and say so.
 - 17 morning modules enum (§7.1/§34.3) — ranking engine emits ONLY these IDs
 - Memory: 11 types (§32.4), explicit consent chips, Cohere embed-multilingual-v3 1024d (§32.5)
 - Safety: L1–L5 ladder; astrology framing removed at L2+; no fear-selling copy ever (§9, §13)
-- Design: tokens only, no hardcoded hex/px (packages/tokens); 48 components (§24.3); Tara = photographic presence, never call it avatar
+- Design: tokens only, no hardcoded hex/px (packages/tokens); **49 components** (§24.3 as amended by CC-007 — KundliChart renders in M10, its contract ships now); never call Tara an avatar
+- **Tara's likeness is AI-generated and exclusively owned (CC-008)** — NOT a real person, NOT a licensed model. The permanent "Tara · AI guide" disclosure is mandatory; no asset, alt text or copy may describe her as real or licensed, in any locale. Enforced by `apps/web/tests/tara-disclosure.spec.ts`
+- Colour usage is measured, not assumed (CC-005): gold and brand-navy are never text, the focus ring carries an outer contour, and `token-lint` verifies every declared contrast pair numerically in BOTH themes
 - No dark patterns: no countdowns, no guilt copy, close always visible (§29.2)
 - Stories = P1 flag, ring hidden in P0 (§30.6)
 - 18+ age gate at signup (§22.4)

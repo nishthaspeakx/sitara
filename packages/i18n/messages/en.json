@@ -208,5 +208,316 @@
     },
     "degraded_note": "Tara has the essentials today; the full reading returns shortly.",
     "notification_title": "Your morning with Tara"
+  },
+  "ui": {
+    "close": "Close",
+    "cancel": "Cancel",
+    "back": "Back",
+    "retry": "Try again",
+    "loading": "Loading…",
+    "why_this": "Why this?",
+    "button": {
+      "loading": "Working…"
+    },
+    "toggle": {
+      "on": "On",
+      "off": "Off"
+    },
+    "progress": {
+      "step": "Step {current} of {total}"
+    },
+    "search": {
+      "label": "Search",
+      "placeholder": "Search your journal",
+      "clear": "Clear search"
+    },
+    "select": {
+      "choose": "Choose"
+    },
+    "tabs": {
+      "label": "Main navigation",
+      "today": "Today",
+      "ask": "Ask Tara",
+      "journal": "Journal",
+      "you": "You"
+    },
+    "tara": {
+      "ai_label": "Tara · AI guide",
+      "state": {
+        "warm_neutral": "Tara",
+        "listening": "Tara, listening",
+        "speaking_soft": "Tara, speaking",
+        "smile": "Tara, smiling",
+        "full_smile": "Tara, smiling warmly",
+        "thoughtful": "Tara, thoughtful",
+        "concerned_kind": "Tara, listening closely",
+        "celebration": "Tara, celebrating",
+        "night": "Tara, at night",
+        "festival": "Tara, dressed for the festival",
+        "reading": "Tara, reading your chart",
+        "safety": "Tara"
+      }
+    },
+    "module": {
+      "energy_of_day": "Energy of the day",
+      "personal_chart_theme": "Your chart today",
+      "moon_nakshatra_note": "Moon & nakshatra",
+      "colour": "Colour",
+      "number": "Number",
+      "favourable_window": "Favourable window",
+      "caution_window": "Window to go gently",
+      "priorities": "Priorities",
+      "what_to_avoid": "What to hold back on",
+      "food_and_drink": "Food & drink",
+      "work": "Work",
+      "relationship": "Relationships",
+      "family_reminder": "Family reminder",
+      "festival_observance": "Festival & observance",
+      "goal_check": "Goal check",
+      "spiritual_practice": "Practice",
+      "tomorrow_prep_teaser": "For tomorrow"
+    },
+    "brief": {
+      "locked": "This card opens with your subscription."
+    },
+    "trust": {
+      "title": "Why this guidance?",
+      "details_show": "See the details",
+      "details_hide": "Hide the details"
+    },
+    "confidence": {
+      "verified": "Verified",
+      "verified_desc": "computed from your chart and checked against two sources",
+      "verified_limited": "Verified — limited",
+      "verified_limited_desc": "checked against one source today",
+      "approximate": "Approximate",
+      "approximate_desc": "your birth time is a window, so this is close rather than exact",
+      "tradition_general": "From tradition",
+      "tradition_general_desc": "general to the tradition, not calculated from your chart",
+      "cannot_calculate": "Can't calculate",
+      "cannot_calculate_desc": "I don't have enough to work this out honestly"
+    },
+    "source": {
+      "verified_two": "Computed from your chart · verified against 2 sources",
+      "single": "Computed from your chart · one source available today",
+      "disputed": "Our two sources differ on this — we're checking it"
+    },
+    "memory": {
+      "offer": "Shall I remember this?",
+      "accept": "Yes, remember",
+      "decline": "No, don't",
+      "accepted": "Remembered",
+      "declined": "Not remembered",
+      "forget": "Don't remember this",
+      "source_turn": "Where this came from",
+      "consent_stamp": "You agreed on {date}",
+      "type": {
+        "life_fact": "Life fact",
+        "relationship": "Relationship",
+        "preference": "Preference",
+        "goal": "Goal",
+        "concern": "Concern",
+        "health_context": "Health context",
+        "belief_practice": "Belief & practice",
+        "important_date": "Important date",
+        "name_pronunciation": "Name pronunciation",
+        "language_style": "Language & style",
+        "conversation_thread": "Conversation thread"
+      }
+    },
+    "voice": {
+      "idle": "Hold to speak",
+      "listening": "Listening",
+      "processing": "Thinking",
+      "speaking": "Tara is speaking",
+      "error": "That didn't come through — try once more",
+      "barge_in": "Stop and speak",
+      "mic_denied": "Microphone is off. Typing always works too.",
+      "mic_help": "How to turn the microphone on"
+    },
+    "chat": {
+      "open_trust": "Why Tara said “{text}”",
+      "retry": "Send again"
+    },
+    "audio": {
+      "play": "Play",
+      "pause": "Pause",
+      "stop_recording": "Stop recording",
+      "seek": "Move through the brief",
+      "position": "{elapsed} of {duration}",
+      "speed": "Playback speed",
+      "speed_value": "{speed}×",
+      "transcript": "Read the transcript",
+      "transcript_pending": "Writing this out…",
+      "transcript_failed": "I couldn't write this one out — the audio still plays.",
+      "expires_on": "This recording is kept until {date}, then deleted.",
+      "unavailable": "Today's audio didn't come through. Your brief is here to read."
+    },
+    "call": {
+      "mute": "Mute",
+      "unmute": "Unmute",
+      "end": "End",
+      "speaker_on": "Speaker on",
+      "speaker_off": "Speaker off",
+      "captions": "Captions",
+      "minutes_left": "{minutes, plural, one {# minute left} other {# minutes left}}",
+      "privacy_line": "Calls are never recorded."
+    },
+    "panchang": {
+      "label": "Today's panchang",
+      "tithi": "Tithi",
+      "nakshatra": "Nakshatra",
+      "yoga": "Yoga",
+      "karana": "Karana",
+      "vaara": "Day",
+      "unavailable": "Today's panchang hasn't reached me yet. I'll add it as soon as it does."
+    },
+    "timing": {
+      "chart_label": "The day's timings",
+      "place": "Timings for {place}",
+      "favourable": "favourable",
+      "care": "go gently",
+      "neutral": "ordinary"
+    },
+    "family": {
+      "city": "City",
+      "upcoming": "Coming up",
+      "language": "Language"
+    },
+    "reflection": {
+      "position": "Question {index} of {total}",
+      "placeholder": "However much you'd like to say",
+      "save": "Keep this",
+      "skip": "Not tonight"
+    },
+    "festival": {
+      "open": "Open {name}"
+    },
+    "story": {
+      "unviewed": "Tara has something new today",
+      "viewed": "You've seen today's story"
+    },
+    "empty": {
+      "memories": "No memories yet — Tara remembers only what you ask her to.",
+      "memories_action": "Talk to Tara",
+      "journal": "Your journal begins with your first morning.",
+      "journal_action": "See today",
+      "chat_history": "Nothing here yet — ask Tara anything.",
+      "chat_history_action": "Ask Tara",
+      "search_results": "Nothing matched that.",
+      "search_results_action": "Clear search",
+      "family": "Add the people whose dates you'd like Tara to hold.",
+      "family_action": "Add someone",
+      "saved_guidance": "Nothing saved yet.",
+      "saved_guidance_action": "See today",
+      "reflections": "Your evenings will gather here.",
+      "reflections_action": "Begin tonight",
+      "receipts": "No payments yet.",
+      "receipts_action": "See plans",
+      "notifications": "Nothing waiting for you.",
+      "notifications_action": "Choose what to hear about"
+    },
+    "error": {
+      "title": "Tara will be right back",
+      "fatal_title": "Tara will be right back",
+      "copy_trace": "Copy this code for support",
+      "trace_copied": "Code copied",
+      "status_link": "Check our status page"
+    },
+    "offline": {
+      "title": "You're offline.",
+      "cached_at": "Showing what I had at {time}.",
+      "queued": "{count, plural, one {# waiting to send} other {# waiting to send}}"
+    },
+    "toast": {
+      "dismiss": "Dismiss"
+    },
+    "paywall": {
+      "title": "Staying with you",
+      "tara_line": "I'd love to keep walking with you.",
+      "plans": "Plans",
+      "continue": "Continue",
+      "gift": "Give as a gift",
+      "restore": "Restore a purchase"
+    },
+    "price": {
+      "total_with_tax": "{total} in total, tax included",
+      "founding_offer": "Founding price"
+    },
+    "receipt": {
+      "paid": "Paid",
+      "pending": "Waiting for your bank",
+      "failed": "Didn't go through",
+      "refunded": "Refunded",
+      "invoice": "Invoice"
+    },
+    "consent": {
+      "required": "Needed for Sitara to work at all.",
+      "granted_on": "Agreed on {date}",
+      "policy_version": "Policy {version}",
+      "read_policy": "Read the policy"
+    },
+    "notif": {
+      "channel": {
+        "push": "Push",
+        "whatsapp": "WhatsApp",
+        "email": "Email"
+      },
+      "always_on": "Always on — these are about your account and your money.",
+      "unavailable": "needs turning on",
+      "class": {
+        "transactional": "Account & payments",
+        "daily": "Your morning brief",
+        "conversational": "Replies from Tara",
+        "marketing": "News from Sitara"
+      }
+    },
+    "rating": {
+      "helpful": "This helped",
+      "not_relevant": "Not relevant to me",
+      "looks_wrong": "This looks wrong",
+      "ack": {
+        "helpful": "Thank you — noted.",
+        "not_relevant": "Noted — you'll see less of this.",
+        "looks_wrong": "Thank you. We're checking this against two independent sources and we'll follow up."
+      }
+    },
+    "kundli": {
+      "title": "Your kundli",
+      "style_label": "Chart style",
+      "style": {
+        "north": "North Indian",
+        "south": "South Indian"
+      },
+      "house": "House {house}",
+      "lagna": "Lagna",
+      "pending": "The diagram arrives in the next release. Your placements are listed below, exactly as computed from your chart.",
+      "pending_label": "Kundli diagram, coming in the next release",
+      "rashi": {
+        "1": "Aries",
+        "2": "Taurus",
+        "3": "Gemini",
+        "4": "Cancer",
+        "5": "Leo",
+        "6": "Virgo",
+        "7": "Libra",
+        "8": "Scorpio",
+        "9": "Sagittarius",
+        "10": "Capricorn",
+        "11": "Aquarius",
+        "12": "Pisces"
+      },
+      "graha": {
+        "sun": "Sun",
+        "moon": "Moon",
+        "mars": "Mars",
+        "mercury": "Mercury",
+        "jupiter": "Jupiter",
+        "venus": "Venus",
+        "saturn": "Saturn",
+        "rahu": "Rahu",
+        "ketu": "Ketu"
+      }
+    }
   }
 }

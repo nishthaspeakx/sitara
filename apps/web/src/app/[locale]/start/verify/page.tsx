@@ -123,7 +123,7 @@ export default function VerifyPage() {
       {step === "otp" ? (
         <>
           <header className="flex flex-col gap-2">
-            <h1 className="font-serif text-display text-brand-navy">{t("verify.title")}</h1>
+            <h1 className="font-serif text-display text-ink-primary">{t("verify.title")}</h1>
             <p className="text-h3 text-ink-muted">
               {t("verify.sent_to", { phone: pending?.phone ?? "" })}
             </p>
@@ -150,7 +150,7 @@ export default function VerifyPage() {
             <button
               type="submit"
               disabled={busy}
-              className="rounded-chip bg-brand-navy p-3 text-body text-surface disabled:opacity-60"
+              className="rounded-chip bg-brand-navy p-3 text-body text-on-brand disabled:opacity-60"
             >
               {busy ? t("verify.verifying") : t("verify.verify")}
             </button>
@@ -159,13 +159,13 @@ export default function VerifyPage() {
                 type="button"
                 onClick={resend}
                 disabled={busy || resendIn > 0}
-                className="text-caption text-gold underline underline-offset-4 disabled:text-ink-muted disabled:no-underline"
+                className="text-caption text-ink-primary decoration-gold underline underline-offset-4 disabled:text-ink-muted disabled:no-underline"
               >
                 {resendIn > 0
                   ? t("verify.resend_in", { seconds: resendIn })
                   : t("verify.resend")}
               </button>
-              <Link href="/start/auth" className="text-caption text-gold underline underline-offset-4">
+              <Link href="/start/auth" className="text-caption text-ink-primary decoration-gold underline underline-offset-4">
                 {t("verify.change_number")}
               </Link>
             </div>
@@ -175,7 +175,7 @@ export default function VerifyPage() {
       ) : (
         <>
           <header className="flex flex-col gap-2">
-            <h1 className="font-serif text-display text-brand-navy">{t("dob.title")}</h1>
+            <h1 className="font-serif text-display text-ink-primary">{t("dob.title")}</h1>
             <p className="text-h3 text-ink-muted">{t("dob.subtitle")}</p>
           </header>
 
@@ -197,7 +197,7 @@ export default function VerifyPage() {
             <button
               type="submit"
               disabled={busy}
-              className="rounded-chip bg-brand-navy p-3 text-body text-surface disabled:opacity-60"
+              className="rounded-chip bg-brand-navy p-3 text-body text-on-brand disabled:opacity-60"
             >
               {t("dob.continue")}
             </button>

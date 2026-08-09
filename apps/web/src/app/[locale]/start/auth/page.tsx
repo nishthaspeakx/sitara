@@ -79,7 +79,7 @@ export default function AuthPage() {
       <ProgressDots current={3} />
 
       <header className="flex flex-col gap-2">
-        <h1 className="font-serif text-display text-brand-navy">{t("auth.title")}</h1>
+        <h1 className="font-serif text-display text-ink-primary">{t("auth.title")}</h1>
         <p className="text-h3 text-ink-muted">{t("auth.subtitle")}</p>
       </header>
 
@@ -103,7 +103,7 @@ export default function AuthPage() {
         <button
           type="submit"
           disabled={busy}
-          className="rounded-chip bg-brand-navy p-3 text-body text-surface disabled:opacity-60"
+          className="rounded-chip bg-brand-navy p-3 text-body text-on-brand disabled:opacity-60"
         >
           {busy ? t("auth.sending") : t("auth.continue")}
         </button>

@@ -1,0 +1,520 @@
+{
+  "$comment": "SPEC §24.2: 'both themes AA-verified numerically at token level'; 'text contrast ≥4.5:1 body, ≥3:1 large — enforced by the token lint in CI'. Every pair below is checked by scripts/token-lint.mjs against the built CSS. roles: body=4.5 (WCAG 1.4.3), large=3 (≥1.3rem / h2 and up), nonText=3 (WCAG 1.4.11 control boundaries and focus indicators).",
+  "minRatio": {
+    "body": 4.5,
+    "large": 3,
+    "nonText": 3
+  },
+  "$restrictedAsText": "Tokens whose value fails ≥4.5:1 on its own surfaces in AT LEAST ONE theme. They are fill / icon / bar tokens only. Because a utility class is theme-agnostic, a token restricted in either theme is restricted everywhere — the paired *-text token exists for copy.",
+  "restrictedAsText": {
+    "gold": "gold is 2.42:1 on surface — never text; it is a fill, a ring or a sacred mark (§0.13). For an interactive label use ink-primary with decoration-gold: the gold underline carries the tappable signal without carrying the legibility",
+    "brand-navy": "§34.8's night set defines no navy override, so navy text is ~1.1:1 on the night canvas — use ink-primary, or feedback-info which is theme-aware",
+    "brand-navy-deep": "same as brand-navy",
+    "gold-soft": "a fill behind navy text, never text itself",
+    "candle": "night-only token; undefined in the light theme",
+    "caution": "3.96:1 on canvas — use feedback-caution-text / astro-care-text",
+    "feedback-caution": "use feedback-caution-text",
+    "danger": "3.5:1 on the night surface — use feedback-danger-text",
+    "feedback-danger": "use feedback-danger-text",
+    "astro-auspicious": "3.76:1 — a bar/icon tint; use astro-auspicious-text for labels",
+    "astro-care": "use astro-care-text",
+    "line": "a divider, not text",
+    "border-subtle": "a divider, not text",
+    "border-strong": "a control boundary, not text",
+    "interactive-primary": "a fill; its label is text-on-gold",
+    "interactive-hover": "a fill",
+    "interactive-pressed": "a fill",
+    "interactive-disabled": "a fill",
+    "focus-ring": "an indicator, not text",
+    "focus-ring-outer": "an indicator, not text",
+    "surface": "a surface",
+    "surface-raised": "a surface",
+    "surface-sunken": "a surface",
+    "bg-canvas": "a surface",
+    "feedback-danger-strong": "an emphasis fill; its label is text-on-brand"
+  },
+  "$derived": "§24.2 hue-shift rule: a derived token keeps the HUE of the primitive it came from, drops saturation, and moves lightness +8–12% — AA-verified. What the lint ENFORCES is hue preservation against the declared source primitive, in the theme the value lives in; that is the part of the rule that is unambiguous and mechanically checkable. Lightness and saturation deltas are reported as notes, because the frozen palette itself does not preserve hue across themes (§24.2 line #E4E0D2 is h47, §34.8 night line #2A305C is h233), so a night token derived from its night parent legitimately shares no hue with its light counterpart; and because the same §24.2 clause ends in 'AA-verified against night surfaces', which for text tokens on a #12162E canvas demands lightness far outside the band. The AA half of the rule is enforced hard, in `pairs` above. Every derivation records its source here so no value can enter the palette unexplained.",
+  "derived": [
+    {
+      "token": "border-strong",
+      "from": {
+        "light": "line",
+        "night": "line"
+      },
+      "hueTolerance": 12
+    },
+    {
+      "token": "interactive-hover",
+      "from": {
+        "light": "gold",
+        "night": "gold"
+      },
+      "hueTolerance": 12
+    },
+    {
+      "token": "interactive-pressed",
+      "from": {
+        "light": "gold",
+        "night": "gold"
+      },
+      "hueTolerance": 12
+    },
+    {
+      "token": "feedback-caution-text",
+      "from": {
+        "light": "caution",
+        "night": "caution"
+      },
+      "hueTolerance": 12
+    },
+    {
+      "token": "feedback-danger-text",
+      "from": {
+        "light": "danger",
+        "night": "danger"
+      },
+      "hueTolerance": 12
+    },
+    {
+      "token": "astro-auspicious-text",
+      "from": {
+        "light": "astro-auspicious",
+        "night": "astro-auspicious"
+      },
+      "hueTolerance": 12
+    },
+    {
+      "token": "astro-care-text",
+      "from": {
+        "light": "astro-care",
+        "night": "astro-care"
+      },
+      "hueTolerance": 12
+    },
+    {
+      "token": "surface-raised",
+      "from": {
+        "night": "surface"
+      },
+      "hueTolerance": 12
+    },
+    {
+      "token": "astro-auspicious",
+      "from": {
+        "night": "@light:astro-auspicious"
+      },
+      "hueTolerance": 12
+    },
+    {
+      "token": "feedback-info",
+      "from": {
+        "night": "@light:feedback-info"
+      },
+      "hueTolerance": 12
+    },
+    {
+      "token": "feedback-danger-strong",
+      "from": {
+        "light": "danger",
+        "night": "danger"
+      },
+      "hueTolerance": 12
+    }
+  ],
+  "pairs": {
+    "light": [
+      {
+        "fg": "ink-primary",
+        "bg": "bg-canvas",
+        "role": "body"
+      },
+      {
+        "fg": "ink-primary",
+        "bg": "surface",
+        "role": "body"
+      },
+      {
+        "fg": "ink-muted",
+        "bg": "bg-canvas",
+        "role": "body"
+      },
+      {
+        "fg": "ink-muted",
+        "bg": "surface",
+        "role": "body"
+      },
+      {
+        "fg": "text-primary",
+        "bg": "bg-canvas",
+        "role": "body"
+      },
+      {
+        "fg": "text-primary",
+        "bg": "surface-raised",
+        "role": "body"
+      },
+      {
+        "fg": "text-secondary",
+        "bg": "surface-sunken",
+        "role": "body"
+      },
+      {
+        "fg": "brand-navy",
+        "bg": "bg-canvas",
+        "role": "body"
+      },
+      {
+        "fg": "brand-navy",
+        "bg": "surface",
+        "role": "body"
+      },
+      {
+        "fg": "brand-navy",
+        "bg": "gold-soft",
+        "role": "body"
+      },
+      {
+        "fg": "text-on-gold",
+        "bg": "gold",
+        "role": "body"
+      },
+      {
+        "fg": "text-on-gold",
+        "bg": "interactive-primary",
+        "role": "body"
+      },
+      {
+        "fg": "text-on-gold",
+        "bg": "interactive-hover",
+        "role": "body"
+      },
+      {
+        "fg": "text-on-gold",
+        "bg": "interactive-pressed",
+        "role": "body"
+      },
+      {
+        "fg": "text-on-brand",
+        "bg": "brand-navy",
+        "role": "body"
+      },
+      {
+        "fg": "text-on-brand",
+        "bg": "brand-navy-deep",
+        "role": "body"
+      },
+      {
+        "fg": "text-inverse",
+        "bg": "brand-navy",
+        "role": "body"
+      },
+      {
+        "fg": "ink-muted",
+        "bg": "interactive-disabled",
+        "role": "large"
+      },
+      {
+        "fg": "feedback-success-text",
+        "bg": "surface",
+        "role": "body"
+      },
+      {
+        "fg": "feedback-success-text",
+        "bg": "bg-canvas",
+        "role": "body"
+      },
+      {
+        "fg": "feedback-caution-text",
+        "bg": "surface",
+        "role": "body"
+      },
+      {
+        "fg": "feedback-caution-text",
+        "bg": "bg-canvas",
+        "role": "body"
+      },
+      {
+        "fg": "feedback-danger-text",
+        "bg": "surface",
+        "role": "body"
+      },
+      {
+        "fg": "feedback-danger-text",
+        "bg": "bg-canvas",
+        "role": "body"
+      },
+      {
+        "fg": "feedback-info",
+        "bg": "surface",
+        "role": "body"
+      },
+      {
+        "fg": "astro-auspicious-text",
+        "bg": "surface",
+        "role": "body"
+      },
+      {
+        "fg": "astro-auspicious-text",
+        "bg": "bg-canvas",
+        "role": "body"
+      },
+      {
+        "fg": "astro-care-text",
+        "bg": "surface",
+        "role": "body"
+      },
+      {
+        "fg": "astro-care-text",
+        "bg": "bg-canvas",
+        "role": "body"
+      },
+      {
+        "fg": "astro-auspicious",
+        "bg": "surface",
+        "role": "nonText"
+      },
+      {
+        "fg": "astro-auspicious",
+        "bg": "bg-canvas",
+        "role": "nonText"
+      },
+      {
+        "fg": "astro-care",
+        "bg": "surface",
+        "role": "nonText"
+      },
+      {
+        "fg": "feedback-danger",
+        "bg": "surface",
+        "role": "nonText"
+      },
+      {
+        "fg": "feedback-success",
+        "bg": "surface",
+        "role": "nonText"
+      },
+      {
+        "fg": "border-strong",
+        "bg": "surface",
+        "role": "nonText"
+      },
+      {
+        "fg": "border-strong",
+        "bg": "bg-canvas",
+        "role": "nonText"
+      },
+      {
+        "fg": "focus-ring-outer",
+        "bg": "bg-canvas",
+        "role": "nonText"
+      },
+      {
+        "fg": "focus-ring-outer",
+        "bg": "surface",
+        "role": "nonText"
+      },
+      {
+        "fg": "text-on-brand",
+        "bg": "feedback-danger-strong",
+        "role": "body"
+      },
+      {
+        "fg": "text-on-gold",
+        "bg": "gold-soft",
+        "role": "body"
+      }
+    ],
+    "night": [
+      {
+        "fg": "ink-primary",
+        "bg": "bg-canvas",
+        "role": "body"
+      },
+      {
+        "fg": "ink-primary",
+        "bg": "surface",
+        "role": "body"
+      },
+      {
+        "fg": "ink-muted",
+        "bg": "bg-canvas",
+        "role": "body"
+      },
+      {
+        "fg": "ink-muted",
+        "bg": "surface",
+        "role": "body"
+      },
+      {
+        "fg": "text-primary",
+        "bg": "surface-raised",
+        "role": "body"
+      },
+      {
+        "fg": "text-secondary",
+        "bg": "surface-raised",
+        "role": "body"
+      },
+      {
+        "fg": "text-secondary",
+        "bg": "surface-sunken",
+        "role": "body"
+      },
+      {
+        "fg": "text-on-gold",
+        "bg": "gold",
+        "role": "body"
+      },
+      {
+        "fg": "text-on-gold",
+        "bg": "interactive-primary",
+        "role": "body"
+      },
+      {
+        "fg": "text-on-gold",
+        "bg": "interactive-hover",
+        "role": "body"
+      },
+      {
+        "fg": "text-on-gold",
+        "bg": "interactive-pressed",
+        "role": "body"
+      },
+      {
+        "fg": "text-on-gold",
+        "bg": "gold-soft",
+        "role": "body"
+      },
+      {
+        "fg": "text-on-gold",
+        "bg": "candle",
+        "role": "body"
+      },
+      {
+        "fg": "text-on-brand",
+        "bg": "surface",
+        "role": "body"
+      },
+      {
+        "fg": "text-inverse",
+        "bg": "ink-primary",
+        "role": "body"
+      },
+      {
+        "fg": "ink-muted",
+        "bg": "interactive-disabled",
+        "role": "large"
+      },
+      {
+        "fg": "feedback-success-text",
+        "bg": "surface",
+        "role": "body"
+      },
+      {
+        "fg": "feedback-success-text",
+        "bg": "bg-canvas",
+        "role": "body"
+      },
+      {
+        "fg": "feedback-caution-text",
+        "bg": "surface",
+        "role": "body"
+      },
+      {
+        "fg": "feedback-caution-text",
+        "bg": "bg-canvas",
+        "role": "body"
+      },
+      {
+        "fg": "feedback-danger-text",
+        "bg": "surface",
+        "role": "body"
+      },
+      {
+        "fg": "feedback-danger-text",
+        "bg": "bg-canvas",
+        "role": "body"
+      },
+      {
+        "fg": "feedback-info",
+        "bg": "surface",
+        "role": "body"
+      },
+      {
+        "fg": "feedback-info",
+        "bg": "bg-canvas",
+        "role": "body"
+      },
+      {
+        "fg": "astro-auspicious-text",
+        "bg": "surface",
+        "role": "body"
+      },
+      {
+        "fg": "astro-auspicious-text",
+        "bg": "bg-canvas",
+        "role": "body"
+      },
+      {
+        "fg": "astro-care-text",
+        "bg": "surface",
+        "role": "body"
+      },
+      {
+        "fg": "astro-care-text",
+        "bg": "bg-canvas",
+        "role": "body"
+      },
+      {
+        "fg": "astro-auspicious",
+        "bg": "surface",
+        "role": "nonText"
+      },
+      {
+        "fg": "astro-care",
+        "bg": "surface",
+        "role": "nonText"
+      },
+      {
+        "fg": "feedback-danger",
+        "bg": "surface",
+        "role": "nonText"
+      },
+      {
+        "fg": "feedback-success",
+        "bg": "surface",
+        "role": "nonText"
+      },
+      {
+        "fg": "border-strong",
+        "bg": "surface",
+        "role": "nonText"
+      },
+      {
+        "fg": "border-strong",
+        "bg": "bg-canvas",
+        "role": "nonText"
+      },
+      {
+        "fg": "focus-ring",
+        "bg": "surface",
+        "role": "nonText"
+      },
+      {
+        "fg": "focus-ring",
+        "bg": "bg-canvas",
+        "role": "nonText"
+      },
+      {
+        "fg": "text-on-brand",
+        "bg": "feedback-danger-strong",
+        "role": "body"
+      },
+      {
+        "fg": "text-on-gold",
+        "bg": "gold-soft",
+        "role": "body"
+      }
+    ]
+  }
+}

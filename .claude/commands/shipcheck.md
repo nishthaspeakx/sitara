@@ -4,9 +4,13 @@ Run every gate below and summarise red/green per gate. Report honestly: a gate t
 1. **Lint** — `cd services/api && uv run ruff check .` (repeat for services/astro, services/realtime)
 2. **Types** — `cd services/api && uv run pyright`
 3. **Tests** — `cd services/api && uv run pytest -q` (repeat per service)
-4. **i18n parity** — `node packages/i18n/scripts/i18n-lint.mjs` (§2.4 — no silent English fallback)
-5. **Token lint** — `pnpm --filter @sitara/tokens lint` if present (§24.2 — no hardcoded hex/px)
+4. **i18n parity + references** — `node packages/i18n/scripts/i18n-lint.mjs` (§2.4 — no silent English fallback; also fails on a key app source references but no catalog defines, and on an undeclared runtime-built key)
+5. **Token lint** — `pnpm token-lint` (§24.2/§29.4 — no hardcoded hex/px, no fill token used as text, and every declared contrast pair AA-verified numerically in BOTH themes)
 6. **DB drift** — `cd services/api && uv run python -m sitara_api.db.verify` (§6.4, exit 1 on drift)
+7. **Design system** — `pnpm --filter web test` (§24.3/§34.7 — the library is 48 components, each declared, storied and exported)
+8. **Per-locale screenshot diff** — `pnpm --filter web build-storybook && pnpm --filter web screenshots` (§24.8 design-QA gate, §14 Language QA — 48 components × 4 locales × 2 themes, plus the §0.12 reduced-motion paths)
+
+`pnpm design-qa` runs 4, 5, and 7–8 together with types and lint, in order.
 
 ## Human-closed gates (§31.7)
 7. **Release gates** — `cd services/api && uv run python -m sitara_api.release_gates`

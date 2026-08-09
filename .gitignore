@@ -18,3 +18,10 @@ dist/
 !.env.example
 .secrets/
 *service-account*.json
+
+# Storybook + screenshot-suite outputs (§24.8 design-QA gate).
+# The BASELINES under apps/web/tests/__screenshots__ ARE committed — they are
+# the reviewable artefact; only the build and the run outputs are ignored.
+storybook-static/
+test-results/
+playwright-report/

@@ -208,5 +208,316 @@
     },
     "degraded_note": "Aaj Tara ke paas zaroori baatein hain; poori reading thodi der mein.",
     "notification_title": "Tara ke saath aapki subah"
+  },
+  "ui": {
+    "close": "Band karein",
+    "cancel": "Rehne dein",
+    "back": "Peeche",
+    "retry": "Phir koshish karein",
+    "loading": "Aa raha hai…",
+    "why_this": "Yeh kyun?",
+    "button": {
+      "loading": "Ho raha hai…"
+    },
+    "toggle": {
+      "on": "Chaalu",
+      "off": "Band"
+    },
+    "progress": {
+      "step": "Step {current} / {total}"
+    },
+    "search": {
+      "label": "Khojein",
+      "placeholder": "Apni diary mein khojein",
+      "clear": "Khoj hataayein"
+    },
+    "select": {
+      "choose": "Chunein"
+    },
+    "tabs": {
+      "label": "Main navigation",
+      "today": "Aaj",
+      "ask": "Tara se poochein",
+      "journal": "Diary",
+      "you": "Aap"
+    },
+    "tara": {
+      "ai_label": "Tara · AI guide",
+      "state": {
+        "warm_neutral": "Tara",
+        "listening": "Tara, sun rahi hain",
+        "speaking_soft": "Tara, bol rahi hain",
+        "smile": "Tara, muskurate hue",
+        "full_smile": "Tara, khulkar muskurate hue",
+        "thoughtful": "Tara, sochte hue",
+        "concerned_kind": "Tara, dhyaan se sunte hue",
+        "celebration": "Tara, khushi manate hue",
+        "night": "Tara, raat mein",
+        "festival": "Tara, tyohaar ke liye taiyaar",
+        "reading": "Tara, aapki kundli dekhte hue",
+        "safety": "Tara"
+      }
+    },
+    "module": {
+      "energy_of_day": "Din ki energy",
+      "personal_chart_theme": "Aapki kundli aaj",
+      "moon_nakshatra_note": "Chandrama aur nakshatra",
+      "colour": "Rang",
+      "number": "Ank",
+      "favourable_window": "Shubh samay",
+      "caution_window": "Sambhalkar chalne ka samay",
+      "priorities": "Priorities",
+      "what_to_avoid": "Kisse bachein",
+      "food_and_drink": "Khaan-paan",
+      "work": "Kaam",
+      "relationship": "Rishte",
+      "family_reminder": "Family reminder",
+      "festival_observance": "Tyohaar aur vrat",
+      "goal_check": "Goal check",
+      "spiritual_practice": "Sadhana",
+      "tomorrow_prep_teaser": "Kal ke liye"
+    },
+    "brief": {
+      "locked": "Yeh card subscription ke saath khulta hai."
+    },
+    "trust": {
+      "title": "Yeh salah kyun?",
+      "details_show": "Vistaar se dekhein",
+      "details_hide": "Vistaar chhupayein"
+    },
+    "confidence": {
+      "verified": "Verified",
+      "verified_desc": "Aapki kundli se ganana, do sources se milaan",
+      "verified_limited": "Verified — limited",
+      "verified_limited_desc": "Aaj ek hi source se milaan ho saka",
+      "approximate": "Anumaanit",
+      "approximate_desc": "Aapka birth time ek window hai, isliye yeh lagbhag hai, bilkul exact nahin",
+      "tradition_general": "Parampara se",
+      "tradition_general_desc": "Parampara ki general baat, aapki kundli se ganana nahin",
+      "cannot_calculate": "Ganana nahin ho saki",
+      "cannot_calculate_desc": "Ise imaandaari se nikalne ke liye mere paas poori jaankari nahin hai"
+    },
+    "source": {
+      "verified_two": "Aapki kundli se ganana · 2 sources se verified",
+      "single": "Aapki kundli se ganana · aaj ek hi source available",
+      "disputed": "Hamare dono sources yahan alag hain — hum check kar rahe hain"
+    },
+    "memory": {
+      "offer": "Kya main yeh yaad rakhoon?",
+      "accept": "Haan, yaad rakhein",
+      "decline": "Nahin, rehne dein",
+      "accepted": "Yaad rakha gaya",
+      "declined": "Yaad nahin rakha",
+      "forget": "Yeh yaad na rakhein",
+      "source_turn": "Yeh kahan se aaya",
+      "consent_stamp": "Aapne {date} ko sehmati di",
+      "type": {
+        "life_fact": "Life fact",
+        "relationship": "Rishta",
+        "preference": "Pasand",
+        "goal": "Goal",
+        "concern": "Chinta",
+        "health_context": "Sehat ka context",
+        "belief_practice": "Aastha aur sadhana",
+        "important_date": "Khaas taareekh",
+        "name_pronunciation": "Naam ka uchcharan",
+        "language_style": "Bhasha aur style",
+        "conversation_thread": "Baatcheet ka silsila"
+      }
+    },
+    "voice": {
+      "idle": "Bolne ke liye dabaye rakhein",
+      "listening": "Sun rahi hoon",
+      "processing": "Soch rahi hoon",
+      "speaking": "Tara bol rahi hain",
+      "error": "Woh pahunch nahin paya — ek baar phir kahiye",
+      "barge_in": "Rok kar bolein",
+      "mic_denied": "Microphone band hai. Type karna bhi hamesha chalta hai.",
+      "mic_help": "Microphone kaise chaalu karein"
+    },
+    "chat": {
+      "open_trust": "Tara ne “{text}” kyun kaha",
+      "retry": "Phir bhejein"
+    },
+    "audio": {
+      "play": "Chalayein",
+      "pause": "Rokein",
+      "stop_recording": "Recording rokein",
+      "seek": "Brief mein aage-peeche jayein",
+      "position": "{duration} mein se {elapsed}",
+      "speed": "Playback speed",
+      "speed_value": "{speed}×",
+      "transcript": "Likha hua padhein",
+      "transcript_pending": "Likha ja raha hai…",
+      "transcript_failed": "Ise likha nahin ja saka — audio phir bhi chalega.",
+      "expires_on": "Yeh recording {date} tak rahegi, phir mita di jayegi.",
+      "unavailable": "Aaj ka audio nahin aa paya. Aapki brief padhne ke liye yahin hai."
+    },
+    "call": {
+      "mute": "Mute karein",
+      "unmute": "Mute hataayein",
+      "end": "End",
+      "speaker_on": "Speaker chaalu",
+      "speaker_off": "Speaker band",
+      "captions": "Captions",
+      "minutes_left": "{minutes, plural, one {# minute baaki} other {# minutes baaki}}",
+      "privacy_line": "Call kabhi record nahin hoti."
+    },
+    "panchang": {
+      "label": "Aaj ka panchang",
+      "tithi": "Tithi",
+      "nakshatra": "Nakshatra",
+      "yoga": "Yoga",
+      "karana": "Karana",
+      "vaara": "Vaar",
+      "unavailable": "Aaj ka panchang abhi mujh tak nahin pahuncha. Aate hi jod doongi."
+    },
+    "timing": {
+      "chart_label": "Din ke samay",
+      "place": "{place} ke liye samay",
+      "favourable": "shubh",
+      "care": "sambhalkar",
+      "neutral": "samanya"
+    },
+    "family": {
+      "city": "Shehar",
+      "upcoming": "Aane wala",
+      "language": "Bhasha"
+    },
+    "reflection": {
+      "position": "Sawaal {index} / {total}",
+      "placeholder": "Jitna kehna chahein, utna",
+      "save": "Sahej lein",
+      "skip": "Aaj nahin"
+    },
+    "festival": {
+      "open": "{name} kholein"
+    },
+    "story": {
+      "unviewed": "Tara ke paas aaj kuch naya hai",
+      "viewed": "Aaj ki kahani aap dekh chuki hain"
+    },
+    "empty": {
+      "memories": "Abhi koi yaad nahin — Tara wahi yaad rakhti hain jo aap kahein.",
+      "memories_action": "Tara se baat karein",
+      "journal": "Aapki diary aapki pehli subah se shuru hogi.",
+      "journal_action": "Aaj dekhein",
+      "chat_history": "Abhi yahan kuch nahin — Tara se kuch bhi poochiye.",
+      "chat_history_action": "Tara se poochein",
+      "search_results": "Isse kuch nahin mila.",
+      "search_results_action": "Khoj hataayein",
+      "family": "Un logon ko jodiye jinki taareekhein Tara yaad rakhe.",
+      "family_action": "Kisi ko jodein",
+      "saved_guidance": "Abhi kuch saheja nahin gaya.",
+      "saved_guidance_action": "Aaj dekhein",
+      "reflections": "Aapki shaamein yahan jama hongi.",
+      "reflections_action": "Aaj raat se shuru karein",
+      "receipts": "Abhi koi payment nahin.",
+      "receipts_action": "Plans dekhein",
+      "notifications": "Aapke liye kuch ruka nahin hai.",
+      "notifications_action": "Chunein ki kis baare mein sunna hai"
+    },
+    "error": {
+      "title": "Tara abhi lautti hain",
+      "fatal_title": "Tara abhi lautti hain",
+      "copy_trace": "Support ke liye yeh code copy karein",
+      "trace_copied": "Code copy ho gaya",
+      "status_link": "Hamara status page dekhein"
+    },
+    "offline": {
+      "title": "Aap offline hain.",
+      "cached_at": "{time} ki jaankari dikha rahi hoon.",
+      "queued": "{count, plural, one {# bhejne ko ruka hai} other {# bhejne ko ruke hain}}"
+    },
+    "toast": {
+      "dismiss": "Hataayein"
+    },
+    "paywall": {
+      "title": "Aapke saath bane rehna",
+      "tara_line": "Main aapke saath chalti rehna chahoongi.",
+      "plans": "Plans",
+      "continue": "Aage badhein",
+      "gift": "Gift mein dein",
+      "restore": "Purani kharid wapas laayein"
+    },
+    "price": {
+      "total_with_tax": "Total {total}, tax included",
+      "founding_offer": "Founding price"
+    },
+    "receipt": {
+      "paid": "Payment hua",
+      "pending": "Aapke bank ka intezaar",
+      "failed": "Poora nahin hua",
+      "refunded": "Wapas kiya gaya",
+      "invoice": "Raseed"
+    },
+    "consent": {
+      "required": "Sitara ke chalne ke liye zaroori hai.",
+      "granted_on": "{date} ko sehmati",
+      "policy_version": "Policy {version}",
+      "read_policy": "Policy padhein"
+    },
+    "notif": {
+      "channel": {
+        "push": "Push",
+        "whatsapp": "WhatsApp",
+        "email": "Email"
+      },
+      "always_on": "Hamesha chaalu — yeh aapke account aur paise se judi hain.",
+      "unavailable": "chaalu karna hoga",
+      "class": {
+        "transactional": "Account aur payments",
+        "daily": "Aapki subah ki brief",
+        "conversational": "Tara ke jawaab",
+        "marketing": "Sitara ki khabrein"
+      }
+    },
+    "rating": {
+      "helpful": "Yeh kaam aaya",
+      "not_relevant": "Mere liye nahin",
+      "looks_wrong": "Yeh galat lag raha hai",
+      "ack": {
+        "helpful": "Shukriya — note kar liya.",
+        "not_relevant": "Note kar liya — ab yeh kam dikhega.",
+        "looks_wrong": "Shukriya. Hum ise do independent sources se check kar rahe hain aur aapko batayenge."
+      }
+    },
+    "kundli": {
+      "title": "Aapki kundli",
+      "style_label": "Chart style",
+      "style": {
+        "north": "North Indian",
+        "south": "South Indian"
+      },
+      "house": "Bhav {house}",
+      "lagna": "Lagna",
+      "pending": "Diagram agli release mein aayega. Aapki graha-sthitiyan neeche di hain, theek waisi jaisi aapki kundli se nikleen.",
+      "pending_label": "Kundli diagram, agli release mein",
+      "rashi": {
+        "1": "Mesh",
+        "2": "Vrishabh",
+        "3": "Mithun",
+        "4": "Kark",
+        "5": "Simha",
+        "6": "Kanya",
+        "7": "Tula",
+        "8": "Vrishchik",
+        "9": "Dhanu",
+        "10": "Makar",
+        "11": "Kumbh",
+        "12": "Meen"
+      },
+      "graha": {
+        "sun": "Surya",
+        "moon": "Chandra",
+        "mars": "Mangal",
+        "mercury": "Budh",
+        "jupiter": "Guru",
+        "venus": "Shukra",
+        "saturn": "Shani",
+        "rahu": "Rahu",
+        "ketu": "Ketu"
+      }
+    }
   }
 }

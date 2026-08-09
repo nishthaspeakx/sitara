@@ -10,6 +10,17 @@ export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
 
+/**
+ * Locale → script (§2.3). EN and Hinglish are Latin; HI is Devanagari. The
+ * wave-2/3 locales join here with their scripts as they ship: gu → gujarati,
+ * pa → gurmukhi, mr → devanagari, ta → tamil, te → telugu.
+ */
+const LOCALE_SCRIPT: Record<string, string> = {
+  en: "latin",
+  "hi-Latn": "latin",
+  hi: "devanagari",
+};
+
 export default async function LocaleLayout({
   children,
   params,
@@ -21,8 +32,12 @@ export default async function LocaleLayout({
   if (!hasLocale(routing.locales, locale)) notFound();
 
   return (
-    <html lang={locale}>
-      <body className="bg-bg-canvas text-ink-primary min-h-screen font-ui">
+    // §24.2: [data-script] is what applies the per-script family, size factor,
+    // line-height and tracking. Without it the Indic locales fall back to
+    // whatever font the device happens to have — which renders, and renders
+    // wrong: the tuning exists precisely because untuned Devanagari sets badly.
+    <html lang={locale} data-script={LOCALE_SCRIPT[locale]}>
+      <body className="bg-bg-canvas text-ink-primary min-h-screen font-script">
         <NextIntlClientProvider>{children}</NextIntlClientProvider>
       </body>
     </html>
