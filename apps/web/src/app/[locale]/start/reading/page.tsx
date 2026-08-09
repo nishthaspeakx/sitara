@@ -79,6 +79,7 @@ export default function ReadingPage() {
   /** Set when the client deadline fired before anything arrived. */
   const [timedOut, setTimedOut] = useState(false);
   const [memoryOffered, setMemoryOffered] = useState(true);
+  const [finishing, setFinishing] = useState(false);
   const [briefMinutes, setBriefMinutes] = useState(() => {
     const [h, m] = briefTime.split(":").map(Number);
     return (h || 7) * 60 + (m || 0);
@@ -134,13 +135,21 @@ export default function ReadingPage() {
 
   /** §0.17 minute 5: the brief-time promise, then Today. */
   async function finish() {
-    await patchState({
+    setFinishing(true);
+    const result = await patchState({
       brief_time: toClock(briefMinutes),
       completed_step: STEPS.READING,
     });
-    // The commit is best-effort by design: a failed preference write must not
-    // strand the user inside onboarding (§28.1). Today's brief-time control is
-    // the recovery path, and it is one tap away.
+    setFinishing(false);
+    if (!result.ok) {
+      // This used to advance regardless, which reads as generous and strands
+      // her permanently: `next_step` is the LOWEST unrecorded step, so an
+      // unrecorded step 13 drops her back into the ceremony on every future
+      // launch, with nothing ever explaining why. Every other step surfaces
+      // its failure and stays put; so does this one.
+      setError(result.error);
+      return;
+    }
     router.push("/today");
   }
 
@@ -249,7 +258,7 @@ export default function ReadingPage() {
       </Card>
 
       {/* Rendered from the first frame, on every path. This is invariant (4). */}
-      <Button fullWidth data-testid="reading-continue" onClick={() => void finish()}>
+      <Button fullWidth loading={finishing} data-testid="reading-continue" onClick={() => void finish()}>
         {t("start.reading.continue")}
       </Button>
     </main>

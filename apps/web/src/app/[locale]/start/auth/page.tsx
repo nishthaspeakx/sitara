@@ -64,9 +64,13 @@ export default function AuthPage() {
       setPendingPhone(e164, pending);
       router.push("/start/verify");
     } catch (err) {
-      // Error CODES carry no PII, so logging one keeps field reports
-      // diagnosable; the phone number never appears (§13).
-      console.warn("[auth] phone sign-in failed:", err);
+      // §13: the CODE only. The comment used to say this while the line logged
+      // the whole FirebaseError, which carries `customData` and can echo the
+      // number back — a phone number in a browser console is still PII.
+      console.warn(
+        "[auth] phone sign-in failed:",
+        err instanceof FirebaseError ? err.code : "unknown",
+      );
       setError(envelope(firebaseErrorKey(err instanceof FirebaseError ? err.code : "")));
       setBusy(false);
     }

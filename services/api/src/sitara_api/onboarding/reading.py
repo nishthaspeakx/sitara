@@ -75,9 +75,13 @@ def confidence_for(
     if not has_chart:
         # Panchang alone is exactly §5.4's "no chart needed / panchang-only"
         # row: true, and not a personal reading. Saying so is the point.
-        return ConfidenceState.TRADITION_BASED_GENERAL if has_panchang else ConfidenceState.CANNOT_CALCULATE
+        if has_panchang:
+            return ConfidenceState.TRADITION_BASED_GENERAL
+        return ConfidenceState.CANNOT_CALCULATE
     if time_accuracy == "exact":
-        return ConfidenceState.VERIFIED if has_panchang else ConfidenceState.VERIFIED_LIMITED_BIRTH_DATA
+        if has_panchang:
+            return ConfidenceState.VERIFIED
+        return ConfidenceState.VERIFIED_LIMITED_BIRTH_DATA
     if time_accuracy == "unknown":
         # §5.4: "date+place, no exact time" → the Moon chart, stated.
         return ConfidenceState.VERIFIED_LIMITED_BIRTH_DATA

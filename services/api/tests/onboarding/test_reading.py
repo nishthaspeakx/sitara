@@ -116,7 +116,16 @@ def chart(*facts: FactSnapshot) -> ChartBundle:
 
 
 def line(result, line_id: LineId):  # noqa: ANN001, ANN201
+    """The composed line, or None when the composer declined to write it."""
     return next((line for line in result.lines if line.id is line_id), None)
+
+
+def required_line(result, line_id: LineId):  # noqa: ANN001, ANN201
+    """The line, asserted present — so a test reading `.house` off it says WHICH
+    line was missing rather than failing on an attribute of None."""
+    found = line(result, line_id)
+    assert found is not None, f"expected a {line_id.value} line"
+    return found
 
 
 # ---------------------------------------------------------------------------
@@ -159,14 +168,14 @@ def test_the_observation_prefers_the_moon_but_will_speak_about_saturn() -> None:
         locale="en",
         time_accuracy="exact",
     )
-    assert line(with_moon, LineId.OBSERVATION).house == 7
+    assert required_line(with_moon, LineId.OBSERVATION).house == 7
 
     # No lunar house assignment: a true sentence about Saturn beats no
     # observation, and both are honest.
     saturn_only = reading.compose(
         chart=chart(saturn_house(3)), panchang=[], locale="en", time_accuracy="exact"
     )
-    assert line(saturn_only, LineId.OBSERVATION).house == 3
+    assert required_line(saturn_only, LineId.OBSERVATION).house == 3
 
 
 # ---------------------------------------------------------------------------
@@ -330,7 +339,7 @@ def test_the_composer_renders_terms_in_the_asked_for_locale(locale: str) -> None
         locale=locale,
         time_accuracy="exact",
     )
-    nakshatra = line(result, LineId.MOON_NAKSHATRA).values["nakshatra"]
+    nakshatra = required_line(result, LineId.MOON_NAKSHATRA).values["nakshatra"]
     expected = _catalog(locale)["terms"]["nakshatra"]["rohini"]
     # §2.4: no silent English fallback — the Devanagari name, or no line.
     assert nakshatra == expected

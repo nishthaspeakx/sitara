@@ -243,6 +243,17 @@ SPECS: tuple[CollectionSpec, ...] = (
             # and `follow_timezone` decides whether to move.
             "brief_place": [OBJ, "null"],
             "density": STR,
+            # --- §24.4's per-step persistence ---------------------------------
+            # "state persisted per step (resume on return)". §6.4's table gives
+            # the row no home for progress, and `next_step` is derived from the
+            # LOWEST unrecorded step — so this is load-bearing, not bookkeeping:
+            # without it a user who signed in, consented and gave her birth
+            # details resumes at the sign-up screen. Holds `completed_steps`,
+            # `interest` (§10-8, the source of `density` beside it) and
+            # `voice_enabled`. Declared here because the registry is the only
+            # declaration of database shape — the validator is lenient enough to
+            # have accepted it undeclared, which is exactly why it is written down.
+            "onboarding": OBJ,
             "quiet_hours": OBJ,
             "notification_prefs": OBJ,
             "follow_timezone": BOOL,

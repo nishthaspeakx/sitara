@@ -203,7 +203,9 @@ async def put_birth(payload: BirthIn, request: Request, session: CurrentSession)
         raise ApiError(ErrorCode.SYS_VALIDATION)
     # The zone is validated against the IANA tzdb here, not trusted: §5.2 never
     # takes a timezone from a vendor OR a client without checking it.
-    place = resolve_explicit(payload.place.label, payload.place.lat, payload.place.lon, payload.place.tz)
+    place = resolve_explicit(
+        payload.place.label, payload.place.lat, payload.place.lon, payload.place.tz
+    )
     try:
         details = BirthDetailsInput(
             date=payload.date,
@@ -332,9 +334,17 @@ async def first_reading(request: Request, session: CurrentSession) -> ReadingOut
 async def _log_guidance(request: Request, user_id: ObjectId, result: FirstReading) -> None:
     """§34.2 — the artefact embeds the snapshot it cited, at generation.
 
-    A best-effort write: the ceremony must not fail because an audit row did.
-    The row is what makes "which reading did she actually see?" answerable
-    months later, when the engine has moved on and the chart has been recomputed.
+    Written into §6.4's OWN field names. It was not: the row omitted the
+    required `date` and put the snapshots in `facts` where §6.4 declares
+    `fact_snapshots`, so every insert was rejected by the validator and the
+    `except` below swallowed it. S13 produced no audit row at all, silently —
+    "which reading did she actually see?" was unanswerable the moment the engine
+    moved on.
+
+    Still best-effort: the ceremony must not fail because an audit row did. But
+    a rejected write now logs the exception rather than a bare warning, because
+    the difference between "Mongo was down" and "we have been writing an invalid
+    document for a month" is the whole value of the line.
     """
     from sitara_api.db.documents import stamp
 
@@ -343,16 +353,29 @@ async def _log_guidance(request: Request, user_id: ObjectId, result: FirstReadin
             stamp(
                 {
                     "user_id": user_id,
-                    "surface": "first_reading",
+                    # Required by §6.4. The user's local day, not the server's —
+                    # §23.9's rule, and the same date the reading was composed for.
+                    "date": dt.datetime.now(dt.UTC).date().isoformat(),
                     "confidence": result.confidence.value,
-                    "source_state": result.source_state.value,
-                    "status": result.status.value,
-                    "degrade_reason": result.degrade_reason.value if result.degrade_reason else None,
-                    "line_ids": [line.id.value for line in result.lines],
                     "fact_ids": [fid for line in result.lines for fid in line.fact_ids],
-                    "facts": [f.model_dump(mode="json") for f in result.facts],
+                    # §6.4's name for the embedded snapshots. Anything that reads
+                    # the declared field — audit, export, a Trust Sheet — looks
+                    # here and nowhere else.
+                    "fact_snapshots": [f.model_dump(mode="json") for f in result.facts],
+                    "template_ids": [line.id.value for line in result.lines],
+                    # §6.4's `why` object carries the reasoning; the ceremony's
+                    # surface, status and degrade reason belong together in it
+                    # rather than as three undeclared top-level fields.
+                    "why": {
+                        "surface": "first_reading",
+                        "status": result.status.value,
+                        "source_state": result.source_state.value,
+                        "degrade_reason": (
+                            result.degrade_reason.value if result.degrade_reason else None
+                        ),
+                    },
                 }
             )
         )
     except Exception:  # noqa: BLE001
-        logger.warning("first reading: guidance log write failed", exc_info=True)
+        logger.exception("first reading: guidance log write failed")

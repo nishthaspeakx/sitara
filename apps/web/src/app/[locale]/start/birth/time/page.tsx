@@ -17,6 +17,7 @@
  */
 
 import { useTranslations } from "next-intl";
+import { useEffect } from "react";
 
 import {
   Button,
@@ -59,10 +60,15 @@ export default function BirthTimePage() {
 
   // Arriving here without S06's answers means a resume landed mid-pair. Back to
   // the question that has to be answered first — never a blank form (§28.1).
-  if (!birthDate || !birthPlace) {
-    router.replace(STEP_ROUTES[STEPS.BIRTH]!);
-    return null;
-  }
+  //
+  // In an effect, not in the render body: navigating during render mutates the
+  // router while React is rendering, which React treats as a side effect in the
+  // wrong phase and which loops if the guard condition never changes.
+  const incomplete = !birthDate || !birthPlace;
+  useEffect(() => {
+    if (incomplete) router.replace(STEP_ROUTES[STEPS.BIRTH]!);
+  }, [incomplete, router]);
+  if (incomplete) return null;
 
   const needsClock = timeAccuracy === "exact" || timeAccuracy === "approximate";
   const ready =

@@ -148,3 +148,31 @@ test("S03 surfaces a failed session exchange", async ({ page }) => {
   await expect(alert).not.toBeEmpty();
   expect(new URL(page.url()).pathname).toBe("/en/start/verify");
 });
+
+test("S13 does not advance when the final write fails", async ({ page }) => {
+  // The step that used to advance regardless. `next_step` is the LOWEST
+  // unrecorded step, so an unrecorded step 13 drops the user back into the
+  // ceremony on every future launch — permanently, with nothing explaining why.
+  const clientId = await setupApi(page, {
+    state: { completed_steps: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], has_birth_details: true },
+  });
+  await page.goto(`/en/start/reading${SKIP_LAUNCH}`);
+  await expect(page.getByTestId("reading-line").first()).toBeVisible();
+
+  await fetch("http://127.0.0.1:3101/__control/reset", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      clientId,
+      scenario: "fail_writes",
+      state: { completed_steps: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], has_birth_details: true },
+    }),
+  });
+
+  await page.getByTestId("reading-continue").click();
+
+  await expect(page.locator("main").getByRole("alert")).toBeVisible({ timeout: 10_000 });
+  expect(new URL(page.url()).pathname, "advanced on a failed write").toBe("/en/start/reading");
+  // …and the way forward is still there, so she is told rather than trapped.
+  await expect(page.getByTestId("reading-continue")).toBeEnabled();
+});

@@ -39,6 +39,11 @@ export function useCloseOnBack(open: boolean, onClose: () => void): void {
       window.removeEventListener("popstate", onPop);
       // Closed by a control rather than by Back: take our entry back off the
       // stack so the user's next Back leaves the SCREEN, as they expect.
+      //
+      // The `[MARKER]` check is what makes this safe on UNMOUNT. If the screen
+      // navigated away while the overlay was open, the router has already
+      // replaced the history entry and the marker is gone — so this does not
+      // fire and does not undo the navigation the user just asked for.
       if (!closedByBack.current && window.history.state?.[MARKER]) {
         window.history.back();
       }

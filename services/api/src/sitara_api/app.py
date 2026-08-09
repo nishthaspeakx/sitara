@@ -24,12 +24,12 @@ from sitara_api.memory import MemorySettings, build_memory_service
 from sitara_api.memory.router import router as memory_router
 from sitara_api.numerology.adapter import AstroNumerologyAdapter
 from sitara_api.numerology.router import router as numerology_router
+from sitara_api.onboarding.router import router as onboarding_router
 from sitara_api.panchang.adapter import AstroPanchangAdapter
 from sitara_api.panchang.cache import PanchangCache
 from sitara_api.panchang.places import default_resolver
 from sitara_api.panchang.registry import build_registry
 from sitara_api.panchang.router import router as panchang_router
-from sitara_api.onboarding.router import router as onboarding_router
 from sitara_api.panchang.service import PanchangService
 
 

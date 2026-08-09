@@ -192,8 +192,7 @@ class OnboardingService:
             profile_add["onboarding.completed_steps"] = step.value
 
         if profile_set or profile_add:
-            update: dict = {"$setOnInsert": stamp({"user_id": user_id})}
-            update["$setOnInsert"].pop("updated_at", None)
+            update: dict = {"$setOnInsert": _on_insert({"user_id": user_id})}
             if profile_set:
                 update["$set"] = {**profile_set, "updated_at": utcnow()}
             else:
@@ -207,18 +206,27 @@ class OnboardingService:
 
         return await self.state(user_id)
 
-    async def record_consent(self, user_id: ObjectId, consent_type: str, *, surface: str = "S05") -> None:
+    async def record_consent(
+        self, user_id: ObjectId, consent_type: str, *, surface: str = "S05"
+    ) -> None:
         """Append to the §13 consent ledger.
 
         Upsert on (user_id, type) rather than insert: a user who backs into S05
         and continues again has not consented twice, and a ledger that says she
         did is a worse record than one that says when she first did.
+
+        `_on_insert` is not a nicety. `stamp()` sets `updated_at`, and MongoDB
+        rejects any update naming the same path in both `$set` and
+        `$setOnInsert` — so this method failed on EVERY call, and the §13 ledger
+        (permanent, legal) recorded nothing while S05 returned a 500. It went
+        unnoticed because the flow suite's stub answers consents with success
+        and no Python test exercised this against a real collection.
         """
         await self._db.consents.update_one(
             {"user_id": user_id, "type": consent_type},
             {
                 "$set": {"surface": surface, "revoked_at": None, "updated_at": utcnow()},
-                "$setOnInsert": stamp(
+                "$setOnInsert": _on_insert(
                     {
                         "user_id": user_id,
                         "type": consent_type,
@@ -237,6 +245,20 @@ class OnboardingService:
             # thing §13 does not permit. Refuse, retryably.
             raise ApiError(ErrorCode.SYS_UNAVAILABLE)
         await self._facade.set_birth_details(str(user_id), details)
+
+
+def _on_insert(document: dict) -> dict:
+    """`stamp()` minus `updated_at`, for use in `$setOnInsert`.
+
+    MongoDB refuses an update that names the same path in both `$set` and
+    `$setOnInsert`, and `stamp()` sets `updated_at`. Every upsert in this module
+    goes through here so the conflict cannot be reintroduced one call site at a
+    time — which is exactly how `record_consent` shipped broken while `apply`
+    worked.
+    """
+    stamped = stamp(dict(document))
+    stamped.pop("updated_at", None)
+    return stamped
 
 
 def _is_hhmm(value: str) -> bool:
