@@ -96,7 +96,7 @@ Bounded-context modules in one process (auth, users/profiles, localisation, astr
 - **The pre-job works over CELLS, not users.** §7.2's key carries no user by construction, so a city of ten thousand costs what a city of one costs. A pre-job iterating users would produce identical output at ten thousand times the price and nothing downstream would notice.
 - **Chart facts ARE wired** — `astrology/chart_adapter.py` calls sitara-astro for natal, dasha and transits, and `CompositeBriefFacts` fetches both halves independently so neither takes the other down. `BriefFacts.missing` names whichever failed, which is what `_missing_reason` reads. (This line said the opposite through M6–M8; it was stale, not a decision.)
 
-## today module (M9, §28.2) — invariants that must not regress
+## today module (M8-P9b, §28.2/§29.1) — invariants that must not regress
 - **`GET /v1/today` is the door M6 never had.** M6 stored `daily_briefings` rows nothing could read. The router is deliberately thin: `BriefStore.get` on the user's LOCAL date (§32.13, never UTC), `generate_on_open` on a miss (§7.1's dormant path and §32.13's missed-date path are one code path), `mark_opened`, serialise. Every other decision is made somewhere better.
 - **A failed brief is a SCREEN, not a 5xx.** §28.2 has a designed variant for every way this goes wrong. Returning an error envelope from `/v1/today` would replace a designed state with an error page on the app's home surface.
 - **The brief enums live in `sitara_schemas.today`, not here.** `Density`, `Tier`, `BriefStatus` and `BriefDegradeReason` cross the wire, so both sides need one declaration — the same discipline §34.3's `MorningModule` already follows. `types.py` imports and re-exports them; it declares none.
@@ -121,7 +121,7 @@ Bounded-context modules in one process (auth, users/profiles, localisation, astr
 - **Every task must be safe to run twice.** §6.1 rejected a workflow engine on the strength of "Celery Beat + idempotent tasks", and `task_acks_late` means a dead worker hands the message back.
 - **The tick fans out by `send_task` name**, so the producer needs none of the consumer's imports and can run on a worker carrying no model client.
 
-## Commands (M9)
+## Commands (Today)
 - Re-record the web's Today fixtures: `uv run python scripts/record_today_fixtures.py`
 - The variant switcher: run the API in dev, then `/en/dev/today` in the web app
 
