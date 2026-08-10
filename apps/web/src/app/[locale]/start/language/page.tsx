@@ -20,10 +20,10 @@
 
 import { useLocale, useTranslations } from "next-intl";
 
-import { Card, ErrorState, ListRow, SectionHeader, TaraPresence } from "@/components/ui";
-import { patchState, STEPS } from "@/lib/onboarding";
+import { Card, ListRow, SectionHeader, TaraPresence } from "@/components/ui";
+import { STEPS } from "@/lib/onboarding";
 
-import { useStepCommit } from "../_step";
+import { useLocalStepCommit } from "../_step";
 
 /** §2.2's eight, in wave order. `released` is §2.4's gate, not a preference. */
 const LANGUAGES = [
@@ -40,20 +40,25 @@ const LANGUAGES = [
 export default function LanguagePage() {
   const t = useTranslations();
   const active = useLocale();
-  const { commit, busy, error, clearError } = useStepCommit(STEPS.LANGUAGE);
+  const { commit, busy } = useLocalStepCommit(STEPS.LANGUAGE);
 
-  async function choose(code: string) {
-    // Persist FIRST, then move. This screen used to switch locale immediately
-    // and commit afterwards, which reads well and is wrong: the locale switch
-    // replaces the tree, so a failed PATCH set its error on a component that no
-    // longer existed. The user tapped a language and nothing happened at all —
-    // no error, no retry, no advance.
+  function choose(code: string) {
+    // **S02 does not write to the server, and cannot.**
     //
-    // §10-3's "full re-render, no residue" still holds; it just happens on the
-    // forward navigation, which `commit` performs with the chosen locale.
-    await commit(() => patchState({ locale: code, completed_step: STEPS.LANGUAGE }), {
-      locale: code,
-    });
+    // §29.1 puts language FIRST and auth at S03, so at this moment there is no
+    // session — and `PATCH /v1/onboarding` is behind `CurrentSession` (§33.2's
+    // product identity comes from the §34.5 cookie). This screen used to call
+    // it anyway: every tap returned 401, `commit` correctly refused to advance
+    // a step it could not persist, and onboarding was sealed shut at its first
+    // screen for anyone without a stale cookie. Same language or different made
+    // no difference — there was nothing to authorise the write.
+    //
+    // The choice is not lost. next-intl pins the locale in the URL and cookie
+    // on this navigation, and it reaches the server at the FIRST authenticated
+    // moment: `POST /auth/session` already takes `locale` and stores it on the
+    // user (S03). §24.4's "state persisted per step" holds — the step is
+    // recorded locally now and durably the instant an identity exists.
+    commit({ locale: code });
   }
 
   return (
@@ -74,7 +79,7 @@ export default function LanguagePage() {
                 label={t(`start.language.name.${code}`)}
                 detailKey={released ? undefined : "start.skip"}
                 disabled={!released || busy}
-                onClick={released ? () => void choose(code) : undefined}
+                onClick={released ? () => choose(code) : undefined}
                 trailing={code === active ? <span aria-hidden="true">✓</span> : undefined}
               />
             </li>
@@ -83,8 +88,6 @@ export default function LanguagePage() {
       </Card>
 
       <p className="text-caption text-ink-muted">{t("start.language.greeting_hint")}</p>
-
-      {error ? <ErrorState error={error} onRetry={clearError} /> : null}
     </main>
   );
 }

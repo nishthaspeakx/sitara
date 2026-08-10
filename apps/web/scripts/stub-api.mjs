@@ -112,6 +112,9 @@ function emptyState(locale = "en") {
     display_name: null,
     brief_time: null,
     voice_enabled: true,
+    // Set by `POST /auth/session` — the §34.5 exchange is what mints identity,
+    // and nothing under /v1 is reachable before it.
+    session_user_id: null,
   };
 }
 
@@ -278,10 +281,35 @@ const server = createServer(async (req, res) => {
     if (scenario === "auth_fails") {
       return send(res, 401, envelope("AUTH_INVALID_TOKEN", "errors.auth.invalid_token", false));
     }
-    return send(res, 200, { user_id: "6a70000000000000000000a1", is_new_user: true });
+    client.state.session_user_id = "6a70000000000000000000a1";
+    return send(res, 200, {
+      user_id: client.state.session_user_id,
+      // The real router returns the locale it stored, and S02's choice arrives
+      // HERE — it is the first authenticated moment in the stack.
+      locale: client.state.locale,
+      is_new_user: true,
+    });
   }
 
   // ── §24.4 onboarding ─────────────────────────────────────────────────────
+  //
+  // **Every route below is behind a session, because the real one is.**
+  //
+  // `/v1/onboarding` sits behind `CurrentSession` in `sitara_api.onboarding`
+  // (§33.2's product identity comes from the §34.5 cookie). This stub used to
+  // answer 200 to anyone, and that single act of generosity hid a screen that
+  // could not work: S02 runs BEFORE auth, so in a real browser every language
+  // tap 401'd and onboarding was sealed at its first screen — while the whole
+  // flow suite stayed green, because here the write always succeeded.
+  //
+  // That is the root CLAUDE.md rule, in the place it was broken: "a fake that
+  // accepts what the real system rejects is a defect in the fake."
+  const authed = client.state.session_user_id !== null;
+  const needsSession = path.startsWith("/v1/onboarding") || path === "/v1/readings/first";
+  if (needsSession && !authed) {
+    return send(res, 401, envelope("AUTH_INVALID_TOKEN", "errors.auth.invalid_token", false));
+  }
+
   const withNext = () => ({ ...client.state, next_step: nextStep(client.state.completed_steps) });
 
   /** `fail_writes` makes every step's persist fail — §34.4 envelope, retryable. */

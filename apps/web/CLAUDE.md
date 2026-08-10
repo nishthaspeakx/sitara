@@ -62,6 +62,15 @@ Sixteen variants, three densities, one screen. What is worth knowing before chan
 
 `src/app/[locale]/dev/today/page.tsx` is the variant switcher — dev-only, driving `/v1/dev/today`, rendering the real `TodayScreen`. **Not `_dev/`:** Next's App Router treats a `_`-prefixed folder as PRIVATE and excludes it from routing entirely (that is what `_launch/` relies on), so the first version 404'd silently while typechecking, linting and building without a word.
 
+## Onboarding — the pre-auth screen (S02)
+
+**§29.1 runs language (S02) BEFORE auth (S03), so S02 has no session** — and every `/v1/onboarding` route is behind one (`CurrentSession`, §33.2/§34.5). S02 called it anyway: every language tap 401'd, `useStepCommit` correctly refused to advance a step it could not persist, and the first screen of onboarding was a dead end in a real browser. Same language or different made no difference.
+
+- **S02 uses `useLocalStepCommit`**, which records the step and advances without a request. There is no `error` on it, because there is no call that can fail — a retry control for an operation never performed is theatre. The choice reaches the server at `POST /auth/session`, which already carries `locale`.
+- **`stub-api.mjs` refuses `/v1` without a session, because the real API does.** It used to 200 for anyone, which is exactly why the suite could not see this: the flow tests exercised the click handler, the locale switch and the route against a server that granted onboarding writes to anonymous callers. **A fake that accepts what the real system rejects is a defect in the fake** — the root CLAUDE.md rule, and this is where it was broken.
+- **`setupApi` defaults a client to signed-in**; a spec about the pre-auth world opts out with `state: { session_user_id: null }`. Mid-test scenario switches go through `setScenario`, never a raw `/__control/reset` — a hand-rolled one that forgot the session turned every "failed write" test into a 401, which is non-retryable, so `ErrorState` renders no retry control and the test fails for an unrelated reason.
+- `tests/onboarding-language.spec.ts` covers S02 with no session, in all three locales, each selecting **its own already-active language** — the case the old suite never had because it always switched languages.
+
 ## Storybook + the screenshot-diff gate (§24.8)
 `.storybook/preview.tsx` wraps every story in the locale × theme × motion matrix:
 - **locale** — en, hi, hi-Latn, plus `ta-Pseudo`, the Tamil-length pseudo-locale (§24.3's longest-string test: ~1.4× English, real Tamil glyphs, ICU placeholders preserved). It is generated in the harness, NOT added to `packages/i18n` — §2.4 admits a locale only through the §12 gate, and a pseudo-catalog next to the real ones is how a fake language ships by accident.

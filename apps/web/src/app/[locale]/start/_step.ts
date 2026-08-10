@@ -66,3 +66,47 @@ export function useStepCommit(step: number) {
 
   return { commit, busy, error, clearError: () => setError(null) };
 }
+
+/**
+ * The same move for a step that has NO server to persist to yet.
+ *
+ * §29.1 orders onboarding language (S02) → auth (S03), so S02 runs before any
+ * session exists — and every onboarding write is behind `CurrentSession`
+ * (§33.2's product identity comes from the §34.5 cookie). S02 used the
+ * server-backed `useStepCommit` anyway: every tap 401'd, `commit` correctly
+ * refused to advance a step it could not persist, and the FIRST screen of
+ * onboarding was a dead end for anyone without a stale cookie. Same language or
+ * different made no difference — there was nothing to authorise the write.
+ *
+ * Selecting and advancing are two different things, and so are "persisted" and
+ * "recorded". This records the step locally and advances; the answer reaches
+ * the server at the first authenticated moment, since `POST /auth/session`
+ * already carries `locale` and stores it on the user. §24.4's per-step
+ * persistence is not weakened — there is simply nowhere to put an answer until
+ * there is a someone to put it against.
+ *
+ * Deliberately has no `error`: there is no request, so nothing can fail, and a
+ * screen offering a retry for a call it never makes would be theatre.
+ */
+export function useLocalStepCommit(step: number) {
+  const router = useRouter();
+  const locale = useLocale();
+  const markComplete = useOnboarding((s) => s.markComplete);
+  const [busy, setBusy] = useState(false);
+
+  const commit = useCallback(
+    (options: { next?: string; locale?: string } = {}) => {
+      if (busy) return;
+      setBusy(true);
+      markComplete(step);
+      track("onboarding_step_completed", { step, locale });
+      const steps = Object.keys(STEP_ROUTES).map(Number).sort((a, b) => a - b);
+      const nextStep = steps[steps.indexOf(step) + 1];
+      const fallback = nextStep === undefined ? undefined : STEP_ROUTES[nextStep];
+      router.push(options.next ?? fallback ?? "/today", { locale: options.locale });
+    },
+    [busy, locale, markComplete, router, step],
+  );
+
+  return { commit, busy };
+}

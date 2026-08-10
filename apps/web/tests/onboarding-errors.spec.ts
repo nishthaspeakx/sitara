@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { SKIP_LAUNCH, setupApi } from "./_onboarding-fixtures";
+import { SKIP_LAUNCH, setupApi, setScenario } from "./_onboarding-fixtures";
 
 /**
  * **No onboarding step may swallow a failure.**
@@ -30,12 +30,18 @@ interface Step {
   submit: (page: Page) => Promise<void>;
 }
 
+/**
+ * S02 is absent, and that is the point.
+ *
+ * It ran before auth and therefore before any session, so its `PATCH
+ * /v1/onboarding` could only ever 401 — which `useStepCommit` correctly treated
+ * as "do not advance", sealing onboarding at its first screen in a real
+ * browser. S02 no longer writes at all (`useLocalStepCommit`), so there is no
+ * failed write for it to surface and no retry to offer. A screen cannot fail an
+ * operation it does not perform. Its behaviour is covered by
+ * `onboarding-language.spec.ts`, which runs it with NO session.
+ */
 const STEPS: Step[] = [
-  {
-    id: "S02 language",
-    route: "/start/language",
-    submit: (page) => page.getByRole("button", { name: /English/ }).first().click(),
-  },
   {
     id: "S05 consent",
     route: "/start/consent",
@@ -99,14 +105,9 @@ for (const step of STEPS) {
     await page.goto(`/en${step.route}${SKIP_LAUNCH}`);
     await step.arrange?.(page);
 
-    await fetch("http://127.0.0.1:3101/__control/reset", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        clientId,
-        scenario: "fail_writes",
-        state: { completed_steps: [2, 3, 4, 5, 6], has_birth_details: true },
-      }),
+    await setScenario(clientId, "fail_writes", {
+      completed_steps: [2, 3, 4, 5, 6],
+      has_birth_details: true,
     });
 
     const before = page.url();
@@ -159,14 +160,9 @@ test("S13 does not advance when the final write fails", async ({ page }) => {
   await page.goto(`/en/start/reading${SKIP_LAUNCH}`);
   await expect(page.getByTestId("reading-line").first()).toBeVisible();
 
-  await fetch("http://127.0.0.1:3101/__control/reset", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      clientId,
-      scenario: "fail_writes",
-      state: { completed_steps: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], has_birth_details: true },
-    }),
+  await setScenario(clientId, "fail_writes", {
+    completed_steps: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    has_birth_details: true,
   });
 
   await page.getByTestId("reading-continue").click();

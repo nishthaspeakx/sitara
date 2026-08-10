@@ -21,6 +21,14 @@ const STUB = "http://127.0.0.1:3101";
 
 export interface StubState {
   locale: string;
+  /**
+   * Whether `POST /auth/session` has run for this client.
+   *
+   * Everything under `/v1` is behind it, exactly as in `sitara_api` — a suite
+   * whose stub granted onboarding writes to anonymous callers could not see
+   * that S02 runs before auth and 401s in a real browser.
+   */
+  session_user_id: string | null;
   completed_steps: number[];
   has_birth_details: boolean;
   time_accuracy: string | null;
@@ -88,6 +96,9 @@ export interface SetupOptions {
   density?: "low" | "med" | "high";
 }
 
+/** The id `POST /auth/session` mints, mirrored from `scripts/stub-api.mjs`. */
+export const SIGNED_IN_USER = "6a70000000000000000000a1";
+
 let counter = 0;
 
 /**
@@ -105,7 +116,13 @@ export async function setupApi(page: Page, options: SetupOptions = {}): Promise<
       clientId,
       locale: options.locale ?? "en",
       scenario: options.scenario ?? "ok",
-      state: options.state ?? {},
+      // Most specs describe a SIGNED-IN user, because most screens are behind
+      // the §34.5 session — so that is the default, and a spec about the
+      // pre-auth world (S02 runs before auth) opts out with
+      // `state: { session_user_id: null }`. Before the stub had this gate it
+      // granted onboarding writes to anonymous callers, and the suite could not
+      // see that S02 401s in a real browser.
+      state: { session_user_id: SIGNED_IN_USER, ...(options.state ?? {}) },
       variant: options.variant ?? "normal_morning",
       density: options.density ?? "med",
     }),
@@ -116,6 +133,33 @@ export async function setupApi(page: Page, options: SetupOptions = {}): Promise<
     { name: "sitara_test_client", value: clientId, domain: "127.0.0.1", path: "/" },
   ]);
   return clientId;
+}
+
+/**
+ * Re-configure a client mid-test — switching a scenario on once a screen is in
+ * position, without losing what it already had.
+ *
+ * A spec that called `/__control/reset` directly had to remember to re-send
+ * `session_user_id`, and forgetting it turned every "failed write" into a 401:
+ * non-retryable, so `ErrorState` renders no retry control at all and the test
+ * fails for a reason unrelated to what it is testing. The defaulting belongs in
+ * one place.
+ */
+export async function setScenario(
+  clientId: string,
+  scenario: Scenario,
+  state: Partial<StubState> = {},
+): Promise<void> {
+  const response = await fetch(`${STUB}/__control/reset`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      clientId,
+      scenario,
+      state: { session_user_id: SIGNED_IN_USER, ...state },
+    }),
+  });
+  if (!response.ok) throw new Error(`stub-api reset failed: ${response.status}`);
 }
 
 /** Read the stub's view of a client — for asserting a step actually persisted. */

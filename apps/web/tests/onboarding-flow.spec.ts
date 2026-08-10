@@ -140,14 +140,24 @@ async function walkTheStack(page: Page, locale: string) {
   // server's own view, because §24.4's resume reads from there, and because a
   // request that 404'd would leave this empty while every screen still advanced.
   //
-  // ALL TWELVE, contiguously. This assertion caught a real gap: S03, S04 and
-  // S06 used to advance without recording themselves, and `next_step` is the
-  // LOWEST unrecorded step — so a user who had signed in, consented and given
-  // her birth details resumed at the sign-up screen.
+  // Every step from S03 on, contiguously. This assertion caught a real gap:
+  // S03, S04 and S06 used to advance without recording themselves, and
+  // `next_step` is the LOWEST unrecorded step — so a user who had signed in,
+  // consented and given her birth details resumed at the sign-up screen.
+  //
+  // **Step 2 is absent, and must be.** §29.1 runs language BEFORE auth, so at
+  // S02 there is no session and `/v1/onboarding` — which is behind one — cannot
+  // be called. It used to be called anyway: every tap 401'd and onboarding was
+  // sealed at its first screen in a real browser, while this suite stayed green
+  // because the stub granted the write to anonymous callers. The answer is not
+  // lost; it arrives with the session exchange, which the locale assertion
+  // below proves.
   const persisted = await serverState(clientId);
   expect(persisted.completed_steps.sort((a, b) => a - b)).toEqual([
-    2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
+    3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13,
   ]);
+  // S02's choice reached the server at the first authenticated moment (§34.5).
+  expect(persisted.locale).toBe(locale);
   expect(persisted.has_birth_details).toBe(true);
   expect(persisted.interest).toBe("balanced");
   expect(persisted.priorities.length).toBe(2);
