@@ -97,6 +97,7 @@ export interface ControlEvent {
   type: ControlEventType;
   seq: number;
   ts: number;
+  ack: number | null;
   payload: Record<string, unknown>;
 }
 
@@ -110,6 +111,161 @@ export const BINARY_HEADER_FLAGS_BYTES = 4 as const;
 export const HEARTBEAT_INTERVAL_S = 10 as const;
 export const REAP_AFTER_SILENCE_S = 30 as const;
 export const RESUME_WINDOW_S = 300 as const;
+
+// ---------------------------------------------------------------------------
+// SPEC §4.3 — Tara's twelve presence states.
+// ONE source, because the client and the server each had their own twelve
+// and five of them disagreed — by name and by position. See the JSON.
+// ---------------------------------------------------------------------------
+/** SPEC §4.3 — Tara's twelve presence states. CLOSED SET. Added in M8-P10 after the two languages turned out to hold DIFFERENT twelves: `sitara_api.chat_orchestration.types.PresenceState` numbered §4.3 exactly (1 welcome … 11 safety-still, 12 profile portrait) while `apps/web`'s `TARA_STATES` had invented `warm_neutral`/`smile`/`full_smile`/`reading`/`safety` and dropped `calm_guidance` and `encouragement` entirely. Five of the twelve disagreed, and they disagreed by POSITION as well as by name — index 11 was `safety_still` on the server and `reading` in the client. Nothing failed because no screen had ever consumed a served presence state; S18's chat header is the first, and §29.5 puts state 11 in exactly that header. The same story as the confidence states one milestone earlier, which is why this file exists rather than a third hand-written copy. */
+export const PRESENCE_STATES = ["welcome", "listening", "speaking_soft", "thoughtful", "calm_guidance", "concern_kind", "encouragement", "celebration", "night", "festival", "safety_still", "profile_portrait"] as const;
+export type PresenceState = (typeof PRESENCE_STATES)[number];
+
+/** §4.3's own numbering. Documentation and a threshold operand — never the wire. */
+export const PRESENCE_ORDINAL: Record<PresenceState, number> = {
+  welcome: 1,
+  listening: 2,
+  speaking_soft: 3,
+  thoughtful: 4,
+  calm_guidance: 5,
+  concern_kind: 6,
+  encouragement: 7,
+  celebration: 8,
+  night: 9,
+  festival: 10,
+  safety_still: 11,
+  profile_portrait: 12,
+};
+
+// ---------------------------------------------------------------------------
+// SPEC §32.4 — the eleven memory types. Vault filters use exactly these.
+// ---------------------------------------------------------------------------
+/** SPEC §32.4 — the eleven memory types. CLOSED SET. §32.4 ends 'Vault filters use exactly these 11 labels, localized', and until M8-P10 two different elevens were in the repo: `sitara_api.memory.taxonomy.MemoryType` had §32.4's (person, significant_event, date_anniversary, …) and `packages/i18n` had an invented parallel set (life_fact, concern, belief_practice, conversation_thread, …) that seven of eleven labels disagreed with. Nothing rendered a typed memory yet, so nothing failed. S18's memory chip is the first thing that does. `taxonomy.py` still OWNS the rules — consent, gates, decay half-lives are §6.3 the memory module's business and stay there; this file is only the closed set of IDS, so the catalogs and the vault can be checked against it mechanically. `dynamic-keys.json` reads it through `valuesFrom`. */
+export const MEMORY_TYPES = ["person", "significant_event", "date_anniversary", "preference", "goal_intention", "decision_context", "mood_pattern", "health_adjacent", "work_finance", "spiritual_practice", "pronunciation_identity"] as const;
+export type MemoryType = (typeof MEMORY_TYPES)[number];
+
+// ---------------------------------------------------------------------------
+// SPEC §25.4 / §30.4 — one chat turn, as it crosses the wire.
+// ---------------------------------------------------------------------------
+/** §25.4's two authors. There is no third — group mechanics are deliberately dropped from the WhatsApp grammar, so there is no shape here that could carry a third party. */
+export const CHAT_ROLES = ["user", "tara"] as const;
+export type ChatRole = (typeof CHAT_ROLES)[number];
+
+/** §9's L1–L5 ladder, as the client must see it. §22.9 and §29.1: L3+ takes the screen over. The threshold is DECLARED below rather than written as `>= 3` on each side. */
+export const SAFETY_LEVELS = ["l1_clear", "l2_constrained", "l3_redirect", "l4_crisis", "l5_human_review"] as const;
+export type SafetyLevel = (typeof SAFETY_LEVELS)[number];
+
+/** §34.7's three VerifiedSourceRow states. Served, never inferred client-side: whether two almanacs corroborated a fact is something only §32.2's adjudication knows. */
+export const SOURCE_STATES = ["default", "single", "disputed"] as const;
+export type SourceState = (typeof SOURCE_STATES)[number];
+
+/** §9's ladder as numbers, for the one comparison both sides make. */
+export const SAFETY_LEVEL_ORDINAL: Record<SafetyLevel, number> = {
+  l1_clear: 1,
+  l2_constrained: 2,
+  l3_redirect: 3,
+  l4_crisis: 4,
+  l5_human_review: 5,
+};
+
+/** §22.9 / §29.1 — 'safety takeover (/support/now, L3+)'. One number, read by the server when it decides and by the client when it renders, so the two can never disagree about what L3+ means. */
+export const SAFETY_TAKEOVER_FROM_ORDINAL = 3 as const;
+
+/** §30.4 — the citation marker sits INSIDE the sentence, before the final stop (the rule daily-guidance's composer already follows), and the grounding validator judges a sentence at a time. So the underlined span is the sentence, which is the unit that was actually verified. A narrower span would claim a precision nothing measured. */
+export const CITATION_SPANS_ARE_SENTENCES = 1 as const;
+
+/** §30.4's three layers, already rendered — the same shape and the same reason as TodayTrust. Fact IDs are absent BY SHAPE: there is no field one could travel in, which is the guarantee TrustSheet's props already give on the component side. */
+export interface ChatTrust {
+  plain: string;
+  sources_line: string;
+  details: string[];
+}
+
+/** §25.4's fact-citation underline. `span_start`/`span_end` index into the turn's `text` (Unicode code points, not UTF-16 units — Devanagari and emoji both make those differ). One citation per verified sentence. */
+export interface ChatCitation {
+  span_start: number;
+  span_end: number;
+  confidence: ConfidenceState;
+  source_state: SourceState;
+  trust: ChatTrust;
+}
+
+/** §32.4 — a SUGGESTION. Nothing is stored without the explicit chip, so this shape carries no memory id: there is no memory yet. `requires_reconfirmation` is types 7–9's 'always re-confirm wording before save'. */
+export interface MemoryChipOffer {
+  type: MemoryType;
+  summary: string;
+  requires_reconfirmation: boolean;
+}
+
+/** One of Tara's turns, after every §9 validator has passed. There is no shape for an unvalidated one, anywhere, in either language — which is what makes 'a fabricated claim never reaches a bubble' a property of the contract rather than a rule someone has to keep. */
+export interface ChatTurn {
+  message_id: string;
+  text: string;
+  locale: string;
+  confidence: ConfidenceState;
+  safety_level: SafetyLevel;
+  presence_state: PresenceState;
+  intent: string;
+  trace_id: string;
+  citations: ChatCitation[];
+  memory_chips: MemoryChipOffer[];
+  review_queued: boolean;
+  message_key: string | null;
+  budget_notice_key: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// SPEC §34.6 — control-event payloads, the TEXT-chat subset only. The voice
+// members stay untyped until M9 builds the thing that emits them.
+// ---------------------------------------------------------------------------
+/** Client → server. The ticket is single-use and 60-second; §34.5's session cookies are httpOnly and first-party, and a WebSocket handshake to another origin does not carry them. */
+export interface SessionStartPayload {
+  ticket: string;
+  conversation_id: string;
+  locale: string;
+  resume_token: string | null;
+}
+
+/** Server → client. `resume_token` is what a reconnect inside `resume_window_s` presents (§32.11). */
+export interface SessionReadyPayload {
+  resume_token: string;
+  resume_window_s: number;
+  conversation_id: string;
+}
+
+/** Client → server, on `captions.final`. Discriminated from the Tara direction by `role`. */
+export interface UserTurnPayload {
+  role: ChatRole;
+  text: string;
+  client_message_id: string;
+  quoted_message_id: string | null;
+}
+
+/** Server → client, on `captions.final`. Carries the whole validated turn and nothing else — there is no field here for text that has not been through §9's validators. */
+export interface TaraTurnPayload {
+  role: ChatRole;
+  client_message_id: string;
+  turn: ChatTurn;
+}
+
+/** Server → client. The client switches on `state` alone. `stage` is §9's pipeline step, carried for traces and analytics — a shape, not content (§13) — and deliberately not something the UI branches on: the presence state is the designed vocabulary (§4.3) and the stage list is an implementation detail that may grow. */
+export interface PresenceStatePayload {
+  state: PresenceState;
+  stage: string | null;
+}
+
+/** Server → client. `reason` is why the socket gave up, so the thread can say something true rather than 'something went wrong'. */
+export interface HandoffToTextPayload {
+  conversation_id: string;
+  reason: string;
+}
+
+/** Server → client (§32.11). `pending_turn` is the turn that COMPLETED while the socket was down — buffered rather than re-run, because re-running a turn charges a user twice for one question. */
+export interface ResumeOfferPayload {
+  conversation_id: string;
+  pending_turn: ChatTurn | null;
+  pending_client_message_id: string | null;
+}
 
 // ---------------------------------------------------------------------------
 // SPEC §28.2 — the Today payload and the closed sets it carries.

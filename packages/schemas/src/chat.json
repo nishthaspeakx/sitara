@@ -1,0 +1,86 @@
+{
+  "$comment": "SPEC §25.4 / §30.4 / §9 — one chat turn, as it crosses the wire. Both transports serve this same shape: `POST /v1/chat/turn` (the §32.11 handoff path) and the §34.6 socket's `captions.final`. One declaration, because a turn that renders one way over HTTP and another over the socket is two chat screens wearing one name.",
+  "$spec": "§25.4, §30.4, §34.6, §22.9",
+  "enums": {
+    "role": {
+      "$comment": "§25.4's two authors. There is no third — group mechanics are deliberately dropped from the WhatsApp grammar, so there is no shape here that could carry a third party.",
+      "enum_name": "ChatRole",
+      "const_name": "CHAT_ROLES",
+      "members": [{ "id": "user" }, { "id": "tara" }]
+    },
+    "safety_level": {
+      "$comment": "§9's L1–L5 ladder, as the client must see it. §22.9 and §29.1: L3+ takes the screen over. The threshold is DECLARED below rather than written as `>= 3` on each side.",
+      "enum_name": "SafetyLevel",
+      "const_name": "SAFETY_LEVELS",
+      "members": [
+        { "id": "l1_clear", "ordinal": 1 },
+        { "id": "l2_constrained", "ordinal": 2 },
+        { "id": "l3_redirect", "ordinal": 3 },
+        { "id": "l4_crisis", "ordinal": 4 },
+        { "id": "l5_human_review", "ordinal": 5 }
+      ]
+    },
+    "source_state": {
+      "$comment": "§34.7's three VerifiedSourceRow states. Served, never inferred client-side: whether two almanacs corroborated a fact is something only §32.2's adjudication knows.",
+      "enum_name": "SourceState",
+      "const_name": "SOURCE_STATES",
+      "members": [{ "id": "default" }, { "id": "single" }, { "id": "disputed" }]
+    }
+  },
+  "constants": {
+    "SAFETY_TAKEOVER_FROM_ORDINAL": {
+      "$comment": "§22.9 / §29.1 — 'safety takeover (/support/now, L3+)'. One number, read by the server when it decides and by the client when it renders, so the two can never disagree about what L3+ means.",
+      "value": 3
+    },
+    "CITATION_SPANS_ARE_SENTENCES": {
+      "$comment": "§30.4 — the citation marker sits INSIDE the sentence, before the final stop (the rule daily-guidance's composer already follows), and the grounding validator judges a sentence at a time. So the underlined span is the sentence, which is the unit that was actually verified. A narrower span would claim a precision nothing measured.",
+      "value": 1
+    }
+  },
+  "shapes": {
+    "ChatTrust": {
+      "$comment": "§30.4's three layers, already rendered — the same shape and the same reason as TodayTrust. Fact IDs are absent BY SHAPE: there is no field one could travel in, which is the guarantee TrustSheet's props already give on the component side.",
+      "fields": [
+        { "name": "plain", "type": "string" },
+        { "name": "sources_line", "type": "string" },
+        { "name": "details", "type": "string[]" }
+      ]
+    },
+    "ChatCitation": {
+      "$comment": "§25.4's fact-citation underline. `span_start`/`span_end` index into the turn's `text` (Unicode code points, not UTF-16 units — Devanagari and emoji both make those differ). One citation per verified sentence.",
+      "fields": [
+        { "name": "span_start", "type": "integer" },
+        { "name": "span_end", "type": "integer" },
+        { "name": "confidence", "type": "ConfidenceState" },
+        { "name": "source_state", "type": "SourceState" },
+        { "name": "trust", "type": "ChatTrust" }
+      ]
+    },
+    "MemoryChipOffer": {
+      "$comment": "§32.4 — a SUGGESTION. Nothing is stored without the explicit chip, so this shape carries no memory id: there is no memory yet. `requires_reconfirmation` is types 7–9's 'always re-confirm wording before save'.",
+      "fields": [
+        { "name": "type", "type": "MemoryType" },
+        { "name": "summary", "type": "string" },
+        { "name": "requires_reconfirmation", "type": "boolean" }
+      ]
+    },
+    "ChatTurn": {
+      "$comment": "One of Tara's turns, after every §9 validator has passed. There is no shape for an unvalidated one, anywhere, in either language — which is what makes 'a fabricated claim never reaches a bubble' a property of the contract rather than a rule someone has to keep.",
+      "fields": [
+        { "name": "message_id", "type": "string" },
+        { "name": "text", "type": "string" },
+        { "name": "locale", "type": "string" },
+        { "name": "confidence", "type": "ConfidenceState" },
+        { "name": "safety_level", "type": "SafetyLevel" },
+        { "name": "presence_state", "type": "PresenceState" },
+        { "name": "intent", "type": "string" },
+        { "name": "trace_id", "type": "string" },
+        { "name": "citations", "type": "ChatCitation[]" },
+        { "name": "memory_chips", "type": "MemoryChipOffer[]" },
+        { "name": "review_queued", "type": "boolean" },
+        { "name": "message_key", "type": "string?" },
+        { "name": "budget_notice_key", "type": "string?" }
+      ]
+    }
+  }
+}

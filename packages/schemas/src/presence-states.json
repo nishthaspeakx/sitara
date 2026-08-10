@@ -1,0 +1,21 @@
+{
+  "$comment": "SPEC §4.3 — Tara's twelve presence states. CLOSED SET. Added in M8-P10 after the two languages turned out to hold DIFFERENT twelves: `sitara_api.chat_orchestration.types.PresenceState` numbered §4.3 exactly (1 welcome … 11 safety-still, 12 profile portrait) while `apps/web`'s `TARA_STATES` had invented `warm_neutral`/`smile`/`full_smile`/`reading`/`safety` and dropped `calm_guidance` and `encouragement` entirely. Five of the twelve disagreed, and they disagreed by POSITION as well as by name — index 11 was `safety_still` on the server and `reading` in the client. Nothing failed because no screen had ever consumed a served presence state; S18's chat header is the first, and §29.5 puts state 11 in exactly that header. The same story as the confidence states one milestone earlier, which is why this file exists rather than a third hand-written copy.",
+  "$spec": "§4.3, §29.5",
+  "enum_name": "PresenceState",
+  "const_name": "PRESENCE_STATES",
+  "$wire": "The ID is the wire format, as with every other closed set here. `ordinal` is §4.3's own numbering, kept so a reader can check this file against the spec line and so a trace can record the number the spec uses — it is NOT what crosses the wire. An int on the wire is positional, and a positional contract between two lists that had already drifted is how this defect would come back.",
+  "members": [
+    { "id": "welcome", "ordinal": 1, "cinemagraph": true, "note": "the smile arriving" },
+    { "id": "listening", "ordinal": 2, "cinemagraph": true, "note": "attentive, slight head tilt" },
+    { "id": "speaking_soft", "ordinal": 3, "cinemagraph": true, "note": "engaged, lips together — no lip-sync mimicry" },
+    { "id": "thoughtful", "ordinal": 4, "cinemagraph": false, "note": "gaze slightly away" },
+    { "id": "calm_guidance", "ordinal": 5, "cinemagraph": false, "note": "" },
+    { "id": "concern_kind", "ordinal": 6, "cinemagraph": false, "note": "" },
+    { "id": "encouragement", "ordinal": 7, "cinemagraph": false, "note": "" },
+    { "id": "celebration", "ordinal": 8, "cinemagraph": true, "note": "full warm smile" },
+    { "id": "night", "ordinal": 9, "cinemagraph": true, "note": "dusk light, shawl" },
+    { "id": "festival", "ordinal": 10, "cinemagraph": false, "note": "per-festival stills" },
+    { "id": "safety_still", "ordinal": 11, "cinemagraph": false, "note": "neutral, steady — used L2+; no smile, no astrology framing" },
+    { "id": "profile_portrait", "ordinal": 12, "cinemagraph": false, "note": "canonical Tara profile portrait" }
+  ]
+}

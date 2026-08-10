@@ -1,0 +1,19 @@
+{
+  "$comment": "SPEC §32.4 — the eleven memory types. CLOSED SET. §32.4 ends 'Vault filters use exactly these 11 labels, localized', and until M8-P10 two different elevens were in the repo: `sitara_api.memory.taxonomy.MemoryType` had §32.4's (person, significant_event, date_anniversary, …) and `packages/i18n` had an invented parallel set (life_fact, concern, belief_practice, conversation_thread, …) that seven of eleven labels disagreed with. Nothing rendered a typed memory yet, so nothing failed. S18's memory chip is the first thing that does. `taxonomy.py` still OWNS the rules — consent, gates, decay half-lives are §6.3 the memory module's business and stay there; this file is only the closed set of IDS, so the catalogs and the vault can be checked against it mechanically. `dynamic-keys.json` reads it through `valuesFrom`.",
+  "$spec": "§32.4",
+  "enum_name": "MemoryType",
+  "const_name": "MEMORY_TYPES",
+  "members": [
+    { "id": "person", "ordinal": 1, "note": "family/friends, relationships" },
+    { "id": "significant_event", "ordinal": 2, "note": "past" },
+    { "id": "date_anniversary", "ordinal": 3, "note": "recurring" },
+    { "id": "preference", "ordinal": 4, "note": "tastes, routines, comms style" },
+    { "id": "goal_intention", "ordinal": 5, "note": "" },
+    { "id": "decision_context", "ordinal": 6, "note": "open questions, options weighed" },
+    { "id": "mood_pattern", "ordinal": 7, "note": "mood/emotional pattern" },
+    { "id": "health_adjacent", "ordinal": 8, "note": "non-medical framing; NEVER symptoms/diagnoses — declined at classification" },
+    { "id": "work_finance", "ordinal": 9, "note": "" },
+    { "id": "spiritual_practice", "ordinal": 10, "note": "fasts, poojas, traditions observed" },
+    { "id": "pronunciation_identity", "ordinal": 11, "note": "names, how she refers to people" }
+  ]
+}
