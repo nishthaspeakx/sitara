@@ -30,7 +30,6 @@ from sitara_schemas import ErrorCode
 from sitara_schemas.today import Density, Tier, TodayPayload
 
 from sitara_api.daily_guidance import dev_fixtures
-from sitara_api.daily_guidance.polish import BriefPolisher
 from sitara_api.daily_guidance.router import build_payload
 from sitara_api.daily_guidance.service import compose_brief
 from sitara_api.daily_guidance.types import Brief, BriefSubject
@@ -75,7 +74,6 @@ async def dev_today(
     composed = await compose_brief(
         facts,
         subject,
-        polisher=_polisher_for(variant),
         skip_polish=skip_polish,
         inputs=_inputs_for(variant, locale),
     )
@@ -102,19 +100,10 @@ async def dev_today(
         state,
         local_date=dev_fixtures.LOCAL_DATE,
         local_time=local_time,
+        place_label="Bengaluru",
     )
 
 
-def _polisher_for(variant: str) -> BriefPolisher | None:
-    """No model, except where the variant IS the model failing.
-
-    Every other variant runs with `skip_polish=True`, because the switcher must
-    render the same thing every time it is opened and a polish pass is the one
-    stage that would not.
-    """
-    if variant != "provider_degraded":
-        return None
-    return BriefPolisher(dev_fixtures.UngroundedLLM())
 
 
 def _inputs_for(variant: str, locale: str) -> dict[str, str]:

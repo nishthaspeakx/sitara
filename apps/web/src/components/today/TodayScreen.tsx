@@ -51,7 +51,17 @@ import { TrustSheetHost } from "./TrustSheetHost";
  * theme"). Order is preference, not fallback-to-anything: if neither is
  * present there is no core card, and §5.3 says that is the correct answer.
  */
-const CORE_PREFERENCE: MorningModule[] = ["personal_chart_theme", "energy_of_day"];
+const CORE_PREFERENCE: MorningModule[] = [
+  "personal_chart_theme",
+  "energy_of_day",
+  // The degraded morning's last resort. §7.1's degrade target is "panchang +
+  // one chart theme"; when the chart half is the half that failed, the panchang
+  // note is all there is — and a screen whose only card is tucked into the
+  // summary row has no centre at all. The core slot takes the best card
+  // available, which is what makes §28.2's dominance rule meaningful rather
+  // than merely satisfiable by having nothing.
+  "moon_nakshatra_note",
+];
 
 /** §28.2 item (4)'s four, in the order the strip reads them. */
 const PRACTICAL: MorningModule[] = ["colour", "number", "favourable_window", "caution_window"];
@@ -229,7 +239,9 @@ export function TodayScreen({
             {/* (6) */}
             <PanchangRow
               payload={payload}
-              row={byId.get(PANCHANG_MODULE)}
+              // Never twice: if the nakshatra note was promoted to the core
+              // card, the row shows the strip alone.
+              row={core?.module === PANCHANG_MODULE ? undefined : byId.get(PANCHANG_MODULE)}
               onWhyThis={() => {
                 const row = byId.get(PANCHANG_MODULE);
                 if (row) setTrustFor(row);

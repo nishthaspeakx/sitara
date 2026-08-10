@@ -115,6 +115,25 @@
         }
       ],
       "const_name": "PLAN_STATES"
+    },
+    "TimingQuality": {
+      "$comment": "§5.2's auspiciousness band, on the wire. The ENGINE's vocabulary, not the UI's — `TimingBar` speaks favourable/care/neutral and the screen maps between them, because §29.2 forbids fear-selling copy and 'inauspicious' is a fact about the sky rather than a word to put in front of someone.",
+      "enum_name": "TimingQuality",
+      "const_name": "TIMING_QUALITIES",
+      "members": [
+        {
+          "id": "auspicious",
+          "label": "Auspicious"
+        },
+        {
+          "id": "neutral",
+          "label": "Neutral"
+        },
+        {
+          "id": "inauspicious",
+          "label": "Inauspicious"
+        }
+      ]
     }
   },
   "shapes": {
@@ -257,6 +276,31 @@
         }
       ]
     },
+    "TodayTiming": {
+      "$comment": "One day-timing window for S16 (§28.2 item 6 → /today/timings). Minutes-from-midnight because that is `TimingBar`'s axis unit; `range` is pre-formatted in the FACT's own zone (§5.3) so no client re-derives a clock from a timestamp and lands in the wrong one.",
+      "fields": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "starts_minute",
+          "type": "integer"
+        },
+        {
+          "name": "ends_minute",
+          "type": "integer"
+        },
+        {
+          "name": "range",
+          "type": "string"
+        },
+        {
+          "name": "quality",
+          "type": "TimingQuality"
+        }
+      ]
+    },
     "TodayPayload": {
       "$comment": "What GET /v1/today serves. `local_time` is DATA, not ambient: §28.2's night takeover fires after 20:00 LOCAL, and a screen that read the browser clock would render a different variant than the brief was generated for — and would make every §24.8 baseline depend on when CI ran.",
       "fields": [
@@ -307,6 +351,14 @@
         {
           "name": "state",
           "type": "TodayState"
+        },
+        {
+          "name": "timings",
+          "type": "TodayTiming[]"
+        },
+        {
+          "name": "place_label",
+          "type": "string?"
         }
       ]
     }

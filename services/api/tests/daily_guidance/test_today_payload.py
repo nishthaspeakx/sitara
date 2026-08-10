@@ -10,7 +10,10 @@ say so" is a test nobody runs while changing the copy.
 from __future__ import annotations
 
 import pytest
-from sitara_schemas.facts import ConfidenceState
+from sitara_schemas.facts import (
+    ConfidenceState,
+    FactKind,  # noqa: F401
+)
 from sitara_schemas.today import BriefStatus, Density, PlanState, Tier
 
 from sitara_api.daily_guidance import dev_fixtures
@@ -175,20 +178,32 @@ async def test_the_worst_case_carries_every_input_the_rule_reads() -> None:
 # ---------------------------------------------------------------------------
 
 
-async def test_the_trust_layers_never_contradict_each_other() -> None:
-    """The defect the recorded fixtures caught.
+async def test_each_trust_layer_says_something_the_others_do_not() -> None:
+    """§30.4's three layers, and the two defects that shaped them.
 
-    `sources_line` was derived from `len(module.snapshots)` — how many
-    DIFFERENT facts a card stands on — while `plain` came from the confidence
-    state. A card standing on one fact therefore said "checked against two
-    sources" directly above "one source available today". Both are now read
-    from the same thing, so they cannot disagree.
+    **First:** `sources_line` was derived from `len(module.snapshots)` — how
+    many DIFFERENT facts a card stands on, not how many sources agreed on one —
+    so a card said "checked against two sources" directly above "one source
+    available today". Both now read the confidence state, which is where §32.2
+    already records corroboration.
+
+    **Second:** `plain` was the confidence description, which is also what the
+    ConfidenceChip renders. The sheet then showed one sentence three times and
+    told the reader nothing they did not already have. Layer 1 is now the CLAIM,
+    which is how §30.4's own worked example opens.
     """
     payload = await dev_today(variant="normal_morning", density=Density.HIGH, locale="en")
+    assert payload.modules
     for module in payload.modules:
-        two_in_plain = "two sources" in module.trust.plain
-        two_in_row = "2 sources" in module.trust.sources_line
-        assert two_in_plain == two_in_row, module.module
+        # Layer 1 is what was claimed.
+        assert module.trust.plain == module.text
+        # Layer 2 is how we know it, and it tracks the state rather than a count.
+        expected = "2 sources" if module.confidence is ConfidenceState.VERIFIED else "one source"
+        assert expected in module.trust.sources_line, module.module
+        # No layer is a copy of another.
+        assert module.trust.plain != module.trust.sources_line
+        for detail in module.trust.details:
+            assert detail != module.trust.plain
 
 
 async def test_a_brief_with_no_modules_still_builds_a_payload() -> None:
@@ -213,3 +228,45 @@ async def test_a_brief_with_no_modules_still_builds_a_payload() -> None:
     assert payload.modules == ()
     assert payload.panchang == ()
     assert payload.taras_line is not None
+
+
+# ---------------------------------------------------------------------------
+# S16's day axis
+# ---------------------------------------------------------------------------
+
+
+def test_a_window_crossing_midnight_is_truncated_at_the_day_boundary() -> None:
+    """`TimingBar` plots ONE 24-hour axis and computes `width = end - start`.
+
+    A night choghadiya running 23:00 to 00:45 belongs partly to tomorrow, and
+    the raw pair gave `ends_minute < starts_minute` — a NEGATIVE CSS width,
+    which a browser drops entirely, leaving the band unrendered at the
+    right-hand edge. Truncating at midnight is the honest shape for a
+    today-axis; `range` still carries the true end time, so nothing is claimed
+    that is not so.
+    """
+    import datetime as dt
+
+    from sitara_schemas.facts import Choghadiya, DayTimingKind, DayTimingValue, TimingQuality
+
+    from sitara_api.daily_guidance.presenter import present_timings
+
+    crossing = dev_fixtures._snapshot(
+        dev_fixtures.FactKind.PANCHANG_DAY_TIMING,
+        DayTimingValue(
+            starts_utc=dt.datetime(2026, 8, 12, 17, 30, tzinfo=dt.UTC),  # 23:00 IST
+            ends_utc=dt.datetime(2026, 8, 12, 19, 15, tzinfo=dt.UTC),  # 00:45 IST
+            timing=DayTimingKind.CHOGHADIYA_NIGHT,
+            quality=TimingQuality.NEUTRAL,
+            choghadiya=Choghadiya.AMRIT,
+            part_index=1,
+        ),
+        "panchang.day_timing.chogh_night",
+    )
+
+    (timing,) = present_timings((crossing,), "en")
+    assert timing.starts_minute == 23 * 60
+    assert timing.ends_minute == 24 * 60
+    assert timing.ends_minute > timing.starts_minute
+    # The true end survives in the text a reader actually sees.
+    assert timing.range == "23:00–00:45"

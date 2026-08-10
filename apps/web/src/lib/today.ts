@@ -15,7 +15,7 @@
  * age that should be made by whatever stored it.
  */
 
-import type { TodayPayload } from "@sitara/schemas";
+import type { ErrorEnvelope, TodayPayload } from "@sitara/schemas";
 
 import { apiCall, type ApiResult } from "./api";
 
@@ -58,4 +58,26 @@ export function readCachedToday(): CachedToday | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * The shared read for Today and its three sub-routes (§29.1 S15–S17).
+ *
+ * All four surfaces render the SAME morning, so they read the same payload
+ * through the same door rather than each inventing an endpoint. The cache
+ * fallback is shared too: a timings screen opened on a train should show the
+ * timings it had, for the same reason Today does.
+ */
+export type TodayView =
+  | { kind: "loading" }
+  | { kind: "ready"; payload: TodayPayload; offline: boolean; cachedAt?: string }
+  | { kind: "error"; error: ErrorEnvelope };
+
+export async function loadToday(): Promise<TodayView> {
+  const result = await fetchToday();
+  if (result.ok) return { kind: "ready", payload: result.data, offline: false };
+  const cached = readCachedToday();
+  return cached
+    ? { kind: "ready", payload: cached.payload, offline: true, cachedAt: cached.cachedAt }
+    : { kind: "error", error: result.error };
 }

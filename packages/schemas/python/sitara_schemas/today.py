@@ -23,12 +23,14 @@ __all__ = [
     "TIME_BAND_STARTS",
     "Tier",
     "TimeBand",
+    "TimingQuality",
     "TodayFestival",
     "TodayModule",
     "TodayPanchangEntry",
     "TodayPayload",
     "TodayState",
     "TodayTarasLine",
+    "TodayTiming",
     "TodayTravel",
     "TodayTrust",
     "time_band",
@@ -78,6 +80,14 @@ class PlanState(StrEnum):
     TRIAL = "trial"
     FREE = "free"
     GRACE = "grace"
+
+
+class TimingQuality(StrEnum):
+    """§5.2's auspiciousness band, on the wire. The ENGINE's vocabulary, not the UI's — `TimingBar` speaks favourable/care/neutral and the screen maps between them, because §29.2 forbids fear-selling copy and 'inauspicious' is a fact about the sky rather than a word to put in front of someone."""
+
+    AUSPICIOUS = "auspicious"
+    NEUTRAL = "neutral"
+    INAUSPICIOUS = "inauspicious"
 
 
 class TimeBand(StrEnum):
@@ -182,6 +192,18 @@ class TodayState(BaseModel):
     story_ring_enabled: bool
 
 
+class TodayTiming(BaseModel):
+    """One day-timing window for S16 (§28.2 item 6 → /today/timings). Minutes-from-midnight because that is `TimingBar`'s axis unit; `range` is pre-formatted in the FACT's own zone (§5.3) so no client re-derives a clock from a timestamp and lands in the wrong one."""
+
+    model_config = ConfigDict(frozen=True)
+
+    name: str
+    starts_minute: int
+    ends_minute: int
+    range: str
+    quality: TimingQuality
+
+
 class TodayPayload(BaseModel):
     """What GET /v1/today serves. `local_time` is DATA, not ambient: §28.2's night takeover fires after 20:00 LOCAL, and a screen that read the browser clock would render a different variant than the brief was generated for — and would make every §24.8 baseline depend on when CI ran."""
 
@@ -199,3 +221,5 @@ class TodayPayload(BaseModel):
     modules: tuple[TodayModule, ...]
     panchang: tuple[TodayPanchangEntry, ...]
     state: TodayState
+    timings: tuple[TodayTiming, ...]
+    place_label: str | None = None

@@ -721,50 +721,58 @@ switcher run the **real** ladder instead of needing a fake `BriefStore` — and
 per CLAUDE.md a fake that accepts what the real one rejects is a defect in the
 fake, so the better answer was not to need one.
 
-*§7.1's degrade is reachable only through diagram 5's grounding `fail` edge.*
-The other stated trigger — "facts too thin" — cannot fire: `rank`'s base
-modules are a superset of what `core_cards` wants under the same `emittable`
-gate, so a fact set that yields nothing to `rank` yields nothing to
-`core_cards` either, and the brief lands on FAILED. The dev fixtures therefore
-reach VERIFIED_CORE_CARDS through a stub model that strips citations — a
-failure no real provider produces on demand. **This is a live-system
-observation, not a spec change**, and it is worth a look before beta: on the
-evidence, a thin-facts morning ships as FAILED rather than as verified core
-cards.
+*§7.1's DEGRADE had two entrances and only one worked — now fixed.* The
+grounding `fail` edge fired correctly; "facts too thin" could not, because
+`rank`'s base modules are a superset of what `core_cards` wants under the same
+`emittable` gate, so a fact set that leaves `rank` empty leaves `core_cards`
+empty too and lands on FAILED. The single way through was an accident of
+density — LOW skips the panchang row, so a nakshatra-only morning reached the
+degrade there and nowhere else. **Two users with identical evidence and
+different density settings therefore got different honesty:** the skeptic was
+told the reading was incomplete, the devout user was shown one card and no
+explanation. `service._is_core_cards_only` is the real trigger and requires BOTH
+halves — the fact stage named something missing, AND nothing beyond
+`ranking.CORE_CARD_MODULES` survived. A core-cards-only morning with every fact
+in hand is a quiet LOW-density day, and labelling it degraded would tell a
+skeptic their reading failed every morning. The degrade also skips polish, per
+§7.1's "no LLM".
 
-*A variant can be "captured" without ever being rendered.* The `offline`
-baseline was, at first, an ordinary morning with the word `offline` in its
-filename: the suite served the offline fixture over a HEALTHY request, so the
-screen never entered the offline path and the picture was of the wrong screen —
-green, committed, and reviewing nothing. §28.2's offline variant is the screen's
-own state (a failed fetch over a populated cache), so the setup now reproduces
-both halves: the stub really returns 503 and `localStorage` really holds a
-previous morning. Seeding client state is not an intercept — the request still
-travels the real path and really fails (CL-013). Two smaller traps fell out of
-it: `page.addInitScript` runs on `about:blank` too, so seeding `localStorage`
-before the first navigation writes it to an origin the app never reads; and
-`cachedAt` had never been plumbed from the page to the banner, so §28.2's "as of
-[time]" would not have rendered even on the real path.
+Two consequences worth recording. The dev fixture no longer needs a stub model
+to reach the degrade, so `UngroundedLLM` is deleted — the switcher carries no
+stub at all. And `moon_nakshatra_note` is promoted to the core card when it is
+the only card left, because a degraded screen whose one card sits inside the
+panchang summary row has no centre; `PanchangRow` then renders the strip alone,
+so it never appears twice.
 
-*Never run `pnpm design-qa` beside a foreground screenshot run.* Both bind
-:3100/:3101, and a concurrent pair produced a baseline that passed against one
-build while the source said another — the same class of failure
-`playwright.config.ts` already documents for reused servers, arriving through
-concurrency rather than staleness. The suites are serial by nature; run them
-that way.
+*A test named for the wrong thing hid it.* `test_thin_facts_degrade_to_core_cards`
+asserted `POLISHED`. Anyone scanning the test list saw the degrade covered; the
+body said the opposite, and the body was right. Renamed to
+`test_a_missing_chart_alone_is_a_real_brief_not_a_degrade`.
 
-*The three fact-free modules are unreachable in production.* `priorities`,
-`goal_check` and `family_reminder` are gated on `RankingContext.available_inputs`,
-and **nothing in `scheduling` builds that dict** — so the set is always empty and
-those three cards can never appear in a real brief. The dev switcher supplies
-them (in-locale, resolved through `start.priorities.option.*`) which is how the
-gap became visible. This is M6 wiring, not a Today defect, and it is left open
-rather than patched from the screen: the inputs are the user's own words and
-belong to whoever reads `profiles.priorities`, `goals` and the family calendar.
+*The three fact-free modules are wired — now fixed.* `priorities`, `goal_check`
+and `family_reminder` are gated on `RankingContext.available_inputs`, and
+**nothing built that dict**, so all three were structurally unreachable in a real
+brief for three milestones — the most personal cards in the product, never once
+shown. `daily_guidance/personal_inputs.py` is the loader, called by BOTH
+generation paths. Three rules hold it: a slug is not a sentence
+(`profiles.priorities` resolves through `start.priorities.option.*`, and a
+priority we cannot name in this locale yields no card); a goal is already in the
+user's words (`goals.text` verbatim, never translated); and a CSFLE name that
+reads back as ciphertext declines rather than composing a card around a blob. A
+leap-day birthday gets no card rather than a guessed one. Verified on the live
+stack: all three composed for a synthetic persona, in en and hi.
 
-**Residual risk.** `/today/timings` does not exist, so §28.2 item (6)'s link is
-absent rather than pointing at a 404 — the panchang summary renders, its
-destination arrives with the timings screen. The density control §28.2 calls
-"user-tunable in settings" is likewise unbuilt: density is read from
-`profiles.density` (set at S09) and the dev switcher is what exercises LOW and
-HIGH.
+**S15–S17 close the routes.** `/today/timings`, `/today/festival` and
+`/today/brief/[card]/why` (§29.1) now exist, so §28.2 item (6)'s link points
+somewhere and the 404 RSC prefetch that hung every `networkidle` wait is gone.
+Two things the why-route settled: §30.4's three layers must each say something
+the others do not — layer 1 was the confidence description, which the
+ConfidenceChip also renders, so the sheet showed one sentence three times; it is
+now the CLAIM, which is how §30.4's own worked example opens. And S16 needed
+structured windows on the wire (`TodayTiming`) plus `place_label`, because §30.2
+forbids implying the place a timing was computed for, and a timezone is not a
+city anyone chose.
+
+**Residual risk.** The density control §28.2 calls "user-tunable in settings" is
+unbuilt: density is read from `profiles.density` (set at S09), and the dev
+switcher is what exercises LOW and HIGH.

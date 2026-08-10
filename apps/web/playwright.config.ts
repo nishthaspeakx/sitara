@@ -148,7 +148,7 @@ export default defineConfig({
       // loose `today-.*` would run them twice and make the cheap command
       // wait on a `next start`.
       testMatch:
-        /screens\.spec\.ts|onboarding-.*\.spec\.ts|ceremony-degradation\.spec\.ts|today-(empty|degraded|screens)\.spec\.ts/,
+        /screens\.spec\.ts|onboarding-.*\.spec\.ts|ceremony-degradation\.spec\.ts|today-(empty|degraded|screens|routes)\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
         viewport: { width: 390, height: 844 },

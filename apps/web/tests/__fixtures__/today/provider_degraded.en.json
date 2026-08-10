@@ -5,7 +5,7 @@
   "density": "med",
   "tier": "paying",
   "status": "verified_core_cards",
-  "degrade_reason": "grounding_failed",
+  "degrade_reason": "chart_unavailable",
   "confidence": "tradition_based_general",
   "taras_line": {
     "text": "The morning opens under Rohini — a gentle place to begin.",
@@ -13,23 +13,11 @@
   },
   "modules": [
     {
-      "module": "energy_of_day",
-      "text": "Today runs on Shukla paksha, tithi 5.",
-      "confidence": "verified",
-      "trust": {
-        "plain": "computed from your chart and checked against two sources",
-        "sources_line": "Computed from your chart · verified against 2 sources",
-        "details": [
-          "Tithi · Shukla paksha 5"
-        ]
-      }
-    },
-    {
       "module": "moon_nakshatra_note",
       "text": "The Moon sits in Rohini today.",
       "confidence": "verified",
       "trust": {
-        "plain": "computed from your chart and checked against two sources",
+        "plain": "The Moon sits in Rohini today.",
         "sources_line": "Computed from your chart · verified against 2 sources",
         "details": [
           "Nakshatra · Rohini"
@@ -38,10 +26,6 @@
     }
   ],
   "panchang": [
-    {
-      "label_key": "ui.panchang.tithi",
-      "value": "Shukla paksha 5"
-    },
     {
       "label_key": "ui.panchang.nakshatra",
       "value": "Rohini"
@@ -61,5 +45,7 @@
     "trial_day": null,
     "plan": "premium",
     "story_ring_enabled": false
-  }
+  },
+  "timings": [],
+  "place_label": "Bengaluru"
 }

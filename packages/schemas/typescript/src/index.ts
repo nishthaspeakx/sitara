@@ -126,6 +126,8 @@ export const BRIEF_DEGRADE_REASONS = ["grounding_failed", "llm_unavailable", "pa
 export type BriefDegradeReason = (typeof BRIEF_DEGRADE_REASONS)[number];
 export const PLAN_STATES = ["premium", "trial", "free", "grace"] as const;
 export type PlanState = (typeof PLAN_STATES)[number];
+export const TIMING_QUALITIES = ["auspicious", "neutral", "inauspicious"] as const;
+export type TimingQuality = (typeof TIMING_QUALITIES)[number];
 export const TIME_BANDS = ["morning", "afternoon", "evening", "night"] as const;
 export type TimeBand = (typeof TIME_BANDS)[number];
 
@@ -199,6 +201,15 @@ export interface TodayState {
   story_ring_enabled: boolean;
 }
 
+/** One day-timing window for S16 (§28.2 item 6 → /today/timings). Minutes-from-midnight because that is `TimingBar`'s axis unit; `range` is pre-formatted in the FACT's own zone (§5.3) so no client re-derives a clock from a timestamp and lands in the wrong one. */
+export interface TodayTiming {
+  name: string;
+  starts_minute: number;
+  ends_minute: number;
+  range: string;
+  quality: TimingQuality;
+}
+
 /** What GET /v1/today serves. `local_time` is DATA, not ambient: §28.2's night takeover fires after 20:00 LOCAL, and a screen that read the browser clock would render a different variant than the brief was generated for — and would make every §24.8 baseline depend on when CI ran. */
 export interface TodayPayload {
   local_date: string;
@@ -213,4 +224,6 @@ export interface TodayPayload {
   modules: TodayModule[];
   panchang: TodayPanchangEntry[];
   state: TodayState;
+  timings: TodayTiming[];
+  place_label: string | null;
 }

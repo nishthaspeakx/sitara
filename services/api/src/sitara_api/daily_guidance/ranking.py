@@ -291,6 +291,19 @@ def rank(
     ]
 
 
+#: What §7.1's degrade target is allowed to contain: "verified core cards
+#: (panchang + one chart theme)". Declared beside `core_cards` so the ladder can
+#: ask "is this brief ONLY core-card material?" without re-deriving the set —
+#: and so the two can never disagree about what a core card is.
+CORE_CARD_MODULES: frozenset[MorningModule] = frozenset(
+    {
+        MorningModule.MOON_NAKSHATRA_NOTE,
+        MorningModule.ENERGY_OF_DAY,
+        MorningModule.PERSONAL_CHART_THEME,
+    }
+)
+
+
 def core_cards(facts: Sequence[FactSnapshot]) -> list[RankedModule]:
     """§7.1's degrade target: "verified core cards (panchang + one chart theme,
     no LLM)".
@@ -304,13 +317,8 @@ def core_cards(facts: Sequence[FactSnapshot]) -> list[RankedModule]:
     """
     by_kind = index_facts(facts)
     context = RankingContext(density=Density.LOW)
-    wanted = (
-        MorningModule.MOON_NAKSHATRA_NOTE,
-        MorningModule.ENERGY_OF_DAY,
-        MorningModule.PERSONAL_CHART_THEME,
-    )
     return [
         RankedModule(module=module, snapshots=_snapshots_for(module, by_kind), score=1.0)
         for module in MORNING_MODULE_ORDER
-        if module in wanted and emittable(module, by_kind, context)
+        if module in CORE_CARD_MODULES and emittable(module, by_kind, context)
     ]

@@ -30,7 +30,7 @@ from sitara_schemas import ErrorCode
 from sitara_schemas.today import BriefStatus, TodayPayload, TodayState, time_band
 
 from sitara_api.auth.router import CurrentSession
-from sitara_api.daily_guidance import presenter, today_state, wiring
+from sitara_api.daily_guidance import personal_inputs, presenter, today_state, wiring
 from sitara_api.daily_guidance.store import BriefStore
 from sitara_api.daily_guidance.templates import compose_taras_line
 from sitara_api.daily_guidance.types import Brief, BriefSubject
@@ -78,7 +78,7 @@ async def get_today(
     brief = await store.get(subject.user_id, local_date)
 
     if brief is None:
-        brief = await _generate_on_open(request, subject, local_date, here)
+        brief = await _generate_on_open(request, subject, local_date, here, db)
 
     if brief is not None:
         await store.mark_opened(subject.user_id, local_date, dt.datetime.now(dt.UTC))
@@ -92,7 +92,12 @@ async def get_today(
         stories_enabled=getattr(request.app.state.settings, "stories_enabled", False),
     )
     return build_payload(
-        subject, brief, state, local_date=local_date, local_time=local_time
+        subject,
+        brief,
+        state,
+        local_date=local_date,
+        local_time=local_time,
+        place_label=await _place_label(db, subject.user_id),
     )
 
 
@@ -101,6 +106,7 @@ async def _generate_on_open(
     subject: BriefSubject,
     local_date: str,
     here: dt.datetime,
+    db,  # noqa: ANN001
 ) -> Brief | None:
     """§7.1: "dormant users get on-open generation only — no waste".
 
@@ -118,6 +124,9 @@ async def _generate_on_open(
         result = await service.generate_on_open(
             subject,
             local_date,
+            # The same three fact-free cards the scheduled wave loads. The
+            # on-open path is a real brief, not a lesser one.
+            inputs=await personal_inputs.load_inputs(db, subject, local_date=local_date),
             due_at=here.replace(
                 hour=int(subject.brief_time[:2]),
                 minute=int(subject.brief_time[3:]),
@@ -159,6 +168,7 @@ def build_payload(
     *,
     local_date: str,
     local_time: str,
+    place_label: str | None = None,
 ) -> TodayPayload:
     """Assemble the wire payload. Pure, and shared with the dev router.
 
@@ -191,8 +201,24 @@ def build_payload(
             for module in source.modules
         ),
         panchang=presenter.present_panchang(source.snapshots, source.locale),
+        timings=presenter.present_timings(source.snapshots, source.locale),
+        # §30.2: "the city the timings were computed for — never implied".
+        # `TimingBar` requires it for the same reason the spec does.
+        place_label=place_label,
         state=state,
     )
+
+
+async def _place_label(db, user_id: str) -> str | None:  # noqa: ANN001
+    """The city §7.1 computed this morning's timings for (§30.2).
+
+    Read rather than inferred from the timezone: a zone is not a place, and
+    "Asia/Kolkata" on a timings screen would be a label the user never chose.
+    """
+    from bson import ObjectId
+
+    profile = await db.profiles.find_one({"user_id": ObjectId(user_id)}) or {}
+    return (profile.get("brief_place") or {}).get("label")
 
 
 async def _brief_count(db, user_id: str) -> int:  # noqa: ANN001

@@ -14,6 +14,7 @@ import { useTranslations } from "next-intl";
 import type { TodayModule, TodayPayload } from "@sitara/schemas";
 
 import { BriefCard, PanchangStrip } from "@/components/ui";
+import { Link } from "@/i18n/navigation";
 
 export function PanchangRow({
   payload,
@@ -51,12 +52,6 @@ export function PanchangRow({
       ) : null}
       {payload.panchang.length ? (
         <>
-          {/* §28.2 item (6) ends "→ /today/timings", and that screen is not
-              built. The link is therefore ABSENT rather than pointing at a
-              404: a dead end on the app's home surface is worse than a missing
-              affordance, and the prefetch for it also hung every `networkidle`
-              wait in the suite. The destination arrives with the timings
-              screen, and this comment is the marker for it. */}
           <p className="text-caption text-ink-muted">{t("today.panchang.title")}</p>
           <PanchangStrip
             entries={payload.panchang.map((entry) => ({
@@ -64,6 +59,17 @@ export function PanchangRow({
               value: entry.value,
             }))}
           />
+          {/* §28.2 item (6): "panchang summary row → /today/timings". S16 now
+              exists, so the row leads somewhere — this link pointed at a 404
+              for exactly as long as it did not, and its RSC prefetch hung every
+              `networkidle` wait in the suite while it did. */}
+          <Link
+            href="/today/timings"
+            data-testid="panchang-link"
+            className="self-start rounded-chip px-2 py-1 text-caption text-ink-primary underline decoration-gold underline-offset-4"
+          >
+            {t("today.panchang.link")}
+          </Link>
         </>
       ) : null}
     </section>

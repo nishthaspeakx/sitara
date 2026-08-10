@@ -194,7 +194,11 @@ def degraded_facts() -> BriefFacts:
     the same few cards and are not the same problem.
     """
     return BriefFacts(
-        snapshots=(tithi(), nakshatra()),
+        # The nakshatra alone. A tithi beside it composes a colour and a food
+        # note, which is a real brief with a gap rather than a degrade — see
+        # `service._is_core_cards_only`. This is what a morning looks like when
+        # the panchang came back partial and the chart not at all.
+        snapshots=(nakshatra(),),
         confidence=ConfidenceState.TRADITION_BASED_GENERAL,
         missing=("chart",),
         degraded=True,
@@ -282,7 +286,6 @@ VARIANTS: dict[str, tuple] = {
     # in it, exactly as a real one would.
     "offline": (full_facts(), "08:30", {}, True),
     # The ONE variant that must run the polish stage: §7.1's degrade is
-    # reached through diagram 5's grounding `fail` edge (see UngroundedLLM).
     "provider_degraded": (degraded_facts(), "08:30", {}, False),
     "trial": (full_facts(), "08:30", {"plan": PlanState.TRIAL, "trial_day": 4}, True),
     "premium": (full_facts(), "08:30", {"plan": PlanState.PREMIUM}, True),
@@ -310,41 +313,7 @@ VARIANTS: dict[str, tuple] = {
 }
 
 
-class UngroundedLLM:
-    """A model that strips every citation. The one stub in this file.
 
-    §7.1's degrade to verified core cards has exactly two triggers, and only one
-    of them can be reproduced from facts: "facts too thin" needs a fact set the
-    ranking engine declines entirely, which by construction also leaves
-    `core_cards` with nothing, so it lands on FAILED rather than on the degrade.
-    The trigger §28.2's provider-degraded variant is actually about is diagram
-    5's `fail` edge — "a polish pass in which EVERY line failed grounding".
-
-    A model that will not stop rewriting the facts is a failure mode no real
-    provider produces on demand, which is the one thing a stub is legitimately
-    for. Everything downstream of it is real: the grounding validator really
-    rejects these lines, the single corrective regeneration really runs and
-    really fails again, and `compose_brief` really falls back to `core_cards`.
-    """
-
-    model = "dev-ungrounded"
-
-    async def complete(self, request):  # noqa: ANN001, ANN201
-        import json as _json
-
-        from sitara_api.chat_orchestration.llm import LLMResponse
-
-        payload = _json.loads(request.messages[0]["content"])
-        lines = [
-            # The citation goes; the astrological claim stays. That is exactly
-            # what cite-or-die exists to catch.
-            {"index": line["index"], "text": _strip_markers(line["text"])}
-            for line in payload["lines"]
-        ]
-        parsed = {"lines": lines}
-        return LLMResponse(
-            text=_json.dumps(parsed), model=self.model, parsed=parsed
-        )
 
 
 def _strip_markers(text: str) -> str:

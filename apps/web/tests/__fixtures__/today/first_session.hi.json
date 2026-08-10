@@ -27,5 +27,7 @@
     "trial_day": null,
     "plan": "premium",
     "story_ring_enabled": false
-  }
+  },
+  "timings": [],
+  "place_label": "Bengaluru"
 }

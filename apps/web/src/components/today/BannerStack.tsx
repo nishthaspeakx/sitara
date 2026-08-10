@@ -21,6 +21,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import type { TodayPayload } from "@sitara/schemas";
 
 import { Chip, FestivalBanner, OfflineBanner } from "@/components/ui";
+import { useRouter } from "@/i18n/navigation";
 import type { TodayChrome } from "@/lib/today-variant";
 
 export interface BannerStackProps {
@@ -41,6 +42,7 @@ export function BannerStack({
   onOpenFestival,
   cachedAt,
 }: BannerStackProps) {
+  const router = useRouter();
   const t = useTranslations();
   const format = useFormatter();
   const { state } = payload;
@@ -93,7 +95,7 @@ export function BannerStack({
                     day: "numeric",
                     month: "long",
                   })}
-                  onOpen={onOpenFestival}
+                  onOpen={onOpenFestival ?? (() => router.push("/today/festival"))}
                 />
               </div>
             ) : null;

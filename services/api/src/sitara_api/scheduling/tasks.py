@@ -161,12 +161,19 @@ def generate_brief(self, user_id: str, local_date: str, due_at_iso: str) -> dict
     """
 
     async def work(db, _settings, client) -> dict[str, Any]:  # noqa: ANN001
+        from sitara_api.daily_guidance.personal_inputs import load_inputs
         from sitara_api.daily_guidance.wiring import build_service, load_subject
 
         subject = await load_subject(db, user_id)
         if subject is None:
             logger.warning("brief skipped: no schedulable profile", extra={"user_id": user_id})
             return {"status": "skipped"}
+
+        # §28.2's three fact-free contextual cards. Without this the ranking
+        # engine's `available_inputs` set is empty and `priorities`,
+        # `goal_check` and `family_reminder` are unreachable — three of §34.3's
+        # seventeen, silently absent from every brief since M6.
+        inputs = await load_inputs(db, subject, local_date=local_date)
 
         # The codec borrows the task's own client for the key vault rather than
         # opening a second one it would then have to remember to close.
@@ -176,6 +183,7 @@ def generate_brief(self, user_id: str, local_date: str, due_at_iso: str) -> dict
                 subject,
                 local_date,
                 due_at=dt.datetime.fromisoformat(due_at_iso),
+                inputs=inputs,
             )
         finally:
             await close()
@@ -183,6 +191,7 @@ def generate_brief(self, user_id: str, local_date: str, due_at_iso: str) -> dict
             "status": result.brief.status.value,
             "modules": len(result.brief.modules),
             "notified": result.notification is not None,
+            "inputs": sorted(inputs),
         }
 
     try:

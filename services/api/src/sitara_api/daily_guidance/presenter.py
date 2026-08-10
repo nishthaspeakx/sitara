@@ -45,9 +45,11 @@ from sitara_schemas.facts import (
     TithiBoundaryValue,
 )
 from sitara_schemas.today import (
+    TimingQuality,
     TodayModule,
     TodayPanchangEntry,
     TodayTarasLine,
+    TodayTiming,
     TodayTrust,
 )
 
@@ -110,15 +112,24 @@ def _sources_line(state: ConfidenceState, locale: str) -> str:
     return _resolve_or_empty(key, locale)
 
 
-def _plain_line(state: ConfidenceState, locale: str) -> str:
-    """§30.4 layer 1 — "why this guidance?" in plain language.
+def _plain_line(text: str) -> str:
+    """§30.4 layer 1 — the CLAIM, in the words the reader just tapped.
 
-    Keyed on the confidence state rather than on the module, because that is
-    what the sentence is actually about: how much we know, and how we know it.
-    A per-module variant would be seventeen sentences saying the same five
-    things.
+    §30.4's own worked example opens exactly this way: "Today the Moon moves
+    through your 10th house — work themes rise. Your birth time is exact, so
+    this is precise." The claim first, the precision qualifier after — and the
+    qualifier already has a home in layer 2, on the ConfidenceChip.
+
+    The first cut put the CONFIDENCE description here instead, and the rendered
+    sheet showed why that is wrong: layer 1 read "computed from your chart and
+    checked against two sources", the sources row beneath it read "Computed from
+    your chart · verified against 2 sources", and the chip beside that read the
+    first sentence again. Three layers, one sentence, said three times — a Trust
+    Sheet that looks thorough and tells a reader nothing they did not already
+    have. The layers must each carry something the others do not: what was
+    claimed, how we know it, and what the fact actually holds.
     """
-    return _resolve_or_empty(f"ui.confidence.{state.value}_desc", locale)
+    return text
 
 
 def _detail(snapshot: FactSnapshot, locale: str) -> str | None:
@@ -208,10 +219,12 @@ def _resolve_or_empty(key: str, locale: str) -> str:
         return ""
 
 
-def trust_for(module: ComposedModule, state: ConfidenceState, locale: str) -> TodayTrust:
+def trust_for(
+    module: ComposedModule, state: ConfidenceState, locale: str, *, text: str
+) -> TodayTrust:
     details = [d for d in (_detail(s, locale) for s in module.snapshots) if d]
     return TodayTrust(
-        plain=_plain_line(state, locale),
+        plain=_plain_line(text),
         sources_line=_sources_line(state, locale),
         details=tuple(details),
     )
@@ -224,11 +237,12 @@ def trust_for(module: ComposedModule, state: ConfidenceState, locale: str) -> To
 
 def present_module(module: ComposedModule, brief: Brief, locale: str) -> TodayModule:
     state = module_confidence(module, brief.confidence or ConfidenceState.VERIFIED)
+    text = strip_citations(module.rendered)
     return TodayModule(
         module=module.module,
-        text=strip_citations(module.rendered),
+        text=text,
         confidence=state,
-        trust=trust_for(module, state, locale),
+        trust=trust_for(module, state, locale, text=text),
     )
 
 
@@ -236,6 +250,79 @@ def present_taras_line(line: TarasLine | None) -> TodayTarasLine | None:
     if line is None:
         return None
     return TodayTarasLine(text=strip_citations(line.text), confidence=line.confidence)
+
+
+def present_timings(
+    snapshots: Sequence[FactSnapshot], locale: str
+) -> tuple[TodayTiming, ...]:
+    """S16's day (§28.2 item 6 → `/today/timings`).
+
+    Every window the day's facts carry, in clock order, rendered in the FACT's
+    own zone — the same rule the composer follows, and for the same reason: a
+    time in the wrong zone is a lie that also happens to be a number mismatch.
+
+    Minutes-from-midnight travels beside the formatted range because `TimingBar`
+    plots on a time-of-day axis (§29.4's dataviz rules) and deriving minutes
+    from a rendered string on the client would put the zone conversion in two
+    places, one of which would eventually be wrong.
+    """
+    from sitara_api.daily_guidance.templates import _clock
+
+    out: list[TodayTiming] = []
+    for snapshot in snapshots:
+        value = snapshot.value
+        if not isinstance(value, DayTimingValue | MuhuratWindowValue):
+            continue
+        starts = _clock(value.starts_utc, snapshot)
+        ends = _clock(value.ends_utc, snapshot)
+        if isinstance(value, DayTimingValue):
+            name = localised_term("day_timing", value.timing.value, locale)
+            if name is None:
+                # §2.4: an unnamed window is a bar with no label. Drop it rather
+                # than plot an English name on a Devanagari axis.
+                logger.warning(
+                    "timing unnamed in locale",
+                    extra={"timing": value.timing.value, "locale": locale},
+                )
+                continue
+        else:
+            # A muhurat has no `DayTimingKind` to name it. `ui.timing.chart_label`
+            # is the day's own label rather than the legend word "favourable",
+            # which is the QUALITY and already renders beside every band — a
+            # window named after its own colour tells a reader nothing.
+            name = _resolve_or_empty("ui.timing.chart_label", locale)
+
+        starts_minute = _minutes(starts)
+        ends_minute = _minutes(ends)
+        if ends_minute <= starts_minute:
+            # The window crosses midnight — a night choghadiya running 23:00 to
+            # 00:45 belongs partly to tomorrow. `TimingBar` plots a single
+            # 24-hour axis and computes `width = end - start`, so the raw pair
+            # produced a NEGATIVE width: an invalid CSS declaration, dropped by
+            # the browser, leaving the band unrendered at the right-hand edge.
+            # Truncating at the day boundary is the honest shape for a
+            # today-axis; `range` still carries the true end time.
+            ends_minute = _DAY_MINUTES
+
+        out.append(
+            TodayTiming(
+                name=name,
+                starts_minute=starts_minute,
+                ends_minute=ends_minute,
+                range=f"{starts}–{ends}",
+                quality=TimingQuality(value.quality.value),
+            )
+        )
+    return tuple(sorted(out, key=lambda t: t.starts_minute))
+
+
+#: A day, on `TimingBar`'s axis.
+_DAY_MINUTES = 24 * 60
+
+
+def _minutes(clock: str) -> int:
+    hours, minutes = (int(part) for part in clock.split(":"))
+    return hours * 60 + minutes
 
 
 def present_panchang(

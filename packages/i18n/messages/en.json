@@ -221,6 +221,10 @@
       "morning_nakshatra": "The morning opens under {nakshatra} — a gentle place to begin.",
       "night": "The day is winding down. Nothing more is being asked of you tonight.",
       "night_nakshatra": "The night comes in under {nakshatra}, and rest is enough."
+    },
+    "family": {
+      "birthday": "their birthday in {days} days",
+      "birthday_today": "their birthday today"
     }
   },
   "ui": {
@@ -771,6 +775,21 @@
     },
     "festival_accent": "{name} today",
     "first_morning": "Your first morning. This is how it will arrive each day.",
-    "how_it_works": "Each morning Tara reads the day against your chart, and tells you what she finds."
+    "how_it_works": "Each morning Tara reads the day against your chart, and tells you what she finds.",
+    "timings": {
+      "title": "The day's timings",
+      "empty": "Today's timings haven't reached me yet.",
+      "legend": "Windows are drawn on the day, not ranked against each other."
+    },
+    "festival": {
+      "title": "Today's observance",
+      "tradition": "Reckoned by the {tradition} calendar.",
+      "empty": "No observance falls today.",
+      "practice": "If you keep it"
+    },
+    "why": {
+      "back": "Back to today",
+      "missing": "That card isn't on today's brief."
+    }
   }
 }

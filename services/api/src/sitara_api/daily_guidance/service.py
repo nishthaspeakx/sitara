@@ -134,6 +134,37 @@ def _relevance_for(facts: BriefFacts) -> dict[MorningModule, float]:
     return {MorningModule.FESTIVAL_OBSERVANCE: 10.0} if has_festival else {}
 
 
+def _missing_reason(facts: BriefFacts) -> DegradeReason:
+    """WHY the brief is short, from what the fact stage said it could not get.
+
+    Carried rather than inferred (see `BriefFacts.missing`): "the panchang cell
+    was cold" and "this person has no birth time" produce the same few cards
+    and are not the same problem.
+    """
+    return (
+        DegradeReason.PANCHANG_UNAVAILABLE
+        if "panchang" in facts.missing
+        else DegradeReason.CHART_UNAVAILABLE
+    )
+
+
+def _is_core_cards_only(
+    modules: Sequence[ComposedModule], facts: BriefFacts
+) -> bool:
+    """Did this morning produce nothing beyond §7.1's degrade target?
+
+    BOTH halves are required. A brief that is core-cards-only with every fact in
+    hand is not degraded — it is a quiet day at LOW density, and labelling it
+    degraded would tell a skeptic their reading failed every morning. And a
+    brief with a missing half that still composed a colour, a number and two
+    windows is a real brief with a gap in it, which the per-module confidence
+    already says.
+    """
+    if not facts.missing:
+        return False
+    return {module.module for module in modules} <= ranking.CORE_CARD_MODULES
+
+
 async def compose_brief(
     facts: BriefFacts,
     subject: BriefSubject,
@@ -169,11 +200,29 @@ async def compose_brief(
         # shipping an empty card set.
         modules = composer.compose_all(ranking.core_cards(facts.snapshots), subject.locale)
         status = BriefStatus.VERIFIED_CORE_CARDS if modules else BriefStatus.FAILED
-        degrade_reason = (
-            DegradeReason.PANCHANG_UNAVAILABLE
-            if "panchang" in facts.missing
-            else DegradeReason.CHART_UNAVAILABLE
-        )
+        degrade_reason = _missing_reason(facts)
+    elif _is_core_cards_only(modules, facts):
+        # §7.1's DEGRADE, reached by the path the spec actually describes:
+        # "a failed brief degrades to 'verified core cards' (panchang + one
+        # chart theme, no LLM) rather than nothing".
+        #
+        # This branch did not exist, and the gap was invisible because the
+        # branch above LOOKS like it covers the case. It cannot: `rank`'s base
+        # modules are a SUPERSET of what `core_cards` wants, under the same
+        # `emittable` gate, so any fact set that leaves `rank` empty leaves
+        # `core_cards` empty too and lands on FAILED. The one exception was an
+        # accident of density — at LOW the panchang row is skipped, so a
+        # nakshatra-only morning could reach the degrade there and nowhere
+        # else. Two users with identical evidence and different density
+        # settings therefore got different honesty: one was told the reading
+        # was incomplete, the other was quietly shown one card.
+        #
+        # The real trigger is a property of the FACTS, not of how many modules
+        # happened to compose: the fact stage named something missing, and what
+        # survived is only core-card material. No polish either — §7.1 says
+        # "no LLM", and there is nothing here a rewrite could improve.
+        status = BriefStatus.VERIFIED_CORE_CARDS
+        degrade_reason = _missing_reason(facts)
     elif skip_polish or polisher is None:
         # §7.1's cost lever. Complete and verified; simply not polished.
         status = BriefStatus.RANKING_ONLY

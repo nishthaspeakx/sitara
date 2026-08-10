@@ -24,6 +24,7 @@ from sitara_api.chat_orchestration.llm import (
     LLMResponse,
     LLMUnavailable,
 )
+from sitara_api.daily_guidance import ranking
 from sitara_api.daily_guidance.notify import NotificationQueue, NotificationStatus
 from sitara_api.daily_guidance.polish import BriefPolisher
 from sitara_api.daily_guidance.service import (
@@ -165,8 +166,20 @@ async def test_total_grounding_failure_degrades_to_core_cards(db, full_facts) ->
     assert result.brief.confidence is ConfidenceState.TRADITION_BASED_GENERAL
 
 
-async def test_thin_facts_degrade_to_core_cards(db, tithi_fact, nakshatra_fact) -> None:  # noqa: ANN001
-    """The facts, not the model, are what usually fails."""
+async def test_a_missing_chart_alone_is_a_real_brief_not_a_degrade(
+    db, tithi_fact, nakshatra_fact  # noqa: ANN001
+) -> None:
+    """The facts, not the model, are what usually fails — but not every gap is
+    a degrade.
+
+    Renamed: this was called `test_thin_facts_degrade_to_core_cards` while
+    asserting POLISHED, and the name is part of why the missing degrade path
+    went unnoticed for a milestone. Anyone scanning the test list saw the
+    degrade covered; the body says the opposite, and the body is right. A
+    panchang with no chart still composes a colour, a food note and two
+    windows — a real brief with a gap, which §5.4's APPROXIMATE state is
+    exactly how to say.
+    """
     service = build(
         db,
         FixedFacts([tithi_fact, nakshatra_fact], missing=("chart",), degraded=True),
@@ -360,3 +373,87 @@ async def test_a_missed_local_date_generates_on_open(db, full_facts) -> None:  #
     assert result.brief.status is BriefStatus.POLISHED
     assert result.brief.tier is Tier.DORMANT
     assert await db.daily_briefings.count_documents({}) == 1
+
+
+# --- the degrade path that did not exist -----------------------------------
+
+
+async def test_thin_facts_degrade_to_core_cards_at_every_density(
+    db, nakshatra_fact  # noqa: ANN001
+) -> None:
+    """§7.1: "a failed brief degrades to 'verified core cards' … rather than
+    nothing" — the PARTIAL path, which was unreachable.
+
+    The first branch of the ladder looks like it covers this and cannot:
+    `rank`'s base modules are a superset of what `core_cards` wants under the
+    same `emittable` gate, so any fact set that leaves `rank` empty leaves
+    `core_cards` empty too and lands on FAILED. The only way through was an
+    accident of density — at LOW the panchang row is skipped, so a
+    nakshatra-only morning reached the degrade there and nowhere else.
+
+    That is the bug worth stating plainly: two users with IDENTICAL evidence and
+    different density settings got different honesty. The skeptic was told the
+    reading was incomplete; the devout user was quietly shown one card and no
+    explanation. This test runs all three densities against one fact set for
+    exactly that reason.
+    """
+    for density in (Density.LOW, Density.MED, Density.HIGH):
+        service = build(db, FixedFacts([nakshatra_fact], missing=("chart",), degraded=True))
+        result = await service.generate_for(member_for(subject(density=density)), now=NOW)
+
+        assert result.brief.status is BriefStatus.VERIFIED_CORE_CARDS, density
+        assert result.brief.degrade_reason is DegradeReason.CHART_UNAVAILABLE, density
+        # §5.4: "we can tell you what the day holds generally, not what it holds
+        # for you" — not APPROXIMATE, which would claim a reading we did not do.
+        assert result.brief.confidence is ConfidenceState.TRADITION_BASED_GENERAL, density
+        assert {m.module for m in result.brief.modules} <= ranking.CORE_CARD_MODULES, density
+
+
+async def test_the_degrade_does_not_call_the_model(db, nakshatra_fact) -> None:  # noqa: ANN001
+    """§7.1's degrade is "panchang + one chart theme, NO LLM".
+
+    A polish pass here would spend the per-user marginal cost §7.1 is built to
+    protect, on the one morning where there is nothing for a rewrite to improve.
+    """
+    calls: list[LLMRequest] = []
+
+    def record(request: LLMRequest) -> LLMResponse:
+        calls.append(request)
+        return LLMResponse(text="{}", model="test")
+
+    service = build(
+        db,
+        FixedFacts([nakshatra_fact], missing=("chart",), degraded=True),
+        ScriptedLLM(record, record),
+    )
+    result = await service.generate_for(member_for(), now=NOW)
+
+    assert result.brief.status is BriefStatus.VERIFIED_CORE_CARDS
+    assert calls == []
+
+
+async def test_a_quiet_day_with_every_fact_is_not_a_degrade(db, full_facts) -> None:  # noqa: ANN001
+    """The other half of the rule, and the one that keeps it honest.
+
+    A brief can be core-cards-only without anything being wrong — that is a LOW
+    density morning. Labelling it degraded would tell a skeptic their reading
+    failed every single day, which is the opposite of what §28.2's LOW mode is
+    for. The trigger needs BOTH halves: the fact stage named something missing,
+    AND nothing beyond core-card material survived.
+    """
+    service = build(db, FixedFacts(full_facts))
+    result = await service.generate_for(member_for(subject(density=Density.LOW)), now=NOW)
+
+    assert result.brief.status is BriefStatus.RANKING_ONLY
+    assert result.brief.degrade_reason is None
+
+
+async def test_no_facts_at_all_still_fails_honestly(db) -> None:  # noqa: ANN001
+    """FAILED is not retired by the new branch. A morning with nothing to stand
+    on is not "verified core cards" — there are no cards to verify."""
+    service = build(db, FixedFacts([], missing=("panchang", "chart"), degraded=True))
+    result = await service.generate_for(member_for(), now=NOW)
+
+    assert result.brief.status is BriefStatus.FAILED
+    assert result.brief.modules == ()
+    assert result.brief.confidence is ConfidenceState.CANNOT_CALCULATE

@@ -221,6 +221,10 @@
       "morning_nakshatra": "Subah {nakshatra} mein khul rahi hai — shuruaat ke liye komal samay.",
       "night": "Din tham raha hai. Aaj raat aapse aur kuch nahin maanga ja raha.",
       "night_nakshatra": "Raat {nakshatra} mein utar rahi hai, aur aaraam hi kaafi hai."
+    },
+    "family": {
+      "birthday": "{days} din mein unka janmdin",
+      "birthday_today": "Aaj unka janmdin"
     }
   },
   "ui": {
@@ -771,6 +775,21 @@
     },
     "festival_accent": "Aaj {name}",
     "first_morning": "Aapki pehli subah. Har din aise hi aayegi.",
-    "how_it_works": "Har subah Tara din ko aapki kundli ke saath padhti hain, aur jo milta hai wo batati hain."
+    "how_it_works": "Har subah Tara din ko aapki kundli ke saath padhti hain, aur jo milta hai wo batati hain.",
+    "timings": {
+      "title": "Din ki samay-saarni",
+      "empty": "Aaj ki samay-saarni abhi mujh tak nahin pahunchi.",
+      "legend": "Ye samay din par dikhaye gaye hain, ek-doosre se tulna mein nahin."
+    },
+    "festival": {
+      "title": "Aaj ka parv",
+      "tradition": "{tradition} panchang ke anusaar.",
+      "empty": "Aaj koi parv nahin hai.",
+      "practice": "Agar aap ise maanti hain"
+    },
+    "why": {
+      "back": "Aaj par wapas",
+      "missing": "Ye card aaj ke brief mein nahin hai."
+    }
   }
 }
