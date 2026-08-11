@@ -98,11 +98,11 @@ export {
   motionStandard,
   ICON_STROKE,
   TARA_SIZES,
-  TARA_STATES,
+  PRESENCE_STATES,
   CONFIDENCE_STATES,
   type MessageKey,
   type TaraSize,
-  type TaraState,
+  type PresenceState,
   type ConfidenceState,
 } from "./_util";
 export { TARA_ASSETS, TARA_ASSET_STATUS, type TaraAsset } from "./tara-assets";

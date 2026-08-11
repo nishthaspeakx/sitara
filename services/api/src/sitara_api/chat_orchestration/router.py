@@ -18,7 +18,7 @@ from sitara_schemas.facts import ConfidenceState, FactSnapshot
 
 from sitara_api.auth.router import CurrentSession
 from sitara_api.chat_orchestration.pipeline import ChatPipeline
-from sitara_api.chat_orchestration.types import BirthProfile, TurnRequest
+from sitara_api.chat_orchestration.types import BirthProfile, PresenceState, TurnRequest
 from sitara_api.errors import ApiError
 
 router = APIRouter(prefix="/v1/chat", tags=["chat"])
@@ -38,7 +38,7 @@ class TurnResponse(BaseModel):
     confidence: ConfidenceState
     intent: str
     safety_level: str
-    presence_state: int
+    presence_state: PresenceState
     trace_id: str
     fact_snapshots: list[FactSnapshot] = []
     message_key: str | None = None
@@ -81,7 +81,7 @@ async def chat_turn(
         confidence=result.confidence,
         intent=result.intent.value,
         safety_level=result.safety.level.name,
-        presence_state=int(result.presence_state),
+        presence_state=result.presence_state,
         trace_id=result.trace_id,
         fact_snapshots=list(result.fact_snapshots),
         message_key=result.message_key,

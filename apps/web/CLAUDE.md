@@ -28,6 +28,14 @@ Some rules are enforced by the component's shape rather than by review, and are 
 - `KundliChart` ships its **contract and an honest unbuilt state** — CC-007 schedules the diagram for M10. It renders a labelled placeholder plus the house data it would draw, never a wrong chart, so the 49-count is true rather than aspirational. M10 changes the render only.
 - `ErrorState` takes a §34.4 envelope; `retryable: false` means no retry control exists at all.
 
+### The presence states are §4.3's, from the schema (M8-P10)
+
+`_util.ts` used to declare its own twelve — `warm_neutral`, `smile`, `full_smile`, `reading`, `safety` — none of which are §4.3's names, with `calm_guidance` and `encouragement` missing outright. The API has always emitted §4.3's set. Five of the twelve it can serve had no asset and no alt text here, and the lists differed in ORDER too, so a positional read resolved state 11 (safety-still — the one §29.5 puts in the chat header at L2+) to `reading`. Nothing failed because no screen consumed a served presence state until S18.
+
+`PRESENCE_STATES` now comes from `@sitara/schemas`. Two consequences worth knowing:
+- **The asset SLUGS were deliberately not renamed.** They name files built from ~30MB escrow masters (§22.16); renaming a hundred derivatives to tidy a mapping table is a large diff that changes no pixel. `tara-assets.ts` carries the pairing and the reason for each, chosen by looking at every master — a wrong mapping puts a festive portrait on a safety screen.
+- **`PaywallPanel` changed image.** §29.5 says "Subscription/paywall: state 1 small", state 1 is `welcome`, and the old list had no state-1 equivalent so it rendered the canonical portrait. That baseline moving is the drift being repaired, not a regression.
+
 ### Tara's assets
 **Her likeness is AI-generated and exclusively owned (CC-008). She is not a real person and not a licensed human model**, and §25.2's face-model baseline is superseded. Three rules bind anything that touches these files:
 - the permanent "Tara · AI guide" disclosure stays wherever her name or face appears;

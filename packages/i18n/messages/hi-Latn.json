@@ -262,18 +262,18 @@
     "tara": {
       "ai_label": "Tara · AI guide",
       "state": {
-        "warm_neutral": "Tara",
+        "welcome": "Tara, muskurate hue",
         "listening": "Tara, sun rahi hain",
         "speaking_soft": "Tara, bol rahi hain",
-        "smile": "Tara, muskurate hue",
-        "full_smile": "Tara, khulkar muskurate hue",
         "thoughtful": "Tara, sochte hue",
-        "concerned_kind": "Tara, dhyaan se sunte hue",
+        "calm_guidance": "Tara, aapki kundli dekhte hue",
+        "concern_kind": "Tara, dhyaan se sunte hue",
+        "encouragement": "Tara, khulkar muskurate hue",
         "celebration": "Tara, khushi manate hue",
         "night": "Tara, raat mein",
         "festival": "Tara, tyohaar ke liye taiyaar",
-        "reading": "Tara, aapki kundli dekhte hue",
-        "safety": "Tara"
+        "safety_still": "Tara",
+        "profile_portrait": "Tara"
       }
     },
     "module": {
@@ -330,17 +330,17 @@
       "source_turn": "Yeh kahan se aaya",
       "consent_stamp": "Aapne {date} ko sehmati di",
       "type": {
-        "life_fact": "Life fact",
-        "relationship": "Rishta",
+        "person": "Vyakti",
+        "significant_event": "Ahem ghatna",
+        "date_anniversary": "Taareekh aur saalgirah",
         "preference": "Pasand",
-        "goal": "Goal",
-        "concern": "Chinta",
-        "health_context": "Sehat ka context",
-        "belief_practice": "Aastha aur sadhana",
-        "important_date": "Khaas taareekh",
-        "name_pronunciation": "Naam ka uchcharan",
-        "language_style": "Bhasha aur style",
-        "conversation_thread": "Baatcheet ka silsila"
+        "goal_intention": "Goal",
+        "decision_context": "Chal raha faisla",
+        "mood_pattern": "Mann ka dhang",
+        "health_adjacent": "Sehat ka context",
+        "work_finance": "Kaam aur paisa",
+        "spiritual_practice": "Aadhyatmik sadhana",
+        "pronunciation_identity": "Naam aur uchcharan"
       }
     },
     "voice": {

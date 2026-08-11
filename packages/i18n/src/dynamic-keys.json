@@ -48,20 +48,8 @@
       ]
     },
     "ui.memory.type.${type}": {
-      "$spec": "§32.4 — the 11 memory types",
-      "values": [
-        "life_fact",
-        "relationship",
-        "preference",
-        "goal",
-        "concern",
-        "health_context",
-        "belief_practice",
-        "important_date",
-        "name_pronunciation",
-        "language_style",
-        "conversation_thread"
-      ]
+      "$spec": "§32.4 — the 11 memory types; sourced from the schema so the two cannot drift. They HAD drifted: this entry listed life_fact/relationship/goal/concern/health_context/belief_practice/important_date/language_style/conversation_thread, an eleven §32.4 does not contain, while the memory module carried the spec's own. Seven of eleven disagreed, and nothing failed because no screen had ever rendered a typed memory.",
+      "valuesFrom": "packages/schemas/src/memory-types.json"
     },
     "ui.module.${module}": {
       "$spec": "§7.1/§34.3 — the 17 morning modules; sourced from the schema so the two cannot drift",
@@ -116,21 +104,8 @@
       ]
     },
     "ui.tara.state.${state}": {
-      "$spec": "§4.3 — the 12 presence states",
-      "values": [
-        "warm_neutral",
-        "listening",
-        "speaking_soft",
-        "smile",
-        "full_smile",
-        "thoughtful",
-        "concerned_kind",
-        "celebration",
-        "night",
-        "festival",
-        "reading",
-        "safety"
-      ]
+      "$spec": "§4.3 — the 12 presence states; sourced from the schema for the same reason as the memory types. This entry listed warm_neutral/smile/full_smile/reading/safety — names §4.3 does not use — and omitted calm_guidance and encouragement entirely, so five of the twelve the API can serve had no alt text at all.",
+      "valuesFrom": "packages/schemas/src/presence-states.json"
     },
     "ui.timing.${band.quality}": {
       "$spec": "§29.4 — never encoded by colour alone",

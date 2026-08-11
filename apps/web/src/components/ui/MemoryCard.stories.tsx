@@ -6,7 +6,7 @@ import { SAMPLE, StateGroup, StatePanel } from "./_story-utils";
 const meta = {
   title: "Sitara/MemoryCard",
   component: MemoryCard,
-  args: { type: "life_fact", content: SAMPLE.memory, consentedOn: SAMPLE.date },
+  args: { type: "person", content: SAMPLE.memory, consentedOn: SAMPLE.date },
 } satisfies Meta<typeof MemoryCard>;
 
 export default meta;

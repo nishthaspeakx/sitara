@@ -262,18 +262,18 @@
     "tara": {
       "ai_label": "Tara · AI guide",
       "state": {
-        "warm_neutral": "Tara",
+        "welcome": "Tara, smiling",
         "listening": "Tara, listening",
         "speaking_soft": "Tara, speaking",
-        "smile": "Tara, smiling",
-        "full_smile": "Tara, smiling warmly",
         "thoughtful": "Tara, thoughtful",
-        "concerned_kind": "Tara, listening closely",
+        "calm_guidance": "Tara, reading your chart",
+        "concern_kind": "Tara, listening closely",
+        "encouragement": "Tara, smiling warmly",
         "celebration": "Tara, celebrating",
         "night": "Tara, at night",
         "festival": "Tara, dressed for the festival",
-        "reading": "Tara, reading your chart",
-        "safety": "Tara"
+        "safety_still": "Tara",
+        "profile_portrait": "Tara"
       }
     },
     "module": {
@@ -330,17 +330,17 @@
       "source_turn": "Where this came from",
       "consent_stamp": "You agreed on {date}",
       "type": {
-        "life_fact": "Life fact",
-        "relationship": "Relationship",
+        "person": "Person",
+        "significant_event": "Significant event",
+        "date_anniversary": "Date & anniversary",
         "preference": "Preference",
-        "goal": "Goal",
-        "concern": "Concern",
-        "health_context": "Health context",
-        "belief_practice": "Belief & practice",
-        "important_date": "Important date",
-        "name_pronunciation": "Name pronunciation",
-        "language_style": "Language & style",
-        "conversation_thread": "Conversation thread"
+        "goal_intention": "Goal",
+        "decision_context": "Decision in progress",
+        "mood_pattern": "Mood pattern",
+        "health_adjacent": "Health context",
+        "work_finance": "Work & money",
+        "spiritual_practice": "Spiritual practice",
+        "pronunciation_identity": "Name & pronunciation"
       }
     },
     "voice": {

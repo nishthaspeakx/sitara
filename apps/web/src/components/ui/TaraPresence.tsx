@@ -26,7 +26,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 import { TARA_ASSETS } from "./tara-assets";
-import { cn, type TaraSize, type TaraState } from "./_util";
+import { cn, type TaraSize, type PresenceState } from "./_util";
 
 const SIZE: Record<TaraSize, string> = {
   sm: "h-presence-sm w-presence-sm rounded-portrait",
@@ -50,7 +50,7 @@ const SIZES_ATTR: Record<TaraSize, string> = {
 
 export interface TaraPresenceProps {
   size?: TaraSize;
-  state?: TaraState;
+  state?: PresenceState;
   /** Renders the §25.2 "Tara · AI guide" disclosure beneath the portrait. */
   showAiLabel?: boolean;
   /**
@@ -63,7 +63,7 @@ export interface TaraPresenceProps {
 
 export function TaraPresence({
   size = "md",
-  state = "warm_neutral",
+  state = "profile_portrait",
   showAiLabel = false,
   still = false,
   className,

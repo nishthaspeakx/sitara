@@ -14,27 +14,15 @@ from __future__ import annotations
 
 import datetime as dt
 import math
-from enum import StrEnum
 
-
-class MemoryType(StrEnum):
-    """§32.4's canonical taxonomy. Vault filters use exactly these labels."""
-
-    PERSON = "person"  # 1 family/friends, relationships
-    SIGNIFICANT_EVENT = "significant_event"  # 2 past
-    DATE_ANNIVERSARY = "date_anniversary"  # 3 recurring
-    PREFERENCE = "preference"  # 4 tastes, routines, comms style
-    GOAL_INTENTION = "goal_intention"  # 5
-    DECISION_CONTEXT = "decision_context"  # 6 open questions, options weighed
-    MOOD_PATTERN = "mood_pattern"  # 7 mood/emotional pattern
-    HEALTH_ADJACENT = "health_adjacent"  # 8 non-medical framing ONLY
-    WORK_FINANCE = "work_finance"  # 9
-    SPIRITUAL_PRACTICE = "spiritual_practice"  # 10 fasts, poojas, traditions
-    PRONUNCIATION_IDENTITY = "pronunciation_identity"  # 11 names, how she refers
-
-
-#: §32.4's order, so the vault renders 1–11 as the spec numbers them.
-MEMORY_TYPE_ORDER: tuple[MemoryType, ...] = tuple(MemoryType)
+# The eleven IDS moved to `packages/schemas` in M8-P10 — `apps/web` needed them
+# to render S18's memory chip, and the moment a closed set is named on both
+# sides of the wire is the moment it needs one declaration. It had already
+# drifted by then: `packages/i18n` carried a parallel eleven that seven labels
+# disagreed with. This module still OWNS everything below — consent, the
+# visibility gates, the decay policy are §6.3 the memory module's business and
+# a schema package has no opinion about them.
+from sitara_schemas.memory_types import MEMORY_TYPE_ORDER, MemoryType
 
 # --------------------------------------------------------------------------
 # Consent (§32.4: "all types explicit-chip; types 7–9 always re-confirm")

@@ -103,6 +103,24 @@ class _Markers:
 
 
 @dataclass(frozen=True)
+class CitedSentence:
+    """One sentence that carried a citation the served payload could honour.
+
+    §25.4 puts a fact-citation underline inside the bubble, and the validator
+    is the only thing in the pipeline that knows WHICH words stand on a fact —
+    it decided sentence by sentence, and then `strip_citations` erased the
+    evidence. Recording it here is cheaper and far more honest than a second
+    pass over the text guessing where the markers used to be.
+
+    The `text` is the sentence WITHOUT its markers and without its terminal
+    stop (the splitter consumes that), which is exactly the span to underline.
+    """
+
+    text: str
+    fact_ids: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class GroundingVerdict:
     """Evidence, not an opinion. Frozen: the safety queue reads this later."""
 
@@ -113,6 +131,9 @@ class GroundingVerdict:
     unknown_fact_ids: tuple[str, ...] = ()
     numeric_mismatches: tuple[str, ...] = ()
     reasons: tuple[str, ...] = field(default_factory=tuple)
+    #: In order of appearance. Empty on a rejected turn — a verdict that failed
+    #: has no spans worth underlining, because its text never ships.
+    cited_sentences: tuple[CitedSentence, ...] = ()
 
 
 class GroundingValidator:
@@ -135,6 +156,7 @@ class GroundingValidator:
         unknown: list[str] = []
         mismatches: list[str] = []
         reasons: list[str] = []
+        spans: list[CitedSentence] = []
 
         for sentence in _sentences(text):
             citations = CITATION_RE.findall(sentence)
@@ -159,6 +181,11 @@ class GroundingValidator:
                     reasons.append(f"astrological claim with no citation: {_clip(bare)}")
                 continue
 
+            # §25.4's underline. Recorded for every claim-bearing sentence that
+            # a served fact backs — which is precisely the set §30.4 requires
+            # to be "reachable to a Trust Sheet in ≤1 tap".
+            spans.append(CitedSentence(text=bare, fact_ids=tuple(dict.fromkeys(known))))
+
             house_pattern = self._ordinal_pattern(locale)
             for problem in _numeric_mismatches(
                 bare,
@@ -181,6 +208,10 @@ class GroundingValidator:
             unknown_fact_ids=tuple(unknown),
             numeric_mismatches=tuple(mismatches),
             reasons=tuple(reasons),
+            # A rejected turn's text never ships, so its spans are not worth
+            # carrying — and carrying them would put a Trust Sheet behind a
+            # sentence the pipeline is about to throw away.
+            cited_sentences=tuple(spans) if ok else (),
         )
 
     # -- claim detection ---------------------------------------------------

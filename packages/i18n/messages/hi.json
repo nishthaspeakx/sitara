@@ -262,18 +262,18 @@
     "tara": {
       "ai_label": "तारा · AI मार्गदर्शक",
       "state": {
-        "warm_neutral": "तारा",
+        "welcome": "तारा, मुस्कुराते हुए",
         "listening": "तारा, सुन रही हैं",
         "speaking_soft": "तारा, बोल रही हैं",
-        "smile": "तारा, मुस्कुराते हुए",
-        "full_smile": "तारा, खुलकर मुस्कुराते हुए",
         "thoughtful": "तारा, सोचते हुए",
-        "concerned_kind": "तारा, ध्यान से सुनते हुए",
+        "calm_guidance": "तारा, आपकी कुंडली देखते हुए",
+        "concern_kind": "तारा, ध्यान से सुनते हुए",
+        "encouragement": "तारा, खुलकर मुस्कुराते हुए",
         "celebration": "तारा, खुशी मनाते हुए",
         "night": "तारा, रात में",
         "festival": "तारा, त्योहार के लिए तैयार",
-        "reading": "तारा, आपकी कुंडली देखते हुए",
-        "safety": "तारा"
+        "safety_still": "तारा",
+        "profile_portrait": "तारा"
       }
     },
     "module": {
@@ -330,17 +330,17 @@
       "source_turn": "यह कहाँ से आया",
       "consent_stamp": "आपने {date} को सहमति दी",
       "type": {
-        "life_fact": "जीवन की बात",
-        "relationship": "रिश्ता",
+        "person": "व्यक्ति",
+        "significant_event": "अहम घटना",
+        "date_anniversary": "तारीख़ और सालगिरह",
         "preference": "पसंद",
-        "goal": "लक्ष्य",
-        "concern": "चिंता",
-        "health_context": "सेहत का संदर्भ",
-        "belief_practice": "आस्था और साधना",
-        "important_date": "ख़ास तारीख़",
-        "name_pronunciation": "नाम का उच्चारण",
-        "language_style": "भाषा और शैली",
-        "conversation_thread": "बातचीत का सिलसिला"
+        "goal_intention": "लक्ष्य",
+        "decision_context": "चल रहा फ़ैसला",
+        "mood_pattern": "मन का ढंग",
+        "health_adjacent": "सेहत का संदर्भ",
+        "work_finance": "काम और पैसा",
+        "spiritual_practice": "आध्यात्मिक साधना",
+        "pronunciation_identity": "नाम और उच्चारण"
       }
     },
     "voice": {

@@ -304,20 +304,17 @@ class MemoryChip:
 # --------------------------------------------------------------------------
 
 
-class PresenceState(IntEnum):
-    WELCOME = 1
-    LISTENING = 2
-    SPEAKING_SOFT = 3
-    THOUGHTFUL = 4
-    CALM_GUIDANCE = 5
-    CONCERN_KIND = 6
-    ENCOURAGEMENT = 7
-    CELEBRATION = 8
-    NIGHT = 9
-    FESTIVAL = 10
-    #: "neutral, steady — used L2+; no smile, no astrology framing" (§4.3).
-    SAFETY_STILL = 11
-    PROFILE_PORTRAIT = 12
+# §4.3's twelve moved to `packages/schemas` in M8-P10, for the reason every
+# closed set eventually moves there: the client needed to render one. It was an
+# IntEnum here and a differently-named, differently-ORDERED list of twelve in
+# `apps/web`, so a positional read resolved this module's SAFETY_STILL (11) —
+# the state §29.5 puts in the chat header at L2+ — to the client's `reading`.
+#
+# It is a StrEnum now. §4.3's numbering survives in the schema package as
+# `PRESENCE_ORDINAL`, for reading a list against the spec line; the ID is what
+# crosses the wire and what a trace records, because a positional contract is
+# exactly what drifted here.
+from sitara_schemas.presence import PresenceState  # noqa: E402, I001
 
 
 # --------------------------------------------------------------------------

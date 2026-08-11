@@ -9,7 +9,7 @@ import {
   TARA_LIKENESS,
   TARA_MOTION_STATUS,
 } from "../src/components/ui/tara-assets";
-import { TARA_STATES } from "../src/components/ui/_util";
+import { PRESENCE_STATES } from "../src/components/ui/_util";
 
 /**
  * CC-008 — Tara's likeness is AI-generated and exclusively owned. She is NOT a
@@ -123,7 +123,7 @@ test("no component calls her an avatar, or claims she is real (glossary, CC-008)
 
 test("every presence state resolves to a real asset set", () => {
   const publicDir = path.join(__dirname, "..", "public");
-  for (const state of TARA_STATES) {
+  for (const state of PRESENCE_STATES) {
     const asset = TARA_ASSETS[state];
     expect(asset, `no asset for ${state}`).toBeTruthy();
     // the default src must exist on disk, not just typecheck
@@ -141,7 +141,7 @@ test("every presence state resolves to a real asset set", () => {
  * is the point: a stale deferral note is indistinguishable from a forgotten one.
  */
 test("the cinemagraph deferral matches what is actually in the manifest", () => {
-  const withLoops = TARA_STATES.filter(
+  const withLoops = PRESENCE_STATES.filter(
     (s) => TARA_ASSETS[s].cinemagraphH265 || TARA_ASSETS[s].cinemagraphVp9,
   );
   if (TARA_MOTION_STATUS.deferred) {
@@ -155,7 +155,7 @@ test("the cinemagraph deferral matches what is actually in the manifest", () => 
 });
 
 test("the pending-replacement record matches the states still flagged approximate", () => {
-  const flagged = TARA_STATES.filter((s) => TARA_ASSETS[s].approximate).sort();
+  const flagged = PRESENCE_STATES.filter((s) => TARA_ASSETS[s].approximate).sort();
   expect(
     flagged,
     "TARA_APPROXIMATE_STATES_PENDING has drifted from the manifest — when a replacement lands, drop the flag AND the pending entry",
