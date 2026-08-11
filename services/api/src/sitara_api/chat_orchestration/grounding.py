@@ -73,7 +73,7 @@ from sitara_schemas.facts import (
 
 from sitara_api import text as textutil
 from sitara_api.chat_orchestration import config
-from sitara_api.chat_orchestration.types import ValidatedFacts
+from sitara_api.chat_orchestration.types import CitedSentence, ValidatedFacts
 
 #: The citation grammar. Nothing else is a citation.
 CITATION_RE = re.compile(r"\[\[\s*(fact:[^\]\s]+)\s*\]\]")
@@ -100,24 +100,6 @@ class _Markers:
     temporal: re.Pattern[str]
     absence: re.Pattern[str]
     celestial_compounds: re.Pattern[str]
-
-
-@dataclass(frozen=True)
-class CitedSentence:
-    """One sentence that carried a citation the served payload could honour.
-
-    §25.4 puts a fact-citation underline inside the bubble, and the validator
-    is the only thing in the pipeline that knows WHICH words stand on a fact —
-    it decided sentence by sentence, and then `strip_citations` erased the
-    evidence. Recording it here is cheaper and far more honest than a second
-    pass over the text guessing where the markers used to be.
-
-    The `text` is the sentence WITHOUT its markers and without its terminal
-    stop (the splitter consumes that), which is exactly the span to underline.
-    """
-
-    text: str
-    fact_ids: tuple[str, ...]
 
 
 @dataclass(frozen=True)

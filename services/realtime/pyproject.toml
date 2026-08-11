@@ -8,11 +8,13 @@ dependencies = [
     "uvicorn[standard]>=0.32",
     "pydantic>=2.7",
     "pydantic-settings>=2.5",
+    # This service reaches the §9 pipeline over HTTP rather than holding one.
+    "httpx>=0.27",
     "sitara-schemas",
 ]
 
 [dependency-groups]
-dev = ["pytest>=8", "httpx>=0.27", "ruff>=0.7", "pyright>=1.1.380"]
+dev = ["pytest>=8", "pytest-asyncio>=0.24", "ruff>=0.7", "pyright>=1.1.380"]
 
 [tool.uv.sources]
 sitara-schemas = { path = "../../packages/schemas/python", editable = true }

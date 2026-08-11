@@ -17,6 +17,7 @@ import datetime as dt
 import hashlib
 import logging
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
@@ -72,6 +73,18 @@ class TurnTrace:
     locale: str
     capture_content: bool = False
     trace_id: str = field(default_factory=lambda: uuid.uuid4().hex)
+    #: Called with each §9 stage as it completes. §34.6's `presence.state`
+    #: events ride on this: `sitara-realtime` needs to know the pipeline is
+    #: advancing so §25.4's typing indicator reflects real progress rather
+    #: than a timer, and the tracer is already the one thing that sees every
+    #: stage exactly once.
+    #:
+    #: It is handed a `Stage` and NOTHING else — deliberately. Everything else
+    #: an observation carries is either content or a hash of content (§13),
+    #: and a hook that could reach it would be a second content path out of
+    #: the pipeline, exempt from `capture_content`'s refusal to run outside
+    #: dev. A stage name is a shape.
+    on_stage: Callable[[Stage], None] | None = None
     _spans: list[dict[str, Any]] = field(default_factory=list)
 
     def start(self, *, intent: str | None = None) -> None:
@@ -137,6 +150,14 @@ class TurnTrace:
         metadata: dict[str, Any] | None,
         content: str | None,
     ) -> dict[str, Any]:
+        if self.on_stage is not None:
+            try:
+                self.on_stage(stage)
+            except Exception:
+                # A listener must never be able to fail a turn. Losing a
+                # presence event costs the user an animation; raising here
+                # would cost them the answer.
+                logger.warning("on_stage listener raised", extra={"stage": stage.value})
         event: dict[str, Any] = {
             "type": kind,
             "id": uuid.uuid4().hex,

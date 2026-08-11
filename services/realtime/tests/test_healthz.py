@@ -18,4 +18,4 @@ def test_ws_session_ready_is_typed_from_shared_schema() -> None:
     with client.websocket_connect("/call/session") as ws:
         event = json.loads(ws.receive_text())
         assert event["type"] == ControlEventType.SESSION_READY.value
-        assert set(event.keys()) == {"type", "seq", "ts", "payload"}
+        assert set(event.keys()) == {"type", "seq", "ts", "ack", "payload"}

@@ -23,6 +23,7 @@ from __future__ import annotations
 import asyncio
 import datetime as dt
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from sitara_schemas.facts import ConfidenceState
@@ -38,7 +39,11 @@ from sitara_api.chat_orchestration.facts import (
     gather_facts,
     validate,
 )
-from sitara_api.chat_orchestration.grounding import GroundingValidator
+from sitara_api.chat_orchestration.grounding import (
+    CitedSentence,
+    GroundingValidator,
+    GroundingVerdict,
+)
 from sitara_api.chat_orchestration.intent import IntentRouter
 from sitara_api.chat_orchestration.langquality import LanguageQualityValidator
 from sitara_api.chat_orchestration.language import detect
@@ -129,13 +134,24 @@ class ChatPipeline:
         self._capture_content = capture_content
         self._budget = ContextBudget(settings, llm)
 
-    async def run(self, request: TurnRequest) -> TurnResult:
+    async def run(
+        self, request: TurnRequest, *, on_stage: Callable[[Stage], None] | None = None
+    ) -> TurnResult:
+        """§9's mandatory pipeline, once.
+
+        `on_stage` is fired as each stage completes, for §34.6's
+        `presence.state` events — it sees a `Stage` and nothing else, so it is
+        not a content path (§13). It never affects the turn: a listener that
+        raises is logged and the turn continues, because losing an animation
+        is cheaper than losing an answer.
+        """
         trace = TurnTrace(
             sink=self._sink,
             user_id=request.user_id,
             conversation_id=request.conversation_id,
             locale=request.locale,
             capture_content=self._capture_content,
+            on_stage=on_stage,
         )
         trace.start()
 
@@ -260,8 +276,10 @@ class ChatPipeline:
             )
 
         # -- 8. response generation (+ 9, 10, 11 as its gate) ---------------
+        # §25.4's swipe-to-reply reaches the model here, not merely the screen.
+        history = await self._with_quoted_turn(request)
         plan = await self._budget.plan(
-            history=request.history, summary=request.summary, locale=locale
+            history=history, summary=request.summary, locale=locale
         )
         outcome = await self._generate_validated(
             request, trace, safety, locale, decision.intent, confidence, facts, visible, plan
@@ -311,6 +329,7 @@ class ChatPipeline:
             fact_ids=facts.fact_ids if outcome.accepted else (),
             fact_snapshots=facts.snapshots if outcome.accepted else (),
             memory_chips=chips,
+            cited_sentences=outcome.cited_sentences,
             message_key=None if outcome.accepted else KEY_FALLBACK,
             regenerations=outcome.regenerations,
             review_queued=outcome.review_queued,
@@ -318,6 +337,42 @@ class ChatPipeline:
             usage=outcome.usage,
             message_id=message_id,
         )
+
+    async def _with_quoted_turn(
+        self, request: TurnRequest
+    ) -> tuple[dict[str, str], ...]:
+        """§25.4: "swipe-to-reply (quotes the earlier message into context —
+        the pipeline receives the quoted turn explicitly)".
+
+        The quoted turn is appended to the history rather than prepended to the
+        user's text, because it IS a turn and the model already reads history
+        as turns. Prepending it to the message would make Tara answer a
+        sentence the user did not write.
+
+        A quote that cannot be loaded is dropped silently and the turn goes on.
+        The alternatives are worse: refusing the turn punishes the user for a
+        stale id, and telling the model "the user quoted something I could not
+        find" invites it to speculate about what.
+        """
+        if not request.quoted_message_id:
+            return request.history
+        try:
+            quoted = await self._store.load_message(
+                request.conversation_id, request.quoted_message_id
+            )
+        except Exception:
+            logger.warning(
+                "quoted message could not be loaded",
+                extra={"conversation_id": request.conversation_id},
+            )
+            return request.history
+        if quoted is None:
+            return request.history
+        content = quoted.get("content")
+        role = quoted.get("role")
+        if not isinstance(content, str) or role not in ("user", "assistant"):
+            return request.history
+        return (*request.history, {"role": role, "content": content})
 
     async def _retrieve_memories(self, request: TurnRequest, locale: str):  # noqa: ANN202
         """Memory is context, not correctness. Losing it degrades the reply;
@@ -425,6 +480,7 @@ class ChatPipeline:
             )
 
             failure: tuple[Stage, tuple[str, ...]] | None
+            verdict = GroundingVerdict(ok=False, clean_text="")
             if response.truncated:
                 # A reply cut off at §9's per-turn cap has lost whatever came
                 # after the cut — usually its closing citation. Failing it here
@@ -435,11 +491,14 @@ class ChatPipeline:
                     ("reply hit the per-turn token cap and was cut off mid-sentence",),
                 )
             else:
-                failure = self._validate(trace, response.text, facts, locale)
+                failure, verdict = self._validate(trace, response.text, facts, locale)
             if failure is None:
-                clean = self._grounding.check(response.text, facts, locale).clean_text
                 return _Outcome(
-                    text=clean, accepted=True, regenerations=attempt, usage=usage
+                    text=verdict.clean_text,
+                    accepted=True,
+                    regenerations=attempt,
+                    usage=usage,
+                    cited_sentences=verdict.cited_sentences,
                 )
 
             stage, reasons = failure
@@ -462,8 +521,16 @@ class ChatPipeline:
 
     def _validate(
         self, trace: TurnTrace, text: str, facts: ValidatedFacts, locale: str
-    ) -> tuple[Stage, tuple[str, ...]] | None:
-        """§9 stages 9, 10, 11 in order. First failure wins the regeneration."""
+    ) -> tuple[tuple[Stage, tuple[str, ...]] | None, GroundingVerdict]:
+        """§9 stages 9, 10, 11 in order. First failure wins the regeneration.
+
+        Returns the failure (or None) AND the grounding verdict. The verdict is
+        where `clean_text` comes from, and now also where §25.4's citation
+        spans come from — the caller used to re-run the whole validator to
+        recover the first of those, which meant the claim lexicon walked every
+        accepted reply twice and the spans would have been computed a third
+        time. One run, one verdict.
+        """
         grounding = self._grounding.check(text, facts, locale)
         trace.span(
             Stage.GROUNDING,
@@ -476,7 +543,7 @@ class ChatPipeline:
             },
         )
         if not grounding.ok:
-            return Stage.GROUNDING, grounding.reasons
+            return (Stage.GROUNDING, grounding.reasons), grounding
 
         quality = self._langquality.check(grounding.clean_text, locale)
         trace.span(
@@ -485,7 +552,7 @@ class ChatPipeline:
             metadata={"failures": list(quality.failures)},
         )
         if not quality.ok:
-            return Stage.LANGUAGE_QUALITY, quality.failures
+            return (Stage.LANGUAGE_QUALITY, quality.failures), grounding
 
         fear = self._fear_lint.check(grounding.clean_text, locale)
         leak = check_no_prompt_leak(grounding.clean_text)
@@ -498,10 +565,13 @@ class ChatPipeline:
             },
         )
         if not fear.ok:
-            return Stage.SAFETY_POST, fear.reasons
+            return (Stage.SAFETY_POST, fear.reasons), grounding
         if not leak.ok:
-            return Stage.SAFETY_POST, tuple(f"prompt fragment leaked: {m}" for m in leak.matched)
-        return None
+            return (
+                Stage.SAFETY_POST,
+                tuple(f"prompt fragment leaked: {m}" for m in leak.matched),
+            ), grounding
+        return None, grounding
 
     # ----------------------------------------------------------------------
     # Terminal paths
@@ -687,6 +757,10 @@ class _Outcome:
     #: The §8 ladder ran (provider outage), as distinct from a validator
     #: failure. Both serve the fallback line; only one queues a human.
     degraded: bool = False
+    #: §25.4's underlines. Only an ACCEPTED outcome has any: a templated line,
+    #: a decline and the fallback are authored copy standing on no fact, and a
+    #: rejected draft's text never ships.
+    cited_sentences: tuple[CitedSentence, ...] = ()
 
 
 def _correction_text(stage: Stage, reasons: tuple[str, ...]) -> str:

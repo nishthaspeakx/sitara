@@ -65,6 +65,9 @@
       "name_invalid": "Is naam mein aise characters hain jo hum naam ki tarah nahin padh pa rahe. Check karke dobara koshish karein.",
       "no_sunrise_at_location": "Us jagah par us din ka sooryoday nahi nikal pa rahi hoon, isliye wahan ka sahi samay nahi bata sakti."
     },
+    "voice": {
+      "session_not_found": "Woh baatcheet ab khuli nahi hai. Nayi shuru karein, Tara aage badha dengi."
+    },
     "sys": {
       "validation": "Request mein kuch theek nahin tha. Dobara koshish karein.",
       "internal": "Hamari taraf se kuch gadbad ho gayi. Thodi der mein dobara try karein.",

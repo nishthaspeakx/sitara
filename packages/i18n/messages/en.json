@@ -65,6 +65,9 @@
       "name_invalid": "That name has characters we can't read as a name. Please check it and try again.",
       "no_sunrise_at_location": "I can't work out sunrise for that place on that date, so I can't give you accurate timings there."
     },
+    "voice": {
+      "session_not_found": "That conversation isn't open any more. Start a new one and Tara will pick things up."
+    },
     "sys": {
       "validation": "Something in the request wasn't right. Please try again.",
       "internal": "Something went wrong on our side. Please try again in a moment.",

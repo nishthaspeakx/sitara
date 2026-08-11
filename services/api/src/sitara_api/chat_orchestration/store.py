@@ -92,6 +92,9 @@ class ReviewEntry:
 class MessageStore(Protocol):
     async def save_message(self, document: dict[str, Any]) -> str: ...
     async def save_guidance_log(self, document: dict[str, Any]) -> None: ...
+    async def load_message(
+        self, conversation_id: str, message_id: str
+    ) -> dict[str, Any] | None: ...
 
 
 class ReviewQueue(Protocol):
@@ -224,6 +227,26 @@ class MongoMessageStore:
     async def save_guidance_log(self, document: dict[str, Any]) -> None:
         await self._db.guidance_logs.insert_one(document)
 
+    async def load_message(
+        self, conversation_id: str, message_id: str
+    ) -> dict[str, Any] | None:
+        """§25.4's quoted turn, read back for the pipeline.
+
+        Scoped by conversation as well as by id, and that is not belt-and-
+        braces: `quoted_message_id` arrives from the client, so an unscoped
+        lookup would let any caller quote any message in the database into
+        their own prompt and read the reply. The conversation is the boundary
+        the user already has.
+        """
+        try:
+            oid = to_object_id(message_id, field_name="messages._id")
+            conversation = to_object_id(conversation_id, field_name="messages.conversation_id")
+        except MalformedIdentifier:
+            return None
+        return await self._db.messages.find_one(
+            {"_id": oid, "conversation_id": conversation}
+        )
+
 
 class MongoReviewQueue:
     """Writes `safety_events` with `review_status="pending"` (§6.4, §22.9)."""
@@ -260,6 +283,27 @@ class InMemoryMessageStore:
 
     async def save_guidance_log(self, document: dict[str, Any]) -> None:
         self.guidance_logs.append(document)
+
+    async def load_message(
+        self, conversation_id: str, message_id: str
+    ) -> dict[str, Any] | None:
+        # Scoped by conversation, exactly as the real collection is — a fake
+        # that accepts what the real system rejects is a defect in the fake,
+        # and here "accepts" would mean handing back another conversation's
+        # message to be quoted into a prompt.
+        try:
+            oid = to_object_id(message_id, field_name="messages._id")
+            conversation = to_object_id(conversation_id, field_name="messages.conversation_id")
+        except MalformedIdentifier:
+            return None
+        return next(
+            (
+                m
+                for m in self.messages
+                if m.get("_id") == oid and m.get("conversation_id") == conversation
+            ),
+            None,
+        )
 
 
 @dataclass
