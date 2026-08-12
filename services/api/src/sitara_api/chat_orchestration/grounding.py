@@ -5,12 +5,23 @@
 The contract with the model is one line of grammar: an astrological claim ends
 with `[[fact:...]]`. Everything else here is enforcement, and it is deliberately
 mechanical — a model that is asked nicely to cite will usually cite, and
-"usually" is not what §5.3 promises. Three ways to fail:
+"usually" is not what §5.3 promises. Four ways to fail:
 
 1. a claim-bearing sentence with no citation at all;
 2. a citation naming a fact-ID that is not in the served payload — the
    fabricated transit, which reads exactly like a real one;
-3. a number in a cited sentence that does not appear in the cited snapshot.
+3. a number in a cited sentence that does not appear in the cited snapshot;
+4. a sentence about a DIFFERENT body from the fact it cites (M8-P10).
+
+The fourth is the one the first three cannot see, and it is the one that has
+actually shipped. "Venus is in your 10th house" citing Saturn's 10th-house
+fact has no numeric problem whatsoever — the 10 is in the fact, verbatim — and
+is false. M6 shipped that shape with the Moon and the Sun (CL-009): the engine
+emits one nakshatra per graha, Sun first, `moon_nakshatra_note` took the first
+nakshatra-shaped value, and the brief said "The Moon sits in Purva Bhadrapada
+today" citing the SUN's. Every gate green and the sentence false. S18 made it
+worse rather than better, because such a sentence now renders with a gold
+underline and opens a Trust Sheet showing the other body's data underneath.
 
 The astrology lexicon that decides "claim-bearing" is derived from the
 `sitara_schemas` enums, so the engine cannot grow a graha the validator does
@@ -103,6 +114,14 @@ class _Markers:
 
 
 @dataclass(frozen=True)
+class _Celestial:
+    """Surface forms and the bodies they name, for one locale."""
+
+    pattern: re.Pattern[str]
+    surfaces: dict[str, str]
+
+
+@dataclass(frozen=True)
 class GroundingVerdict:
     """Evidence, not an opinion. Frozen: the safety queue reads this later."""
 
@@ -112,6 +131,11 @@ class GroundingVerdict:
     uncited_claims: tuple[str, ...] = ()
     unknown_fact_ids: tuple[str, ...] = ()
     numeric_mismatches: tuple[str, ...] = ()
+    #: §5.3's entity check: the sentence named one body, the fact it cites
+    #: holds another. Kept apart from `numeric_mismatches` because they
+    #: fail for opposite reasons — a number that is not in the fact, versus
+    #: a number that IS and belongs to something else.
+    entity_mismatches: tuple[str, ...] = ()
     reasons: tuple[str, ...] = field(default_factory=tuple)
     #: In order of appearance. Empty on a rejected turn — a verdict that failed
     #: has no spans worth underlining, because its text never ships.
@@ -126,6 +150,7 @@ class GroundingValidator:
         self._ordinal_word_maps: dict[str, dict[str, int]] = {}
         self._markers_by_locale: dict[str, _Markers] = {}
         self._dates: dict[str, re.Pattern[str] | None] = {}
+        self._celestial_maps: dict[str, _Celestial] = {}
 
     def check(
         self, text: str, facts: ValidatedFacts | Sequence[FactSnapshot], locale: str
@@ -137,6 +162,7 @@ class GroundingValidator:
         uncited: list[str] = []
         unknown: list[str] = []
         mismatches: list[str] = []
+        wrong_entity: list[str] = []
         reasons: list[str] = []
         spans: list[CitedSentence] = []
 
@@ -168,6 +194,21 @@ class GroundingValidator:
             # to be "reachable to a Trust Sheet in ≤1 tap".
             spans.append(CitedSentence(text=bare, fact_ids=tuple(dict.fromkeys(known))))
 
+            # §5.3's entity check (CL-009's shape, one layer up). The
+            # numeric check below asks whether every number in the sentence is
+            # in a cited fact; it cannot ask whether the sentence is ABOUT that
+            # fact. "Venus is in your 10th house" citing Saturn's 10th-house
+            # fact passes every numeric test — the 10 is right there — and is
+            # false. M6 shipped exactly this with the Moon and the Sun.
+            for problem in _entity_mismatches(
+                bare, [served[fid] for fid in known], self._celestial_map(locale)
+            ):
+                wrong_entity.append(problem)
+                reasons.append(
+                    f"the sentence is about {problem} — §5.3 requires a claim to "
+                    f"cite the fact it is actually about"
+                )
+
             house_pattern = self._ordinal_pattern(locale)
             for problem in _numeric_mismatches(
                 bare,
@@ -181,7 +222,7 @@ class GroundingValidator:
                     f"§5.3 requires numbers verbatim"
                 )
 
-        ok = not (uncited or unknown or mismatches)
+        ok = not (uncited or unknown or mismatches or wrong_entity)
         return GroundingVerdict(
             ok=ok,
             clean_text=strip_citations(text),
@@ -189,6 +230,7 @@ class GroundingValidator:
             uncited_claims=tuple(uncited),
             unknown_fact_ids=tuple(unknown),
             numeric_mismatches=tuple(mismatches),
+            entity_mismatches=tuple(wrong_entity),
             reasons=tuple(reasons),
             # A rejected turn's text never ships, so its spans are not worth
             # carrying — and carrying them would put a Trust Sheet behind a
@@ -278,6 +320,13 @@ class GroundingValidator:
             source = self._source
 
             def alt(section: str, *, derived: frozenset[str] = frozenset()) -> re.Pattern[str]:
+                if section == "celestial":
+                    terms = (
+                        self._celestial_surfaces(key)
+                        | self._celestial_surfaces("en")
+                        | set(derived)
+                    )
+                    return _alternation(terms, min_length=2)
                 block = source.get(section, {})
                 # English always joins the net: §2.3 keeps English loanwords in
                 # Hinglish, and an English clause inside a Hindi reply asserts
@@ -295,6 +344,26 @@ class GroundingValidator:
             )
         return self._markers_by_locale[key]
 
+    def _celestial_surfaces(self, key: str) -> set[str]:
+        """The flat set of surface forms, from the body-keyed block.
+
+        `celestial` used to BE this list. Keying it by canonical body (M8-P10,
+        so the validator can tell which body a sentence names) left two readers
+        — the strong lexicon and the marker net — iterating a dict and getting
+        its KEYS: `sun`, `moon`, … instead of सूर्य, चंद्र. Every Devanagari and
+        Hinglish graha name silently left the claim net, and `शनि वक्री है।`
+        stopped being a claim at all. Flattened here, once.
+        """
+        block = self._source.get("celestial", {}).get(key, {})
+        if isinstance(block, dict):
+            return {
+                form
+                for name, forms in block.items()
+                if not name.startswith("$")
+                for form in forms
+            }
+        return set(block)
+
     def _key(self, locale: str) -> str:
         return locale if locale in self._source["terms"] else "en"
 
@@ -311,7 +380,7 @@ class GroundingValidator:
             # absent from the strong set — the English ones arrive via
             # `_schema_terms` — and "चंद्रमा मीन राशि में है" reaches the
             # exemption test without ever tripping the strong gate.
-            celestial = set(self._source.get("celestial", {}).get(key, ()))
+            celestial = self._celestial_surfaces(key)
             strong = (
                 set(entry.get("strong", ()))
                 | set(english.get("strong", ()))
@@ -321,6 +390,49 @@ class GroundingValidator:
             weak = set(entry.get("weak", ())) | set(english.get("weak", ()))
             self._lexicons[key] = (_alternation(strong), _alternation(weak))
         return self._lexicons[key]
+
+    def _celestial_map(self, locale: str) -> _Celestial:
+        """Surface form → canonical body id, for this locale plus English.
+
+        English always joins, for the reason `_lexicon` records: §2.3 keeps
+        English loanwords in Hinglish, and a real Hindi reply says "Jupiter"
+        as readily as "गुरु". Both must resolve to `jupiter` or the check
+        would flag a true sentence for naming the body in the other language.
+
+        The English half is derived from the enums rather than listed, so a
+        graha the engine grows is covered the day it lands.
+        """
+        key = self._key(locale)
+        if key not in self._celestial_maps:
+            surfaces: dict[str, str] = {}
+            for enum, kind in ((Graha, "graha"), (Rashi, "rashi"), (Nakshatra, "nakshatra")):
+                for member in enum:
+                    # The enum value itself — the English surface, and the one
+                    # a Hinglish reply borrows (§2.3).
+                    surfaces[member.value.replace("_", " ").lower()] = member.value
+                    # And the LOCALE rendering, read from the same catalog the
+                    # Trust Sheet renders from. Listing 27 nakshatra names per
+                    # locale in `claim_terms.json` would be a second copy of
+                    # strings the §14 pass already reviews — and the first cut
+                    # of this map, which had grahas and rashis but no
+                    # nakshatras, could not tell रोहिणी from अश्विनी.
+                    rendered = _catalog_term(kind, member.value, key)
+                    if rendered:
+                        surfaces[rendered.lower()] = member.value
+            # `claim_terms.json` carries only what the catalog cannot: the
+            # SYNONYMS a real reply uses (बृहस्पति beside गुरु, रवि beside सूर्य).
+            for block_key in ("en", key):
+                block = self._source.get("celestial", {}).get(block_key, {})
+                for canonical, forms in block.items():
+                    if canonical.startswith("$"):
+                        continue
+                    for form in forms:
+                        surfaces[form.lower()] = canonical
+            self._celestial_maps[key] = _Celestial(
+                pattern=textutil.alternation(surfaces, min_length=2),
+                surfaces=surfaces,
+            )
+        return self._celestial_maps[key]
 
     def _ordinal_words(self, locale: str) -> dict[str, int]:
         """Word ordinal → house number, per locale.
@@ -389,6 +501,120 @@ def _schema_terms() -> frozenset[str]:
 # --------------------------------------------------------------------------
 # Numbers
 # --------------------------------------------------------------------------
+
+
+#: Which enum a canonical id belongs to. Built once; the check compares
+#: graha against graha and nakshatra against nakshatra, never across.
+_BODY_CLASS: dict[str, str] = {
+    member.value: enum.__name__
+    for enum in (Graha, Rashi, Nakshatra)
+    for member in enum
+}
+
+
+def _by_class(bodies: Iterable[str]) -> dict[str, set[str]]:
+    grouped: dict[str, set[str]] = {}
+    for body in bodies:
+        cls = _BODY_CLASS.get(body)
+        if cls:
+            grouped.setdefault(cls, set()).add(body)
+    return grouped
+
+
+def _bodies_named(text: str, celestial: _Celestial) -> set[str]:
+    """Which canonical bodies this sentence names.
+
+    One compiled alternation rather than a scan per surface: `textutil.
+    alternation` is longest-first (so "बृहस्पति" is not shadowed by a shorter
+    form inside it) and its boundaries survive Devanagari, which `\\b` does not
+    — CL-003, because vowel signs and the virama are combining marks Python
+    excludes from `\\w`.
+    """
+    return {
+        celestial.surfaces[m.group(0).lower()]
+        for m in celestial.pattern.finditer(text.lower())
+        if m.group(0).lower() in celestial.surfaces
+    }
+
+
+def _bodies_held(snapshots: Sequence[FactSnapshot]) -> set[str]:
+    """Which canonical bodies these facts are ABOUT.
+
+    Read off the value models by type rather than by field name, so a value
+    kind added to `sitara_schemas` is covered without editing this — the same
+    "derived rather than listed" discipline `_schema_terms` follows. A field
+    holding a Graha/Rashi/Nakshatra member counts, and so does a tuple of them
+    (`DashaPeriodValue.parent_lords`).
+    """
+    held: set[str] = set()
+    for snapshot in snapshots:
+        value = snapshot.value
+        for name in type(value).model_fields:
+            item = getattr(value, name, None)
+            for candidate in item if isinstance(item, tuple | list) else (item,):
+                if isinstance(candidate, Graha | Rashi | Nakshatra):
+                    held.add(candidate.value)
+    return held
+
+
+def _catalog_term(kind: str, slug: str, locale: str) -> str | None:
+    """One localised term, or None. Imported lazily: `daily_guidance.templates`
+    imports this module, so a module-level import would close the cycle."""
+    from sitara_api.daily_guidance.templates import localised_term
+
+    return localised_term(kind, slug, locale)
+
+
+def _entity_mismatches(
+    sentence: str, snapshots: Sequence[FactSnapshot], celestial: _Celestial
+) -> list[str]:
+    """Is this sentence about the fact it cites?
+
+    The numeric check asks whether every number in a cited sentence appears in
+    a cited fact. It cannot ask the prior question — whether the sentence is
+    about that fact at all — and the two failures look nothing alike. "Venus is
+    in your 10th house" citing Saturn's 10th-house fact has no numeric problem
+    whatsoever: the 10 is right there, in the fact, verbatim. It is simply
+    false, and before this it passed, rendered with a gold underline, and
+    opened a Trust Sheet showing Saturn's data underneath.
+
+    M6 shipped this exact shape: `moon_nakshatra_note` took the first
+    nakshatra-shaped value in a payload the engine emits Sun-first, so the
+    first live brief said "The Moon sits in Purva Bhadrapada today" citing the
+    SUN's nakshatra — every gate green, the id in the payload, the name
+    matching the fact it named, and the sentence false (CL-009).
+
+    Deliberately narrow, because a false positive here costs a regeneration on
+    every ordinary turn:
+
+    * **compares like with like.** Grahas against grahas, nakshatras against
+      nakshatras, never across. "चंद्रमा आज रोहिणी में हैं" cites a
+      `NakshatraBoundaryValue`, which holds the nakshatra and no graha at all —
+      the Moon is implicit in what a panchang nakshatra IS. Comparing the two
+      classes together flagged that true sentence, and it is `moon_nakshatra_note`,
+      the very module CL-009 came from;
+    * only fires when the sentence names a body of a class the cited facts also
+      carry. A claim citing a tithi has nothing to compare;
+    * ANY overlap within a class acquits. "Sun, Mercury and Moon are in your
+      7th" citing three facts is one sentence about all three;
+    * says nothing about houses, times or degrees — those are the numeric
+      check's, and it already has them.
+
+    What it still cannot see: a graha claim citing a fact that names no graha.
+    "चंद्रमा रोहिणी में हैं" would pass while citing ANY nakshatra boundary,
+    because the fact carries no graha to disagree with. Closing that needs the
+    fact KIND to imply its subject, which is a §34.2 change, not a lexicon one.
+    """
+    said = _by_class(_bodies_named(sentence, celestial))
+    if not said:
+        return []
+    held = _by_class(_bodies_held(snapshots))
+    problems = []
+    for cls, named in said.items():
+        carried = held.get(cls)
+        if carried and not (named & carried):
+            problems.append(f"{sorted(named)} but cites facts about {sorted(carried)}")
+    return problems
 
 
 def _house_number(token: str, words: dict[str, int]) -> str | None:
