@@ -1,0 +1,15 @@
+{
+  "message_id": "6a7bfd6a7acfebbe7804eb9c",
+  "text": "उस उत्तर पर मुझे पूरा भरोसा नहीं है, इसलिए मैं अंदाज़ा नहीं लगाऊँगी। हमारी टीम इसे देख लेगी। तब तक कुछ और पूछ लीजिए — मैं यहीं हूँ।",
+  "locale": "hi",
+  "confidence": "verified",
+  "safety_level": "l1_clear",
+  "presence_state": "thoughtful",
+  "intent": "natal_chart_question",
+  "trace_id": "e7f4a5464b7445368ab87a3423595b88",
+  "citations": [],
+  "memory_chips": [],
+  "review_queued": true,
+  "message_key": "chat.fallback.safe_line",
+  "budget_notice_key": null
+}

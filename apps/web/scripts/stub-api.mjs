@@ -80,6 +80,40 @@ try {
   console.warn(`[stub-api] no today fixtures at ${FIXTURE_DIR}`);
 }
 
+/**
+ * §25.4's chat turns, recorded by `services/api/scripts/record_chat_fixtures.py`
+ * for the same reason the briefs are: a turn carries CITATION SPANS the
+ * grounding validator computed, and hand-written spans would render an
+ * underline over words nobody verified.
+ *
+ * `stub-realtime.mjs` replays these over the socket; this file replays them
+ * over `POST /v1/chat/turn`, which is §32.11's handoff path — the same
+ * `ChatTurn` on both transports, which is the property worth having.
+ */
+const CHAT_FIXTURE_DIR = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+  "tests",
+  "__fixtures__",
+  "chat",
+);
+
+/** @type {Map<string, object>} keyed `${scenario}.${locale}` */
+const chatFixtures = new Map();
+try {
+  for (const file of readdirSync(CHAT_FIXTURE_DIR)) {
+    if (!file.endsWith(".json")) continue;
+    chatFixtures.set(file.slice(0, -".json".length), JSON.parse(
+      readFileSync(path.join(CHAT_FIXTURE_DIR, file), "utf-8"),
+    ));
+  }
+} catch {
+  console.warn(`[stub-api] no chat fixtures at ${CHAT_FIXTURE_DIR}`);
+}
+
+/** Where `POST /v1/chat/session` points the browser. Set by the runner. */
+const REALTIME_WS_URL = process.env.STUB_REALTIME_WS_URL ?? "ws://127.0.0.1:3102/chat/session";
+
 /** @type {Map<string, {state: object, scenario: string}>} */
 const clients = new Map();
 
@@ -247,6 +281,12 @@ const server = createServer(async (req, res) => {
       state: { ...emptyState(body.locale ?? "en"), ...(body.state ?? {}) },
       scenario: body.scenario ?? "ok",
       // Which recorded brief `/v1/today` replays for this client.
+      id,
+      // Which recorded turn `/v1/chat/turn` replays for this client.
+      chat: {
+        turn: body.chatTurn ?? "grounded",
+        locale: body.locale ?? "en",
+      },
       today: {
         variant: body.variant ?? "normal_morning",
         locale: body.locale ?? "en",
@@ -353,6 +393,38 @@ const server = createServer(async (req, res) => {
   if (path === "/v1/places") {
     const q = (url.searchParams.get("q") ?? "").toLowerCase();
     return send(res, 200, PLACES.filter((p) => p.label.toLowerCase().startsWith(q)));
+  }
+
+  // ── §25.4 / §34.6 chat ───────────────────────────────────────────────────
+  if (path === "/v1/chat/session" && req.method === "POST") {
+    if (scenario === "chat_unavailable") {
+      return send(res, 503, envelope("SYS_UNAVAILABLE", "errors.sys.unavailable", true));
+    }
+    // The ticket is opaque to the browser and single-use at the far end. What
+    // matters here is that `ws_url` is SERVED — the client compiles no socket
+    // origin of its own, so the test can point it at a real stub process.
+    const clientId = client.id ?? "default";
+    return send(res, 200, {
+      ticket: `ticket-${clientId}`,
+      ws_url: `${REALTIME_WS_URL}?client=${encodeURIComponent(clientId)}`,
+      resume_window_s: 300,
+    });
+  }
+
+  if (path === "/v1/chat/turn" && req.method === "POST") {
+    // §32.11's handoff path. Deliberately the SAME recorded turn the socket
+    // would have delivered: the whole point of one `ChatTurn` on both
+    // transports is that a handoff is invisible in the thread's content.
+    if (scenario === "chat_unavailable") {
+      return send(res, 503, envelope("SYS_UNAVAILABLE", "errors.sys.unavailable", true));
+    }
+    const chat = client.chat ?? { turn: "grounded", locale: "en" };
+    const fixture = chatFixtures.get(`${chat.turn}.${chat.locale}`);
+    if (!fixture) {
+      console.error(`[stub-api] no recorded turn for ${chat.turn}.${chat.locale}`);
+      return send(res, 404, envelope("SYS_VALIDATION", "errors.sys.validation", false));
+    }
+    return send(res, 200, fixture);
   }
 
   // ── §28.2 Today ──────────────────────────────────────────────────────────

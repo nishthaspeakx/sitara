@@ -1,0 +1,35 @@
+{
+  "message_id": "6a7bfd6a7acfebbe7804eba6",
+  "text": "Saturn is moving through your 10th house today. Take the slow route with work decisions — nothing here needs deciding by lunch.",
+  "locale": "en",
+  "confidence": "verified",
+  "safety_level": "l1_clear",
+  "presence_state": "calm_guidance",
+  "intent": "natal_chart_question",
+  "trace_id": "0da8e2ff17074af08f596fe5a0fe2286",
+  "citations": [
+    {
+      "span_start": 0,
+      "span_end": 46,
+      "confidence": "verified",
+      "source_state": "default",
+      "trust": {
+        "plain": "Saturn is moving through your 10th house today.",
+        "sources_line": "Computed from your chart · verified against 2 sources",
+        "details": [
+          "Saturn · 10th"
+        ]
+      }
+    }
+  ],
+  "memory_chips": [
+    {
+      "type": "mood_pattern",
+      "summary": "Mondays weigh on you more than the rest of the week",
+      "requires_reconfirmation": true
+    }
+  ],
+  "review_queued": false,
+  "message_key": null,
+  "budget_notice_key": null
+}

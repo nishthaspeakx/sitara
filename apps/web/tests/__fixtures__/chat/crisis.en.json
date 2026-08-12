@@ -1,0 +1,15 @@
+{
+  "message_id": "6a7bfd6a7acfebbe7804ebac",
+  "text": "Thank you for telling me. I'm not the right kind of help for this, and I don't want you to be alone with it. There are people trained for exactly this moment, and I can take you to them right now — tap Get support. I'm staying here with you.",
+  "locale": "en",
+  "confidence": "cannot_calculate",
+  "safety_level": "l4_crisis",
+  "presence_state": "safety_still",
+  "intent": "emotional_support",
+  "trace_id": "45ef5aa02a9f4bc7a6ffe59ba62ac012",
+  "citations": [],
+  "memory_chips": [],
+  "review_queued": true,
+  "message_key": "chat.safety.crisis",
+  "budget_notice_key": null
+}

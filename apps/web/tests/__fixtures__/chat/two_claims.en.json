@@ -1,0 +1,42 @@
+{
+  "message_id": "6a7bfd6a7acfebbe7804eb8e",
+  "text": "Saturn is in your 10th house today. Venus is in your 5th house today. Work asks for patience; the evening does not.",
+  "locale": "en",
+  "confidence": "verified",
+  "safety_level": "l1_clear",
+  "presence_state": "calm_guidance",
+  "intent": "natal_chart_question",
+  "trace_id": "7a80472b1ed34ae397de33cdd8df0417",
+  "citations": [
+    {
+      "span_start": 0,
+      "span_end": 34,
+      "confidence": "verified",
+      "source_state": "default",
+      "trust": {
+        "plain": "Saturn is in your 10th house today.",
+        "sources_line": "Computed from your chart · verified against 2 sources",
+        "details": [
+          "Saturn · 10th"
+        ]
+      }
+    },
+    {
+      "span_start": 36,
+      "span_end": 68,
+      "confidence": "verified",
+      "source_state": "default",
+      "trust": {
+        "plain": "Venus is in your 5th house today.",
+        "sources_line": "Computed from your chart · verified against 2 sources",
+        "details": [
+          "Venus · 5th"
+        ]
+      }
+    }
+  ],
+  "memory_chips": [],
+  "review_queued": false,
+  "message_key": null,
+  "budget_notice_key": null
+}

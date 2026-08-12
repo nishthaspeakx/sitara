@@ -1,0 +1,35 @@
+{
+  "message_id": "6a7bfd6a7acfebbe7804eba4",
+  "text": "Aaj Shani aapke 10ve bhaav se guzar rahe hain. Kaam ke faislon mein dheeraj rakhein.",
+  "locale": "hi-Latn",
+  "confidence": "verified",
+  "safety_level": "l1_clear",
+  "presence_state": "calm_guidance",
+  "intent": "natal_chart_question",
+  "trace_id": "5d58de88e61646f88f74661df9eb74fe",
+  "citations": [
+    {
+      "span_start": 0,
+      "span_end": 45,
+      "confidence": "verified",
+      "source_state": "default",
+      "trust": {
+        "plain": "Aaj Shani aapke 10ve bhaav se guzar rahe hain.",
+        "sources_line": "Aapki kundli se ganana · 2 sources se verified",
+        "details": [
+          "Shani · dasve"
+        ]
+      }
+    }
+  ],
+  "memory_chips": [
+    {
+      "type": "person",
+      "summary": "Your sister Meera lives in Pune",
+      "requires_reconfirmation": false
+    }
+  ],
+  "review_queued": false,
+  "message_key": null,
+  "budget_notice_key": null
+}

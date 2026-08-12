@@ -1,0 +1,15 @@
+{
+  "message_id": "6a7bfd6a7acfebbe7804eb94",
+  "text": "I'm here. Tell me what's on your mind and we'll take it from there.",
+  "locale": "en",
+  "confidence": "verified",
+  "safety_level": "l1_clear",
+  "presence_state": "calm_guidance",
+  "intent": "natal_chart_question",
+  "trace_id": "47969b1950b24c4293759bd31fd854e3",
+  "citations": [],
+  "memory_chips": [],
+  "review_queued": false,
+  "message_key": null,
+  "budget_notice_key": null
+}

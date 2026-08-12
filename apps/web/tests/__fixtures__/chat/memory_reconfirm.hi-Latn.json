@@ -1,0 +1,35 @@
+{
+  "message_id": "6a7bfd6a7acfebbe7804ebaa",
+  "text": "Aaj Shani aapke 10ve bhaav se guzar rahe hain. Kaam ke faislon mein dheeraj rakhein.",
+  "locale": "hi-Latn",
+  "confidence": "verified",
+  "safety_level": "l1_clear",
+  "presence_state": "calm_guidance",
+  "intent": "natal_chart_question",
+  "trace_id": "641816efdba04eacb6cc8efa69b6c556",
+  "citations": [
+    {
+      "span_start": 0,
+      "span_end": 45,
+      "confidence": "verified",
+      "source_state": "default",
+      "trust": {
+        "plain": "Aaj Shani aapke 10ve bhaav se guzar rahe hain.",
+        "sources_line": "Aapki kundli se ganana · 2 sources se verified",
+        "details": [
+          "Shani · dasve"
+        ]
+      }
+    }
+  ],
+  "memory_chips": [
+    {
+      "type": "mood_pattern",
+      "summary": "Mondays weigh on you more than the rest of the week",
+      "requires_reconfirmation": true
+    }
+  ],
+  "review_queued": false,
+  "message_key": null,
+  "budget_notice_key": null
+}

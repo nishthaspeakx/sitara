@@ -263,6 +263,7 @@
       "you": "You"
     },
     "tara": {
+      "name": "Tara",
       "ai_label": "Tara · AI guide",
       "state": {
         "welcome": "Tara, smiling",
@@ -359,6 +360,44 @@
     "chat": {
       "open_trust": "Why Tara said “{text}”",
       "retry": "Send again"
+    },
+    "ask": {
+      "title": "Ask Tara",
+      "presence_line": "here for you",
+      "placeholder": "Ask Tara anything",
+      "send": "Send",
+      "typing": "Tara is typing…",
+      "listening": "Tara is listening…",
+      "delivered": "Delivered to Tara",
+      "empty_title": "What's on your mind?",
+      "empty_body": "Ask about your day, a decision you're weighing, or anything at all.",
+      "suggestion_day": "How is my day looking?",
+      "suggestion_timing": "When is a good time today?",
+      "suggestion_number": "What does my number say?",
+      "date_today": "Today",
+      "date_yesterday": "Yesterday",
+      "handoff": "The live connection dropped, so Tara is answering the usual way. Nothing is lost.",
+      "reconnecting": "Reconnecting…",
+      "quoting": "Replying to",
+      "quote_clear": "Cancel reply",
+      "action_copy": "Copy",
+      "action_journal": "Save to journal",
+      "action_remember": "Remember this",
+      "action_why": "Why this?",
+      "action_report": "Report",
+      "actions_for": "Actions for this message",
+      "copied": "Copied",
+      "saved": "Saved to your journal",
+      "reported": "Thank you — a person will look at this."
+    },
+    "safety": {
+      "title": "Let's pause the stars for a moment.",
+      "body": "What you've shared matters more than any chart. Here are people who can help right now — real people, trained for this.",
+      "helpline_in": "India · AASRA · 91-9820466726 (24×7)",
+      "helpline_intl": "If you're outside India, your local emergency number is the fastest route.",
+      "back_to_tara": "Back to Tara",
+      "get_help": "Help & support",
+      "disclosure": "Tara is not a crisis service and not a clinician."
     },
     "audio": {
       "play": "Play",

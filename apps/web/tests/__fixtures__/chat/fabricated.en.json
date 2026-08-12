@@ -1,0 +1,15 @@
+{
+  "message_id": "6a7bfd6a7acfebbe7804eb9a",
+  "text": "I'm not confident enough in that answer to give it to you, so I'd rather not guess. Someone on our side will look at it. Ask me something else meanwhile — I'm here.",
+  "locale": "en",
+  "confidence": "verified",
+  "safety_level": "l1_clear",
+  "presence_state": "thoughtful",
+  "intent": "natal_chart_question",
+  "trace_id": "24dc402c747a49d280c562a2f752ed5a",
+  "citations": [],
+  "memory_chips": [],
+  "review_queued": true,
+  "message_key": "chat.fallback.safe_line",
+  "budget_notice_key": null
+}

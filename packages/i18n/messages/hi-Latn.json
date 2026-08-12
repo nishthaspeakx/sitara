@@ -263,6 +263,7 @@
       "you": "Aap"
     },
     "tara": {
+      "name": "Tara",
       "ai_label": "Tara · AI guide",
       "state": {
         "welcome": "Tara, muskurate hue",
@@ -359,6 +360,44 @@
     "chat": {
       "open_trust": "Tara ne “{text}” kyun kaha",
       "retry": "Phir bhejein"
+    },
+    "ask": {
+      "title": "Tara se poochein",
+      "presence_line": "aapke liye yahan hoon",
+      "placeholder": "Tara se kuch bhi poochein",
+      "send": "Bhejein",
+      "typing": "Tara likh rahi hain…",
+      "listening": "Tara sun rahi hain…",
+      "delivered": "Tara tak pahunch gaya",
+      "empty_title": "Mann mein kya hai?",
+      "empty_body": "Apne din ke baare mein poochein, kisi faisle ke baare mein, ya kuch bhi.",
+      "suggestion_day": "Mera din kaisa rahega?",
+      "suggestion_timing": "Aaj achha samay kab hai?",
+      "suggestion_number": "Mera ank kya kehta hai?",
+      "date_today": "Aaj",
+      "date_yesterday": "Kal",
+      "handoff": "Live connection toot gaya, isliye Tara samanya tareeke se jawab de rahi hain. Kuch bhi khoya nahi.",
+      "reconnecting": "Phir se jud rahe hain…",
+      "quoting": "Jawab de rahe hain",
+      "quote_clear": "Jawab radd karein",
+      "action_copy": "Copy karein",
+      "action_journal": "Journal mein sahejein",
+      "action_remember": "Yeh yaad rakhein",
+      "action_why": "Yeh kyon?",
+      "action_report": "Report karein",
+      "actions_for": "Is sandesh ke liye vikalp",
+      "copied": "Copy ho gaya",
+      "saved": "Aapke journal mein saheja gaya",
+      "reported": "Dhanyavaad — koi vyakti ise dekhega."
+    },
+    "safety": {
+      "title": "Thodi der ke liye sitaron ko rokte hain.",
+      "body": "Aapne jo kaha woh kisi bhi kundli se zyada maayne rakhta hai. Ye log abhi madad kar sakte hain — asli log, isi ke liye prashikshit.",
+      "helpline_in": "Bharat · AASRA · 91-9820466726 (24×7)",
+      "helpline_intl": "Agar aap Bharat se bahar hain, to apna local emergency number sabse tez raasta hai.",
+      "back_to_tara": "Tara ke paas wapas",
+      "get_help": "Madad aur sahayata",
+      "disclosure": "Tara koi crisis service nahi hain aur na hi clinician."
     },
     "audio": {
       "play": "Chalayein",
