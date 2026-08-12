@@ -47,12 +47,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from sitara_schemas.facts import Graha  # noqa: E402
-
-from sitara_api.chat_orchestration.presenter import present_turn  # noqa: E402
-from sitara_api.chat_orchestration.types import (  # noqa: E402
-    FactTool,
-    TurnRequest,
-)
 from tests.chat.conftest import (  # noqa: E402
     CONVERSATION_ID,
     NOW,
@@ -62,6 +56,12 @@ from tests.chat.conftest import (  # noqa: E402
     ScriptedSuggester,
     build_env,
     transit_house_fact,
+)
+
+from sitara_api.chat_orchestration.presenter import present_turn  # noqa: E402
+from sitara_api.chat_orchestration.types import (  # noqa: E402
+    FactTool,
+    TurnRequest,
 )
 
 LOCALES = ("en", "hi", "hi-Latn")

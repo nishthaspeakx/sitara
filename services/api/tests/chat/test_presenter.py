@@ -16,7 +16,6 @@ from sitara_schemas.facts import ConfidenceState, Graha
 from sitara_api.chat_orchestration.pipeline import KEY_FALLBACK
 from sitara_api.chat_orchestration.presenter import present_turn
 from sitara_api.chat_orchestration.types import FactTool, PresenceState, TurnRequest
-
 from tests.chat.conftest import (
     CONVERSATION_ID,
     NOW,

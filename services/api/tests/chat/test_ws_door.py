@@ -182,6 +182,8 @@ async def test_the_turn_stream_carries_stage_names_and_then_one_turn() -> None:
     pre-validation text here would be a fabricated claim racing them to the
     screen.
     """
+    from sitara_api.chat_orchestration.presenter import present_turn
+    from sitara_api.chat_orchestration.types import Stage, TurnRequest
     from tests.chat.conftest import (
         CONVERSATION_ID,
         NOW,
@@ -189,8 +191,6 @@ async def test_the_turn_stream_carries_stage_names_and_then_one_turn() -> None:
         USER_ID,
         build_env,
     )
-    from sitara_api.chat_orchestration.presenter import present_turn
-    from sitara_api.chat_orchestration.types import Stage, TurnRequest
 
     env = build_env()
     fabrication = f"Jupiter rules your 7th house [[{SATURN_FACT_ID}]]."
@@ -229,8 +229,8 @@ async def test_the_turn_stream_carries_stage_names_and_then_one_turn() -> None:
 async def test_a_stage_listener_that_raises_never_costs_the_user_the_answer() -> None:
     """Losing a presence event costs an animation. Raising out of the tracer
     would cost the turn."""
-    from tests.chat.conftest import CONVERSATION_ID, NOW, SATURN_FACT_ID, USER_ID, build_env
     from sitara_api.chat_orchestration.types import TurnRequest
+    from tests.chat.conftest import CONVERSATION_ID, NOW, SATURN_FACT_ID, USER_ID, build_env
 
     env = build_env()
     env.llm.script(

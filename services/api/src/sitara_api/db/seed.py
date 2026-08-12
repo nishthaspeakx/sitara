@@ -298,12 +298,33 @@ async def seed(db: MongoDb, now: dt.datetime | None = None) -> dict[str, int]:
                 "date": persona.birth_date,
                 "time": persona.birth_time,
                 "time_accuracy": persona.time_accuracy,
+                # The SAME shape `AstrologyFacade.set_birth_details` writes —
+                # `name` and `tz` included. It used to write `label`/`lat`/`lon`
+                # only, and `birth_input` requires `place["tz"]` (§5.2 forbids
+                # inferring a zone from anywhere but the stored place), so it
+                # logged "birth row incomplete" and returned None for every
+                # seeded account. The visible effect was that no seeded user
+                # could ever get a chart-grounded answer: chat declined every
+                # astrology question for a missing birth date while the row sat
+                # in Mongo, complete-looking, next to a `tz_snapshot` holding
+                # the zone the reader never looks at.
+                #
+                # A seeder that writes what the real reader rejects is the same
+                # defect class as a fake that accepts what the real system
+                # rejects — and it hid here for the same reason, because
+                # nothing read this row in a test.
                 "place": {
+                    "name": persona.place_label,
                     "label": persona.place_label,
                     "lat": persona.place_lat,
                     "lon": persona.place_lon,
+                    "tz": persona.timezone,
                 },
-                "tz_snapshot": {"tz": persona.timezone, "resolved_at": moment.isoformat()},
+                "tz_snapshot": {
+                    "tz": persona.timezone,
+                    "resolved_at": moment.isoformat(),
+                    "source": "gazetteer",
+                },
                 "rectification_notes": None,
             },
         )

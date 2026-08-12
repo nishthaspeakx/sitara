@@ -38,6 +38,7 @@ from dataclasses import dataclass
 from sitara_schemas.facts import (
     BhagyankValue,
     ConfidenceState,
+    DashaPeriodValue,
     DayTimingValue,
     FactSnapshot,
     FestivalObservanceValue,
@@ -189,6 +190,18 @@ def detail(snapshot: FactSnapshot, locale: str) -> str | None:
         if graha is None or house is None:
             return None
         return f"{graha} · {house}"
+    if isinstance(value, DashaPeriodValue):
+        # A dasha-backed claim had NO layer 3 at all until the first live
+        # conversation: Today's modules never stand on a dasha fact, so this
+        # renderer — written for Today — had no branch for one. Chat does, and
+        # constantly: "you are in a Jupiter mahadasha" is the single most
+        # common grounded sentence a real model produced. The sheet opened on
+        # a claim, a sources line, and nothing under "see the details".
+        lord = localised_term("graha", value.lord.value, locale)
+        level = localised_term("dasha_level", value.level.value, locale)
+        if lord is None or level is None:
+            return None
+        return f"{lord} · {level}"
     if isinstance(value, MoolankValue | BhagyankValue):
         # `ui.module.number`, not `ui.panchang.*` — a numerology value is not a
         # panchang element and the panchang catalogue has no label for it.

@@ -104,6 +104,50 @@ def _tickets(request: Request) -> WsTicketService:
     return WsTicketService(request.app.state.redis)
 
 
+async def _birth_profile(request: Request, user_id: str) -> BirthProfile:
+    """What the pipeline knows about the subject (§5.3 step 2).
+
+    **This used to read `request.state.birth_profile`, which nothing ever
+    set.** Every live turn therefore ran with an all-False `BirthProfile()`,
+    `required_data` declined for a missing date of birth, and the chat could
+    not answer a single chart question against a real account — including
+    accounts whose birth row was on file. Every test passed a profile in
+    explicitly, so nothing caught it; the first live conversation did, on its
+    first question.
+
+    §13's single door to birth details is the astrology facade, so this asks
+    it rather than reading the collection. It narrows to the four booleans and
+    the zone the pipeline is allowed to see: §5.3 is explicit that the
+    orchestrator gets sufficiency, never values.
+
+    A facade failure degrades to "we do not know" rather than raising. That is
+    the honest direction — Tara asks for the birth date she cannot confirm she
+    has, which is a worse answer but never a wrong one.
+    """
+    facade = getattr(request.app.state, "astrology", None)
+    if facade is None:
+        return BirthProfile()
+    try:
+        birth = await facade.birth_input(user_id)
+    except Exception:
+        logger.warning("birth profile unavailable; answering without a chart")
+        return BirthProfile()
+    if birth is None:
+        return BirthProfile()
+
+    place = bool(birth.place_name) and bool(birth.tz)
+    return BirthProfile(
+        has_date=True,
+        has_exact_time=birth.has_exact_time,
+        # §10-6's four accuracies collapse to two questions here: do we have a
+        # usable instant, and failing that do we have a window? A row with no
+        # time at all is the Moon-chart path (§5.3), not a window.
+        has_time_window=not birth.has_exact_time,
+        has_place=place,
+        tz=birth.tz,
+    )
+
+
 async def _run(
     request: Request,
     *,
@@ -116,7 +160,7 @@ async def _run(
     on_stage: Callable[[Stage], None] | None = None,
 ) -> ChatTurn:
     pipeline = _pipeline(request)
-    profile: BirthProfile = getattr(request.state, "birth_profile", None) or BirthProfile()
+    profile = await _birth_profile(request, user_id)
     result = await pipeline.run(
         TurnRequest(
             user_id=user_id,

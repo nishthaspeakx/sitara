@@ -153,6 +153,11 @@
       "rahu": "Rahu",
       "ketu": "Ketu"
     },
+    "dasha_level": {
+      "maha": "mahadasha",
+      "antar": "antardasha",
+      "pratyantar": "pratyantar dasha"
+    },
     "day_timing": {
       "rahu_kaal": "Rahu Kaal",
       "yamaganda": "Yamaganda",
