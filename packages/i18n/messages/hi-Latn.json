@@ -68,7 +68,9 @@
     "voice": {
       "session_not_found": "Woh baatcheet ab khuli nahi hai. Nayi shuru karein, Tara aage badha dengi.",
       "provider_unavailable": "Abhi voice notes kaam nahi kar rahe. Likhkar bhejna hamesha chalta hai — Tara yahin hain.",
-      "note_expired": "Woh recording hata di gayi hai. Aapne jo kaha, woh yahin hai."
+      "note_expired": "Woh recording hata di gayi hai. Aapne jo kaha, woh yahin hai.",
+      "call_language_pending": "Is bhasha mein Tara se call abhi taiyaar nahi hai — hum ispar kaam kar rahe hain. Voice notes aaj bhi chalte hain, aur woh unka jawab deti hain.",
+      "call_language_unavailable": "Is bhasha mein call available nahi hai. Voice note aur likhna, dono chalte hain."
     },
     "sys": {
       "validation": "Request mein kuch theek nahin tha. Dobara koshish karein.",
@@ -438,7 +440,9 @@
       "speaker_off": "Speaker band",
       "captions": "Captions",
       "minutes_left": "{minutes, plural, one {# minute baaki} other {# minutes baaki}}",
-      "privacy_line": "Call kabhi record nahin hoti."
+      "privacy_line": "Call kabhi record nahin hoti.",
+      "coming_soon_title": "Call jald aa rahi hai",
+      "coming_soon_body": "Tara abhi is bhasha mein call nahi le paatin. Iske bajaye mic dabakar voice note bhejein — woh apni awaaz mein jawab dengi."
     },
     "panchang": {
       "label": "Aaj ka panchang",

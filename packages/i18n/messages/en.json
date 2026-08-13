@@ -68,7 +68,9 @@
     "voice": {
       "session_not_found": "That conversation isn't open any more. Start a new one and Tara will pick things up.",
       "provider_unavailable": "Voice notes aren't working just now. Typing always works — Tara's right here.",
-      "note_expired": "That recording has been deleted. What you said is still here."
+      "note_expired": "That recording has been deleted. What you said is still here.",
+      "call_language_pending": "Calls with Tara aren't ready in this language yet — we're working on it. Voice notes work today, and she replies to those.",
+      "call_language_unavailable": "Calls aren't available in this language. Voice notes and typing both work."
     },
     "sys": {
       "validation": "Something in the request wasn't right. Please try again.",
@@ -438,7 +440,9 @@
       "speaker_off": "Speaker off",
       "captions": "Captions",
       "minutes_left": "{minutes, plural, one {# minute left} other {# minutes left}}",
-      "privacy_line": "Calls are never recorded."
+      "privacy_line": "Calls are never recorded.",
+      "coming_soon_title": "Calls are coming",
+      "coming_soon_body": "Tara can't take calls in this language yet. Hold the mic to send her a voice note instead — she'll reply in her own voice."
     },
     "panchang": {
       "label": "Today's panchang",

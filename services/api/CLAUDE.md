@@ -65,6 +65,17 @@ Bounded-context modules in one process (auth, users/profiles, localisation, astr
 - Record the Cartesia fixtures + round-trip report: `CARTESIA_API_KEY=... uv run python -m tests.voice.record`
 - §33.1 expiry sweep: `uv run python -m sitara_api.voice.expiry --dry-run`
 
+## call gate + routing (P10b, §25.3/§33.5/CC-010) — invariants that must not regress
+- **`routing.resolve()` may return NO provider, and that is a designed state.** There is no fallback parameter, no `or CARTESIA` and no default argument anywhere in that module — a sensible-looking default is exactly how CC-010's ruling gets reversed by accident. A test asserts the signature stays that way.
+- **Batch and streaming availability differ for the same vendor, model and language.** Voice notes (batch) work in all three locales; calls (streaming) work only in `en`. `calls_available_in` and `voice_notes_available_in` are separate functions on purpose — one "voice works" boolean would take voice notes down in hi/hi-Latn for a limitation that has nothing to do with them.
+- **Landing Sarvam is ONE cell** (`DECLARED` → `IMPLEMENTED`) plus an adapter. `test_landing_sarvam_streaming_is_ONE_cell` asserts that literally, and restores the matrix in a `finally` — a leaked mutation would make every other routing test pass for the wrong reason.
+- **`call_gate` distinguishes BLOCKED from FAILING, and neither is PASSING.** §33.5's safety-interception and naturalness measures cannot run in hi/hi-Latn at all, so they are BLOCKED; an unmeasured measure is UNMEASURED. `passes` requires all six PASSING, because §33.5 says "only if". The blocked reason is READ from the routing matrix so the harness unblocks on the commit that unblocks it.
+- **The `call.indic_streaming_stt` gate reads the matrix too**, for the same reason: an amber-forever gate is how a real blocker gets tuned out.
+- **§3.4 respellings reach the SYNTHESISER and nothing else.** One call site, on the way into `SynthesisRequest`, after the turn is stored and after it has crossed the wire. A leak would put "raahoo kaal" in the user's own thread and make §25.4's transcript toggle disagree with itself. Every row is `draft`; production serves only reviewed rows.
+
+## Commands (P10b)
+- §33.5's gate: `uv run python -m sitara_api.voice.call_gate`
+
 ## memory module (M5-P6b, §32.4/§32.5/§30.5) — invariants that must not regress
 - **`memory/taxonomy.py` owns the 11 types' RULES** — consent, visibility gates, decay policy. `chat_orchestration.types` re-exports; it never redeclares. `tests/memory/test_taxonomy.py` parses §32.4 out of `docs/spec/SPEC.md` and fails on drift — same discipline as `test_registry_matches_spec.py`. **The IDS moved to `sitara_schemas.memory_types` in M8-P10**, because S18's memory chip made them a wire format: `packages/i18n` had meanwhile grown a parallel eleven (`life_fact`, `concern`, `belief_practice`, `conversation_thread`…) that seven labels disagreed with, and §32.4 ends "Vault filters use exactly these 11 labels". Rules here, ids there, one declaration each.
 - **`PresenceState` is `sitara_schemas.presence`, and it is a StrEnum.** It was an IntEnum here; `apps/web` held a differently-named, differently-ORDERED twelve, so a positional read of a served state resolved this module's `SAFETY_STILL` (11) — §29.5's chat-header state at L2+ — to the client's `reading`. `TurnResponse.presence_state` is now the ID, not the ordinal.

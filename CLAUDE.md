@@ -1,4 +1,4 @@
-# Sitara — build rules (spec = docs/spec/SPEC.md, FROZEN v3.9)
+# Sitara — build rules (spec = docs/spec/SPEC.md, FROZEN v3.10)
 NEVER change a frozen decision. If a task seems to require it, STOP and say so.
 
 ## Non-negotiables (spec §)
@@ -29,5 +29,6 @@ NEVER change a frozen decision. If a task seems to require it, STOP and say so.
 - Tests first for engine/pipeline code; golden-set tests are release-blocking CI
 - Conventional commits; one short-lived branch per milestone (`feat/m5-memory`), merged to main as soon as its shipcheck is green; never commit .env
 - **Voice providers sit behind `sitara_api.voice.providers` and are chosen by configuration (§3.2).** Cartesia (Sonic TTS, Ink STT) is the first implementation and M9's default per CC-009; Sarvam stays declared as the Indic STT comparison arm. **§3.2's eight-measure acceptance gate is FINAL and NOT MET** — no bake-off has run, so nothing may describe Cartesia as a shipped primary.
+- **Live calls: `hi`/`hi-Latn` are EXPLICITLY UNAVAILABLE, never routed to an English recogniser (CC-010).** Ink's STREAMING endpoint is English-only; its batch endpoint carries 49 languages, which is why voice notes work in all three. An English model fed Hindi audio does not fail — it produces fluent nonsense that reaches §9 as the user's question, and every fabrication guard we have gates what Tara SAYS, downstream of the transcript. `voice/providers/routing.py` is a `(provider, modality) → {locale: Support}` matrix whose `resolve()` may return NO provider and takes no fallback parameter.
 - **A locale is not a language code.** `hi-Latn` IS Hinglish (Latin script), and `locale.split("-")[0]` sends it to `hi`, which fills every Hinglish thread with Devanagari while every accuracy metric stays green. The map is declared data in `voice/providers/base.py`, differs between STT and TTS at exactly that locale, and an unmapped locale DECLINES (§2.4).
 - When unsure, read docs/spec/SPEC.md section cited in the task — do not invent

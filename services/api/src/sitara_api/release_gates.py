@@ -84,9 +84,44 @@ def _policy_review_status(filename: str) -> str:
     return data.get("review_status", "missing — no review_status field")
 
 
+def _indic_streaming_stt_status() -> str:
+    """Read the gate's answer off the CAPABILITY MATRIX, never off a constant.
+
+    A gate whose status is a literal is a gate that stays red after the thing
+    it watches is fixed, and amber-forever gates are how a real blocker gets
+    tuned out. This reads `voice.providers.routing`, so the day Sarvam's
+    streaming cell goes IMPLEMENTED the gate closes itself.
+    """
+    from sitara_api.voice.providers.routing import Modality, blocked_locales
+
+    blocked = blocked_locales(Modality.STREAMING, ("en", "hi", "hi-Latn"))
+    if not blocked:
+        return "reviewed — every launch locale has a streaming recogniser"
+    return f"blocked — no streaming STT for {', '.join(blocked)}"
+
+
 def gates() -> tuple[Gate, ...]:
     """Every human-closed gate, with its status read from the artefact."""
     return (
+        Gate(
+            id="call.indic_streaming_stt",
+            spec_ref="§25.3 / §33.5 / §3.3 (CC-010)",
+            blocks=Stage.PUBLIC_LAUNCH,
+            status=_indic_streaming_stt_status(),
+            detail=(
+                "hi/hi-Latn live calls are blocked pending Sarvam realtime STT. Cartesia "
+                "Ink's STREAMING endpoint recognises English only (its batch endpoint "
+                "carries 49 languages, which is why §25.4's voice notes work in all three "
+                "locales). Those calls are therefore EXPLICITLY UNAVAILABLE rather than "
+                "routed to an English recogniser: an English model fed Hindi audio does "
+                "not fail, it produces fluent nonsense, which then reaches §9 as the "
+                "user's question — and every validator downstream gates what Tara SAYS, "
+                "so none of them can see it. Closing this needs Sarvam's streaming cell "
+                "in `voice.providers.routing.CAPABILITIES` to go IMPLEMENTED with an "
+                "adapter behind it; the status above is read from that matrix, so this "
+                "gate closes itself and cannot go stale."
+            ),
+        ),
         Gate(
             id="safety.helpline_table",
             spec_ref="§22.9 / §9 L4",
