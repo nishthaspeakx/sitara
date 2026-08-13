@@ -91,7 +91,7 @@ export function PaywallPanel({
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-3">
           {/* state 1, small — never pleading imagery (§29.5) */}
-          <TaraPresence size="sm" state="warm_neutral" still />
+          <TaraPresence size="sm" state="welcome" still />
           <p className="max-w-reading font-serif text-h3 text-ink-primary">
             {t("ui.paywall.tara_line")}
           </p>

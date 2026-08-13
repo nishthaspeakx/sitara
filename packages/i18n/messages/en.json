@@ -65,6 +65,9 @@
       "name_invalid": "That name has characters we can't read as a name. Please check it and try again.",
       "no_sunrise_at_location": "I can't work out sunrise for that place on that date, so I can't give you accurate timings there."
     },
+    "voice": {
+      "session_not_found": "That conversation isn't open any more. Start a new one and Tara will pick things up."
+    },
     "sys": {
       "validation": "Something in the request wasn't right. Please try again.",
       "internal": "Something went wrong on our side. Please try again in a moment.",
@@ -149,6 +152,11 @@
       "saturn": "Saturn",
       "rahu": "Rahu",
       "ketu": "Ketu"
+    },
+    "dasha_level": {
+      "maha": "mahadasha",
+      "antar": "antardasha",
+      "pratyantar": "pratyantardasha"
     },
     "day_timing": {
       "rahu_kaal": "Rahu Kaal",
@@ -260,20 +268,21 @@
       "you": "You"
     },
     "tara": {
+      "name": "Tara",
       "ai_label": "Tara · AI guide",
       "state": {
-        "warm_neutral": "Tara",
+        "welcome": "Tara, smiling",
         "listening": "Tara, listening",
         "speaking_soft": "Tara, speaking",
-        "smile": "Tara, smiling",
-        "full_smile": "Tara, smiling warmly",
         "thoughtful": "Tara, thoughtful",
-        "concerned_kind": "Tara, listening closely",
+        "calm_guidance": "Tara, reading your chart",
+        "concern_kind": "Tara, listening closely",
+        "encouragement": "Tara, smiling warmly",
         "celebration": "Tara, celebrating",
         "night": "Tara, at night",
         "festival": "Tara, dressed for the festival",
-        "reading": "Tara, reading your chart",
-        "safety": "Tara"
+        "safety_still": "Tara",
+        "profile_portrait": "Tara"
       }
     },
     "module": {
@@ -330,17 +339,17 @@
       "source_turn": "Where this came from",
       "consent_stamp": "You agreed on {date}",
       "type": {
-        "life_fact": "Life fact",
-        "relationship": "Relationship",
+        "person": "Person",
+        "significant_event": "Significant event",
+        "date_anniversary": "Date & anniversary",
         "preference": "Preference",
-        "goal": "Goal",
-        "concern": "Concern",
-        "health_context": "Health context",
-        "belief_practice": "Belief & practice",
-        "important_date": "Important date",
-        "name_pronunciation": "Name pronunciation",
-        "language_style": "Language & style",
-        "conversation_thread": "Conversation thread"
+        "goal_intention": "Goal",
+        "decision_context": "Decision in progress",
+        "mood_pattern": "Mood pattern",
+        "health_adjacent": "Health context",
+        "work_finance": "Work & money",
+        "spiritual_practice": "Spiritual practice",
+        "pronunciation_identity": "Name & pronunciation"
       }
     },
     "voice": {
@@ -356,6 +365,44 @@
     "chat": {
       "open_trust": "Why Tara said “{text}”",
       "retry": "Send again"
+    },
+    "ask": {
+      "title": "Ask Tara",
+      "presence_line": "here for you",
+      "placeholder": "Ask Tara anything",
+      "send": "Send",
+      "typing": "Tara is typing…",
+      "listening": "Tara is listening…",
+      "delivered": "Delivered to Tara",
+      "empty_title": "What's on your mind?",
+      "empty_body": "Ask about your day, a decision you're weighing, or anything at all.",
+      "suggestion_day": "How is my day looking?",
+      "suggestion_timing": "When is a good time today?",
+      "suggestion_number": "What does my number say?",
+      "date_today": "Today",
+      "date_yesterday": "Yesterday",
+      "handoff": "The live connection dropped, so Tara is answering the usual way. Nothing is lost.",
+      "reconnecting": "Reconnecting…",
+      "quoting": "Replying to",
+      "quote_clear": "Cancel reply",
+      "action_copy": "Copy",
+      "action_journal": "Save to journal",
+      "action_remember": "Remember this",
+      "action_why": "Why this?",
+      "action_report": "Report",
+      "actions_for": "Actions for this message",
+      "copied": "Copied",
+      "saved": "Saved to your journal",
+      "reported": "Thank you — a person will look at this."
+    },
+    "safety": {
+      "title": "Let's pause the stars for a moment.",
+      "body": "What you've shared matters more than any chart. Here are people who can help right now — real people, trained for this.",
+      "helpline_in": "India · AASRA · 91-9820466726 (24×7)",
+      "helpline_intl": "If you're outside India, your local emergency number is the fastest route.",
+      "back_to_tara": "Back to Tara",
+      "get_help": "Help & support",
+      "disclosure": "Tara is not a crisis service and not a clinician."
     },
     "audio": {
       "play": "Play",

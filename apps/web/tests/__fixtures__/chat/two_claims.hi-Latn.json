@@ -1,0 +1,42 @@
+{
+  "message_id": "6a7bfd6a7acfebbe7804eb92",
+  "text": "Aaj Shani aapke 10ve bhaav mein hain. Aaj Shukra aapke 5ve bhaav mein hain. Kaam dheeraj maangta hai, shaam nahi.",
+  "locale": "hi-Latn",
+  "confidence": "verified",
+  "safety_level": "l1_clear",
+  "presence_state": "calm_guidance",
+  "intent": "natal_chart_question",
+  "trace_id": "9118f63255d84c6780371412eebf9f67",
+  "citations": [
+    {
+      "span_start": 0,
+      "span_end": 36,
+      "confidence": "verified",
+      "source_state": "default",
+      "trust": {
+        "plain": "Aaj Shani aapke 10ve bhaav mein hain.",
+        "sources_line": "Aapki kundli se ganana · 2 sources se verified",
+        "details": [
+          "Shani · dasve"
+        ]
+      }
+    },
+    {
+      "span_start": 38,
+      "span_end": 74,
+      "confidence": "verified",
+      "source_state": "default",
+      "trust": {
+        "plain": "Aaj Shukra aapke 5ve bhaav mein hain.",
+        "sources_line": "Aapki kundli se ganana · 2 sources se verified",
+        "details": [
+          "Shukra · paanchve"
+        ]
+      }
+    }
+  ],
+  "memory_chips": [],
+  "review_queued": false,
+  "message_key": null,
+  "budget_notice_key": null
+}

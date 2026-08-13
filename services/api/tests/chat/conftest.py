@@ -155,6 +155,28 @@ class ScriptedLLM:
         )
 
 
+class ScriptedSuggester:
+    """A memory extractor whose RESULTS are scripted, whose RULES are not.
+
+    §32.4's chip is produced from a structured model output (§9), so scripting
+    the extractor is the same kind of thing as scripting a reply. What is NOT
+    stubbed is `memory.chip_from`, which is where the taxonomy is checked and
+    where "types 7–9 always re-confirm wording before save" is decided — so a
+    scripted type-7 chip comes back requiring re-confirmation because the real
+    rule said so, not because a fixture claimed it.
+    """
+
+    def __init__(self, *raw: dict[str, str]) -> None:
+        self._raw = raw
+
+    async def suggest(
+        self, *, user_text: str, reply_text: str, locale: str, intent: Any
+    ) -> Sequence[Any]:
+        from sitara_api.chat_orchestration.memory import chip_from
+
+        return [chip for chip in (chip_from(r) for r in self._raw) if chip is not None]
+
+
 class StubFactProvider:
     """Serves a fixed snapshot set for the tools it is given."""
 
@@ -202,10 +224,14 @@ def build_env(
     facts_by_tool: dict[FactTool, Sequence[FactSnapshot]] | None = None,
     settings: ChatSettings | None = None,
     classifier_enabled: bool = True,
+    memory_suggester: Any = None,
 ) -> PipelineEnv:
     chat_settings = settings or ChatSettings(
         anthropic_api_key="test-key",
         safety_classifier_enabled=classifier_enabled,
+        # A suggester with the flag off would silently suggest nothing, and the
+        # test would pass by rendering an empty list.
+        memory_chip_suggestions_enabled=memory_suggester is not None,
     )
     llm = ScriptedLLM()
     store = InMemoryMessageStore()
@@ -226,7 +252,7 @@ def build_env(
         grounding=GroundingValidator(),
         langquality=LanguageQualityValidator(),
         memory_retriever=NullMemoryRetriever(),
-        memory_suggester=NullMemorySuggester(),
+        memory_suggester=memory_suggester or NullMemorySuggester(),
         store=store,
         review_queue=review_queue,
         trace_sink=sink,

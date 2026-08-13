@@ -56,6 +56,20 @@ class Settings(BaseSettings):
     otp_max_fails: int = 5
     otp_lock_seconds: int = 900
 
+    # --- §34.6 the chat/voice socket -------------------------------------
+    # Where the browser opens the socket. SERVED to the client by
+    # POST /v1/chat/session rather than compiled into it: `lib/api.ts` records
+    # what a public build-time origin costs when it has to agree with a cookie
+    # posture, and this one also has to agree with a deployment topology.
+    realtime_ws_url: str = "ws://localhost:8002/chat/session"
+    # §34.6/§32.11: "reconnect within 5 min resumes via session token".
+    chat_resume_window_s: int = 300
+    # The shared secret `sitara-realtime` presents on /v1/chat/ws/*. Unset
+    # means those endpoints REFUSE — `require_service_key` fails closed,
+    # because an unconfigured guard on a service-to-service endpoint that runs
+    # the pipeline for an arbitrary user id is an open door that looks shut.
+    service_key: str | None = None
+
     # --- §5.2 Layer B panchang providers ---------------------------------
     # Keys live in .env / Secrets Manager, never here and never in git.
     # A blank key is not an error: the provider then behaves as "down" and the

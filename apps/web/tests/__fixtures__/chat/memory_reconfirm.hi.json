@@ -1,0 +1,35 @@
+{
+  "message_id": "6a7bfd6a7acfebbe7804eba8",
+  "text": "आज शनि आपके 10वें भाव से गुज़र रहे हैं। काम के फ़ैसलों में धीरज रखें।",
+  "locale": "hi",
+  "confidence": "verified",
+  "safety_level": "l1_clear",
+  "presence_state": "calm_guidance",
+  "intent": "natal_chart_question",
+  "trace_id": "72e19d6303784d2d8711043ac18c33c4",
+  "citations": [
+    {
+      "span_start": 0,
+      "span_end": 38,
+      "confidence": "verified",
+      "source_state": "default",
+      "trust": {
+        "plain": "आज शनि आपके 10वें भाव से गुज़र रहे हैं।",
+        "sources_line": "आपकी कुंडली से गणना · 2 स्रोतों से सत्यापित",
+        "details": [
+          "शनि · दसवें"
+        ]
+      }
+    }
+  ],
+  "memory_chips": [
+    {
+      "type": "mood_pattern",
+      "summary": "Mondays weigh on you more than the rest of the week",
+      "requires_reconfirmation": true
+    }
+  ],
+  "review_queued": false,
+  "message_key": null,
+  "budget_notice_key": null
+}

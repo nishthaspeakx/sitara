@@ -24,7 +24,7 @@ import {
   focusRing,
   touchTarget,
   type MessageKey,
-  type TaraState,
+  type PresenceState,
 } from "./_util";
 
 export type HeaderVariant = "presence" | "titled" | "bare";
@@ -39,7 +39,7 @@ export interface HeaderProps {
   /** Trailing controls — settings, search, overflow. */
   actions?: ReactNode;
   /** presence variant only. */
-  taraState?: TaraState;
+  taraState?: PresenceState;
   /** presence variant only — expands the chip during voice/ceremony. */
   taraExpanded?: boolean;
   className?: string;
@@ -52,7 +52,7 @@ export function Header({
   subtitleKey,
   onBack,
   actions,
-  taraState = "warm_neutral",
+  taraState = "profile_portrait",
   taraExpanded = false,
   className,
 }: HeaderProps) {

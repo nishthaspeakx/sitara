@@ -1,0 +1,15 @@
+{
+  "message_id": "6a7bfd6a7acfebbe7804ebb0",
+  "text": "Mujhe batane ke liye shukriya. Is baat ke liye sahi madad main nahin hoon, aur main nahin chahti ki aap ise akele sahein. Aise waqt ke liye trained log hain, aur main aapko abhi unse jod sakti hoon — “Support lein” dabaiye. Main yahin aapke saath hoon.",
+  "locale": "hi-Latn",
+  "confidence": "cannot_calculate",
+  "safety_level": "l4_crisis",
+  "presence_state": "safety_still",
+  "intent": "emotional_support",
+  "trace_id": "18330c3494b2423f931f1fbc7a326400",
+  "citations": [],
+  "memory_chips": [],
+  "review_queued": true,
+  "message_key": "chat.safety.crisis",
+  "budget_notice_key": null
+}

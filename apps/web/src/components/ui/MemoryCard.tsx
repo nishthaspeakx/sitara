@@ -9,13 +9,14 @@
  */
 
 import {
+  Briefcase,
   CalendarHeart,
+  CloudSun,
   Compass,
   Heart,
-  HeartPulse,
   Home,
   Languages,
-  MessageSquareQuote,
+  Leaf,
   Sparkles,
   Star,
   Target,
@@ -24,37 +25,41 @@ import {
 import { useTranslations } from "next-intl";
 import type { ComponentType } from "react";
 
+import { MEMORY_TYPES, type MemoryType } from "@sitara/schemas";
+
 import { Card } from "./Card";
 import { ICON_STROKE, cn, focusRing, motionStandard } from "./_util";
 
-/** §32.4 — the 11 memory types (closed set). */
-export const MEMORY_TYPES = [
-  "life_fact",
-  "relationship",
-  "preference",
-  "goal",
-  "concern",
-  "health_context",
-  "belief_practice",
-  "important_date",
-  "name_pronunciation",
-  "language_style",
-  "conversation_thread",
-] as const;
-export type MemoryType = (typeof MEMORY_TYPES)[number];
+/**
+ * §32.4 — the 11 memory types (closed set), from `@sitara/schemas`.
+ *
+ * This file used to declare its own eleven, and it was a DIFFERENT eleven:
+ * `life_fact`, `concern`, `belief_practice`, `conversation_thread` and three
+ * more that §32.4 does not contain, while `significant_event`,
+ * `decision_context`, `mood_pattern`, `spiritual_practice` and the rest were
+ * missing. §32.4 ends "Vault filters use exactly these 11 labels, localized",
+ * so a vault built on this list would have filtered by a taxonomy the memory
+ * module has never written a row under.
+ */
+export { MEMORY_TYPES, type MemoryType };
 
 const TYPE_ICON: Record<MemoryType, ComponentType<{ strokeWidth?: number; className?: string }>> = {
-  life_fact: Star,
-  relationship: Users,
+  person: Users,
+  significant_event: Star,
+  date_anniversary: CalendarHeart,
   preference: Heart,
-  goal: Target,
-  concern: Compass,
-  health_context: HeartPulse,
-  belief_practice: Sparkles,
-  important_date: CalendarHeart,
-  name_pronunciation: Languages,
-  language_style: Languages,
-  conversation_thread: MessageSquareQuote,
+  goal_intention: Target,
+  decision_context: Compass,
+  mood_pattern: CloudSun,
+  // §32.4 type 8 is non-medical framing ONLY — symptoms and diagnoses are
+  // declined at classification, in code as well as in the model. So the glyph
+  // is not a clinical one: a pulse trace next to a memory the user was
+  // promised is "health-ADJACENT" reads as a medical record, which is the one
+  // thing this type is defined not to be.
+  health_adjacent: Leaf,
+  work_finance: Briefcase,
+  spiritual_practice: Sparkles,
+  pronunciation_identity: Languages,
 };
 
 export interface MemoryCardProps {

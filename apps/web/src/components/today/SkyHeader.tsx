@@ -57,7 +57,7 @@ export function SkyHeader({ payload, chrome, onOpenSettings, onOpenStories }: Sk
             anyway — the default is a safety net, not the decision. */}
         <StoryRing
           enabled={payload.state.story_ring_enabled}
-          taraState={chrome.night ? "night" : "warm_neutral"}
+          taraState={chrome.night ? "night" : "profile_portrait"}
           onOpen={onOpenStories}
         />
 

@@ -11,7 +11,7 @@
 import { useTranslations } from "next-intl";
 
 import { TaraPresence } from "./TaraPresence";
-import { cn, focusRing, motionStandard, type TaraSize, type TaraState } from "./_util";
+import { cn, focusRing, motionStandard, type TaraSize, type PresenceState } from "./_util";
 
 export type StoryRingState = "unviewed" | "viewed" | "none";
 
@@ -20,7 +20,7 @@ export interface StoryRingProps {
   enabled?: boolean;
   state?: StoryRingState;
   size?: TaraSize;
-  taraState?: TaraState;
+  taraState?: PresenceState;
   onOpen?: () => void;
   className?: string;
 }
@@ -34,7 +34,7 @@ export function StoryRing({
   enabled = false,
   state = "none",
   size = "sm",
-  taraState = "warm_neutral",
+  taraState = "profile_portrait",
   onOpen,
   className,
 }: StoryRingProps) {

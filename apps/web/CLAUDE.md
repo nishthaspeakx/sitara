@@ -28,6 +28,14 @@ Some rules are enforced by the component's shape rather than by review, and are 
 - `KundliChart` ships its **contract and an honest unbuilt state** — CC-007 schedules the diagram for M10. It renders a labelled placeholder plus the house data it would draw, never a wrong chart, so the 49-count is true rather than aspirational. M10 changes the render only.
 - `ErrorState` takes a §34.4 envelope; `retryable: false` means no retry control exists at all.
 
+### The presence states are §4.3's, from the schema (M8-P10)
+
+`_util.ts` used to declare its own twelve — `warm_neutral`, `smile`, `full_smile`, `reading`, `safety` — none of which are §4.3's names, with `calm_guidance` and `encouragement` missing outright. The API has always emitted §4.3's set. Five of the twelve it can serve had no asset and no alt text here, and the lists differed in ORDER too, so a positional read resolved state 11 (safety-still — the one §29.5 puts in the chat header at L2+) to `reading`. Nothing failed because no screen consumed a served presence state until S18.
+
+`PRESENCE_STATES` now comes from `@sitara/schemas`. Two consequences worth knowing:
+- **The asset SLUGS were deliberately not renamed.** They name files built from ~30MB escrow masters (§22.16); renaming a hundred derivatives to tidy a mapping table is a large diff that changes no pixel. `tara-assets.ts` carries the pairing and the reason for each, chosen by looking at every master — a wrong mapping puts a festive portrait on a safety screen.
+- **`PaywallPanel` changed image.** §29.5 says "Subscription/paywall: state 1 small", state 1 is `welcome`, and the old list had no state-1 equivalent so it rendered the canonical portrait. That baseline moving is the drift being repaired, not a regression.
+
 ### Tara's assets
 **Her likeness is AI-generated and exclusively owned (CC-008). She is not a real person and not a licensed human model**, and §25.2's face-model baseline is superseded. Three rules bind anything that touches these files:
 - the permanent "Tara · AI guide" disclosure stays wherever her name or face appears;
@@ -61,6 +69,27 @@ Sixteen variants, three densities, one screen. What is worth knowing before chan
 `tests/__fixtures__/today/` holds 57 payloads produced by the REAL pipeline (`services/api/scripts/record_today_fixtures.py`) and replayed by `scripts/stub-api.mjs` over the real request path. A hand-written brief would be a brief nobody's engine produced, and every baseline taken from it would stay green through any regression in ranking, composition or the §7.1 ladder. `tests/today-fixtures.spec.ts` re-validates each one against the generated schema. **Re-record after any template, ranking or ladder change.**
 
 `src/app/[locale]/dev/today/page.tsx` is the variant switcher — dev-only, driving `/v1/dev/today`, rendering the real `TodayScreen`. **Not `_dev/`:** Next's App Router treats a `_`-prefixed folder as PRIVATE and excludes it from routing entirely (that is what `_launch/` relies on), so the first version 404'd silently while typechecking, linting and building without a word.
+
+## Ask Tara (S18, §25.4) — `src/components/ask/`
+
+§25.4's WhatsApp grammar over the §34.6 socket. What is worth knowing before changing it:
+
+- **`src/components/ask/` is NOT the component library**, same rule as `today/`. §24.3 is fixed at 49 and `tests/library.spec.ts` scans only `src/components/ui`.
+- **The thread's behaviour lives in `src/lib/chat-thread.ts` and only there** — a reducer over §34.6 events, no socket and no React. Which bubble a reply belongs to, what a dropped socket does to a message in flight, whether a resumed turn appears once or twice: all of it is `tests/chat-thread.spec.ts`, in the `library` project, with no server.
+- **Citation spans are SERVED, never derived here.** `ChatCitation` carries offsets the grounding validator computed. A client that re-derived them would be a second implementation of "what is a claim", disagreeing exactly where it matters. `MessageBubble.contentParts` splits on `[...text]` — **code points, not UTF-16 units** — because an offset off by one in Devanagari reads as a font bug for a week.
+- **A single ✓ means delivered-to-Tara.** §25.4 drops read receipts as "meaningless and manipulative for an AI", and `DeliveryState` has three members of which none is "read" — a second tick would have to add one and be noticed.
+- **`onClosed` fails the in-flight message on EVERY close, not just the last retry.** It used to fire only when the client gave up reconnecting, which left the bubble on `sending` through five attempts — 36 seconds of a message that looks like it is still going somewhere. The resume buffer holds COMPLETED turns, so a reconnect never rescues a turn that never finished; failed-with-a-retry is the honest state, and a later `resume.offer` heals the bubble if the turn did land. `ask-socket.spec.ts` caught this, which is why that spec drops a REAL socket.
+- **The `ws_url` is served by `POST /v1/chat/session`, not built here.** `NEXT_PUBLIC_REALTIME_WS_URL` is gone for the reason `lib/api.ts` records about `NEXT_PUBLIC_API_BASE_URL`: a public build-time origin that must agree with a cookie posture and a deployment topology is a way for the two to disagree silently. It also means the suite points the client at a stub with a server-side env var and no rebuild.
+- **L3+ replaces the screen.** The comparison is the schema's `SAFETY_TAKEOVER_FROM_ORDINAL`, declared once so client and server cannot disagree about what L3+ means. `SafetyTakeover` renders no TabBar (a tab bar is four other exits), no portrait (§29.5: institutional calm), and exactly two destinations — §29.1's "exits only to Ask Tara or Help" is structural, not reviewed. `/support/now` (S39) renders the same component.
+- **The wallpaper carries no text**, for the six contrast reasons `today/sky.ts` documents. The festival variant §25.4 mentions is deliberately absent until the per-tradition art slots exist — a generic "festival wallpaper" is exactly the generic-Hindu-calendar mistake §25.6 item (4) names.
+- **`ui.memory.type.${type}` needs a BARE identifier.** `i18n-lint` matches the literal template text; `${offer.type}` is one it cannot expand. Same rule as `ui.module.${module}`.
+- **Voice notes are dark-flagged, not unbuilt.** `VOICE_NOTES_ENABLED` in `src/lib/features.ts`. `VoiceBar` and `VoiceNoteBubble` ship with their states and baselines; what is missing is §33.1's encrypted storage of the ORIGINAL recording, without which §25.4's "replay plays the user's own audio, never a TTS reconstruction" cannot be honoured. A mic button before that storage is a promise the app cannot keep.
+
+### The socket stub is a real server, and that is a stronger rule than CL-013
+
+`scripts/stub-realtime.mjs` is a dependency-free RFC 6455 server. Playwright **cannot** intercept a WebSocket, so the only browser-side alternative would be replacing `window.WebSocket` — and then the suite verifies that the client handles frames the test invented over a transport that was never opened. The handshake, the close event, the reconnect, and the ordering of frames against the DOM they update would all be unobservable. That is CL-013's failure mode with no `page.route` in sight.
+
+`tests/__fixtures__/chat/` holds turns recorded from the REAL §9 pipeline by `services/api/scripts/record_chat_fixtures.py`. Recording matters more here than for Today: a turn carries citation SPANS, and hand-written offsets would draw a plausible underline over words no validator verified — the single defect the S18 baselines exist to catch. **Re-record after any pipeline, presenter or template change.**
 
 ## Onboarding — the pre-auth screen (S02)
 

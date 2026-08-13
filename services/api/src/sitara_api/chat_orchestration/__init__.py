@@ -43,6 +43,7 @@ def build_pipeline(
     place_resolver: Any = None,
     llm: LLMClient | None = None,
     memory_retriever: Any = None,
+    astrology_facade: Any = None,
 ) -> ChatPipeline | None:
     """Wire the pipeline once, at app start. None when chat cannot run.
 
@@ -74,6 +75,15 @@ def build_pipeline(
             panchang_service=panchang_service,
             numerology_adapter=numerology_adapter,
             place_resolver=place_resolver,
+            # §13's single door to birth details. Without it every chart tool
+            # declines `chart_facade_unavailable`, which the pipeline renders
+            # as `chat.data.cannot_calculate` — so chat answered EVERY natal,
+            # transit and relationship question with "I don't have enough to
+            # work this out" while the engine sat healthy on :8003 and the
+            # user's birth row sat complete in Mongo. The provider has taken
+            # this argument since M5; nothing ever passed it, and no test
+            # noticed because the chat suite stubs the provider outright.
+            astrology_facade=astrology_facade,
         ),
         grounding=GroundingValidator(),
         langquality=LanguageQualityValidator(),

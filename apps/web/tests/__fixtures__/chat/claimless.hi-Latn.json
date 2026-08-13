@@ -1,0 +1,15 @@
+{
+  "message_id": "6a7bfd6a7acfebbe7804eb98",
+  "text": "Main yahin hoon. Bataiye mann mein kya hai, wahin se shuru karte hain.",
+  "locale": "hi-Latn",
+  "confidence": "verified",
+  "safety_level": "l1_clear",
+  "presence_state": "calm_guidance",
+  "intent": "natal_chart_question",
+  "trace_id": "46b71f98ec4f4b43be7072fc88200a1b",
+  "citations": [],
+  "memory_chips": [],
+  "review_queued": false,
+  "message_key": null,
+  "budget_notice_key": null
+}

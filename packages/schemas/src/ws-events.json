@@ -17,8 +17,86 @@
       { "name": "type", "type": "ControlEventType", "description": "One of the closed event type set" },
       { "name": "seq", "type": "integer", "description": "Monotonic sequence number; server acks by seq" },
       { "name": "ts", "type": "number", "description": "Sender epoch timestamp, milliseconds" },
-      { "name": "payload", "type": "object", "description": "Event-type-specific payload (typed per event in M9)" }
+      { "name": "ack", "type": "integer?", "description": "SPEC §34.6: 'server acks control events by seq'. There is no ack MEMBER to carry that — the set is closed at fifteen — so the acknowledgement rides on the event the server sends in reply, naming the client seq it answers. Null on client frames and on anything the server sends unprompted." },
+      { "name": "payload", "type": "object", "description": "Event-type-specific payload. Typed below for the members the TEXT chat uses; the voice members stay untyped until M9 builds them." }
     ]
+  },
+  "$text_chat_mapping": {
+    "$comment": "SPEC §34.6 is ONE protocol for voice notes, live calls AND the chat socket, and its type set is closed at fifteen. A text conversation therefore has to be said in members that already exist — which it can, because a typed message is the same event a spoken one produces after STT: a finalised caption. Written down here so both services read one description rather than two implementations.",
+    "client_to_server": {
+      "session.start": "ticket + conversation_id + locale; the ticket is minted by POST /v1/chat/session over the cookie-authenticated origin",
+      "captions.final": "the user's finalised turn. In a call, STT finalises it; in text, the keyboard does. `quoted_message_id` carries §25.4's swipe-to-reply INTO the pipeline, not merely into the drawing.",
+      "session.end": "the user left the screen"
+    },
+    "server_to_client": {
+      "session.ready": "resume token + window; the socket is live",
+      "presence.state": "driven by the pipeline's real §9 stage transitions. Where the pipeline reports nothing, this reports nothing — a typing indicator that keeps animating through a stalled turn is the fake online-status §25.4 already refuses, one layer down.",
+      "captions.final": "the whole validated turn (ChatTurn). The ONLY member that ever carries Tara's words.",
+      "error": "the §34.4 envelope, verbatim",
+      "handoff.to_text": "the resume window closed; the thread continues over POST /v1/chat/turn with full context",
+      "resume.offer": "reconnected inside the 5-minute window (§32.11)"
+    },
+    "$never_emitted_for_tara": "captions.partial. A partial caption is pre-validation text, and §9 puts grounding, language-quality and safety-post AFTER generation. Streaming tokens would race past all three, so the socket is built to never hold them: it receives a finished TurnResult and has nothing else to send. That is the fabrication gate, and it is structural rather than remembered.",
+    "$heartbeat": "The transport's own ping/pong, every 10s — which is why the closed set has no heartbeat member. Reap at 30s of pong silence (§29.2).",
+    "$binary": "Not accepted on the chat socket at all until M9. A socket that silently tolerates PCM has opened a §33.1 storage question nobody asked."
+  },
+  "payload_shapes": {
+    "SessionStartPayload": {
+      "$comment": "Client → server. The ticket is single-use and 60-second; §34.5's session cookies are httpOnly and first-party, and a WebSocket handshake to another origin does not carry them.",
+      "fields": [
+        { "name": "ticket", "type": "string" },
+        { "name": "conversation_id", "type": "string" },
+        { "name": "locale", "type": "string" },
+        { "name": "resume_token", "type": "string?" }
+      ]
+    },
+    "SessionReadyPayload": {
+      "$comment": "Server → client. `resume_token` is what a reconnect inside `resume_window_s` presents (§32.11).",
+      "fields": [
+        { "name": "resume_token", "type": "string" },
+        { "name": "resume_window_s", "type": "integer" },
+        { "name": "conversation_id", "type": "string" }
+      ]
+    },
+    "UserTurnPayload": {
+      "$comment": "Client → server, on `captions.final`. Discriminated from the Tara direction by `role`.",
+      "fields": [
+        { "name": "role", "type": "ChatRole" },
+        { "name": "text", "type": "string" },
+        { "name": "client_message_id", "type": "string" },
+        { "name": "quoted_message_id", "type": "string?" }
+      ]
+    },
+    "TaraTurnPayload": {
+      "$comment": "Server → client, on `captions.final`. Carries the whole validated turn and nothing else — there is no field here for text that has not been through §9's validators.",
+      "fields": [
+        { "name": "role", "type": "ChatRole" },
+        { "name": "client_message_id", "type": "string" },
+        { "name": "turn", "type": "ChatTurn" }
+      ]
+    },
+    "PresenceStatePayload": {
+      "$comment": "Server → client. The client switches on `state` alone. `stage` is §9's pipeline step, carried for traces and analytics — a shape, not content (§13) — and deliberately not something the UI branches on: the presence state is the designed vocabulary (§4.3) and the stage list is an implementation detail that may grow.",
+      "fields": [
+        { "name": "state", "type": "PresenceState" },
+        { "name": "stage", "type": "string?" }
+      ]
+    },
+    "HandoffToTextPayload": {
+      "$comment": "Server → client. `reason` is why the socket gave up, so the thread can say something true rather than 'something went wrong'.",
+      "fields": [
+        { "name": "conversation_id", "type": "string" },
+        { "name": "reason", "type": "string" }
+      ]
+    },
+    "ResumeOfferPayload": {
+      "$comment": "Server → client (§32.11). `pending_turn` is the turn that COMPLETED while the socket was down — buffered rather than re-run, because re-running a turn charges a user twice for one question.",
+      "fields": [
+        { "name": "conversation_id", "type": "string" },
+        { "name": "pending_turn", "type": "ChatTurn?" },
+        { "name": "pending_client_message_id", "type": "string?" }
+      ]
+    }
   },
   "heartbeat_interval_s": 10,
   "reap_after_silence_s": 30,

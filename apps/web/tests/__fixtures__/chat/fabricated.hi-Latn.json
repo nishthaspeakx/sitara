@@ -1,0 +1,15 @@
+{
+  "message_id": "6a7bfd6a7acfebbe7804eb9e",
+  "text": "Us jawab par mujhe poora bharosa nahin hai, isliye main andaza nahin lagaungi. Hamari team ise dekh legi. Tab tak kuch aur poochh lijiye — main yahin hoon.",
+  "locale": "hi-Latn",
+  "confidence": "verified",
+  "safety_level": "l1_clear",
+  "presence_state": "thoughtful",
+  "intent": "natal_chart_question",
+  "trace_id": "c9fa8623b60d4fb0aaa4a70f45a4a52f",
+  "citations": [],
+  "memory_chips": [],
+  "review_queued": true,
+  "message_key": "chat.fallback.safe_line",
+  "budget_notice_key": null
+}

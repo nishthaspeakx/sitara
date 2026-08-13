@@ -148,58 +148,138 @@
   },
   "$exemption_comment": "A sentence carrying a STRONG term is exempt from citation only when ALL FIVE hold: no number, no clock value, no second-person reference, no temporal deixis, and no celestial entity asserted to be doing or being anything. That last clause is why `celestial` and `state_motion` exist. Category terms (choghadiya, muhurat, tithi, rahu kaal as CONCEPTS) may be glossed uncited — §2.3 requires that gloss — but a named body is never uncited. Devanagari and Hinglish celestial names are listed per locale because the sitara_schemas enums are English identifiers only; without them 'शुक्र वक्री है' would slip through the exemption it is meant to fail.",
   "celestial": {
-    "$comment": "Named bodies and points. English is derived from the Graha/Rashi/Nakshatra enums at import; these are the locale renderings the enums cannot supply.",
-    "hi": [
-      "सूर्य",
-      "रवि",
-      "चंद्र",
-      "चन्द्र",
-      "चंद्रमा",
-      "मंगल",
-      "बुध",
-      "गुरु",
-      "बृहस्पति",
-      "शुक्र",
-      "शनि",
-      "राहु",
-      "केतु",
-      "मेष",
-      "वृषभ",
-      "मिथुन",
-      "कर्क",
-      "सिंह",
-      "कन्या",
-      "तुला",
-      "वृश्चिक",
-      "धनु",
-      "मकर",
-      "कुंभ",
-      "मीन"
-    ],
-    "hi-Latn": [
-      "surya",
-      "ravi",
-      "chandra",
-      "chandrama",
-      "mangal",
-      "budh",
-      "guru",
-      "brihaspati",
-      "shukra",
-      "shani",
-      "mesh",
-      "vrishabh",
-      "mithun",
-      "kark",
-      "simha",
-      "kanya",
-      "tula",
-      "vrishchik",
-      "dhanu",
-      "makar",
-      "kumbh",
-      "meen"
-    ]
+    "$comment": "Named bodies and points, keyed by the CANONICAL enum id so a surface form resolves to the body it names. English is derived from the Graha/Rashi/Nakshatra enums at import; these are the locale renderings the enums cannot supply. Restructured from a flat list in M8-P10: the flat form could say a sentence NAMES a body but not WHICH, so the grounding validator could not tell 'Venus is in your 10th house' citing Saturn's fact from the truth. `_celestial_surface_map` inverts this; the flat set the marker net wants is the values flattened, so there is still one source.",
+    "hi": {
+      "sun": [
+        "सूर्य",
+        "रवि"
+      ],
+      "moon": [
+        "चंद्र",
+        "चन्द्र",
+        "चंद्रमा"
+      ],
+      "mars": [
+        "मंगल"
+      ],
+      "mercury": [
+        "बुध"
+      ],
+      "jupiter": [
+        "गुरु",
+        "बृहस्पति"
+      ],
+      "venus": [
+        "शुक्र"
+      ],
+      "saturn": [
+        "शनि"
+      ],
+      "rahu": [
+        "राहु"
+      ],
+      "ketu": [
+        "केतु"
+      ],
+      "mesha": [
+        "मेष"
+      ],
+      "vrishabha": [
+        "वृषभ"
+      ],
+      "mithuna": [
+        "मिथुन"
+      ],
+      "karka": [
+        "कर्क"
+      ],
+      "simha": [
+        "सिंह"
+      ],
+      "kanya": [
+        "कन्या"
+      ],
+      "tula": [
+        "तुला"
+      ],
+      "vrishchika": [
+        "वृश्चिक"
+      ],
+      "dhanu": [
+        "धनु"
+      ],
+      "makara": [
+        "मकर"
+      ],
+      "kumbha": [
+        "कुंभ"
+      ],
+      "meena": [
+        "मीन"
+      ]
+    },
+    "hi-Latn": {
+      "sun": [
+        "surya",
+        "ravi"
+      ],
+      "moon": [
+        "chandra",
+        "chandrama"
+      ],
+      "mars": [
+        "mangal"
+      ],
+      "mercury": [
+        "budh"
+      ],
+      "jupiter": [
+        "guru",
+        "brihaspati"
+      ],
+      "venus": [
+        "shukra"
+      ],
+      "saturn": [
+        "shani"
+      ],
+      "mesha": [
+        "mesh"
+      ],
+      "vrishabha": [
+        "vrishabh"
+      ],
+      "mithuna": [
+        "mithun"
+      ],
+      "karka": [
+        "kark"
+      ],
+      "simha": [
+        "simha"
+      ],
+      "kanya": [
+        "kanya"
+      ],
+      "tula": [
+        "tula"
+      ],
+      "vrishchika": [
+        "vrishchik"
+      ],
+      "dhanu": [
+        "dhanu"
+      ],
+      "makara": [
+        "makar"
+      ],
+      "kumbha": [
+        "kumbh"
+      ],
+      "meena": [
+        "meen"
+      ]
+    }
   },
   "state_motion": {
     "$comment": "Verbs that turn a named body into an assertion. Presence of one ALONGSIDE a celestial name means the sentence claims something about that body and must cite.",

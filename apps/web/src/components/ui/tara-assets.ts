@@ -46,7 +46,7 @@
  * states are provisional instead of assuming all twelve are exact.
  */
 
-import type { TaraState } from "./_util";
+import type { PresenceState } from "./_util";
 
 export const TARA_ASSET_STATUS: "placeholder" | "generated" = "generated";
 
@@ -71,7 +71,7 @@ export const TARA_MOTION_STATUS = {
  * record that it is temporary rather than the permanent state of the kit.
  */
 export const TARA_APPROXIMATE_STATES_PENDING = {
-  states: ["concerned_kind", "safety"],
+  states: ["concern_kind", "safety_still"],
   status: "in generation",
   due: "before M8 ships",
 } as const;
@@ -121,22 +121,42 @@ function asset(slug: string, approximate = false): TaraAsset {
   };
 }
 
-export const TARA_ASSETS: Record<TaraState, TaraAsset> = {
-  warm_neutral: asset("warm_neutral"),
+/**
+ * §4.3's twelve states → the twelve delivered masters.
+ *
+ * The masters were named against the invented state list this file used to
+ * carry, so five of the slugs no longer read as the state they serve. The
+ * SLUGS are deliberately left alone — they name files on disk built from
+ * ~30MB escrow masters (§22.16), and renaming a hundred derivatives to make a
+ * mapping table look tidier is a large diff that changes no pixel.
+ *
+ * Each pairing below was chosen by looking at the master, not by matching
+ * names, because a wrong mapping puts a festive portrait on a safety screen:
+ *
+ *   welcome          `smile`         a smile arriving — light, just forming (§4.3's own words)
+ *   thoughtful       `thoughtful`    steady, direct
+ *   calm_guidance    `reading`       gaze down over a page. §10's S14 template puts
+ *                                    state 5 on read-aloud, and this is that frame
+ *   encouragement    `full_smile`    warm, open, daylight — encouraging, not celebratory
+ *   celebration      `celebration`   §4.3's "full warm smile", standing, gold sari
+ *   profile_portrait `warm_neutral`  the canonical lamp-lit portrait
+ */
+export const TARA_ASSETS: Record<PresenceState, TaraAsset> = {
+  welcome: asset("smile"),
   listening: asset("listening"),
   speaking_soft: asset("speaking_soft"),
-  smile: asset("smile"),
-  full_smile: asset("full_smile"),
   thoughtful: asset("thoughtful"),
+  calm_guidance: asset("reading"),
   // no "concerned but kind" frame in the delivered set — closest calm frame
-  concerned_kind: asset("concerned_kind", true),
+  concern_kind: asset("concerned_kind", true),
+  encouragement: asset("full_smile"),
   celebration: asset("celebration"),
   night: asset("night"),
   festival: asset("festival"),
-  reading: asset("reading"),
   // §29.5 puts state 11 only in the chat header; the takeover screen carries no
   // portrait at all. This is the least intense frame available, not a shot for it.
-  safety: asset("safety", true),
+  safety_still: asset("safety", true),
+  profile_portrait: asset("warm_neutral"),
 };
 
 /** §25.5 Stories (P1, §30.6-gated) — not bound to a presence state. */

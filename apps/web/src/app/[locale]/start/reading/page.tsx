@@ -162,7 +162,7 @@ export default function ReadingPage() {
           mascot to keep on stage while the product apologises. */}
       {showTara ? (
         <div className="flex justify-center">
-          <TaraPresence size="lg" state="reading" still showAiLabel />
+          <TaraPresence size="lg" state="calm_guidance" still showAiLabel />
         </div>
       ) : null}
 

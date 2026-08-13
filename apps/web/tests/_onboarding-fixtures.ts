@@ -18,6 +18,7 @@ import type { Page } from "@playwright/test";
  */
 
 const STUB = "http://127.0.0.1:3101";
+const STUB_REALTIME = "http://127.0.0.1:3102";
 
 export interface StubState {
   locale: string;
@@ -51,7 +52,8 @@ export type Scenario =
   | "reading_engine_down_then_panchang"
   | "reading_no_panchang"
   | "reading_unavailable"
-  | "today_unavailable";
+  | "today_unavailable"
+  | "chat_unavailable";
 
 /**
  * §28.2's sixteen. The ids are the recorded fixtures' filenames, so a variant
@@ -94,6 +96,70 @@ export interface SetupOptions {
   variant?: FixtureName;
   /** §28.2's density. Recorded for `normal_morning` only. */
   density?: "low" | "med" | "high";
+  /** Which recorded chat turn the handoff path (`POST /v1/chat/turn`) replays. */
+  chatTurn?: ChatFixture;
+}
+
+/**
+ * §25.4's recorded turns. The ids are the fixture filenames, so a scenario
+ * nobody recorded from the real pipeline cannot be asked for.
+ */
+export const CHAT_FIXTURES = [
+  "grounded",
+  "two_claims",
+  "claimless",
+  "fabricated",
+  "crisis",
+  "memory_offer",
+  "memory_reconfirm",
+] as const;
+export type ChatFixture = (typeof CHAT_FIXTURES)[number];
+
+/** How `scripts/stub-realtime.mjs` behaves for this client. */
+export type SocketBehaviour =
+  | "reply"
+  /** Presence, then nothing, socket still open — a turn genuinely in flight. */
+  | "hold"
+  | "drop_before_reply"
+  | "drop_after_reply"
+  | "handoff"
+  | "error";
+
+/**
+ * Configure the REAL socket server for this client.
+ *
+ * There is no `page.route` equivalent for a WebSocket, and replacing
+ * `window.WebSocket` would mean testing the client against a transport that was
+ * never opened. So the socket's behaviour is configured out-of-band on its own
+ * port, exactly as the API stub's is.
+ */
+export async function setupSocket(
+  clientId: string,
+  options: {
+    turn?: ChatFixture;
+    locale?: string;
+    behaviour?: SocketBehaviour;
+    stages?: string[];
+    pending?: string;
+    code?: string;
+    message_key?: string;
+  } = {},
+): Promise<void> {
+  const response = await fetch(`${STUB_REALTIME}/__control/scenario`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      client: clientId,
+      turn: options.turn ?? "grounded",
+      locale: options.locale ?? "en",
+      behaviour: options.behaviour ?? "reply",
+      stages: options.stages ?? ["safety_pre", "memory_retrieval", "generation"],
+      pending: options.pending,
+      code: options.code,
+      message_key: options.message_key,
+    }),
+  });
+  if (!response.ok) throw new Error(`stub-realtime scenario failed: ${response.status}`);
 }
 
 /** The id `POST /auth/session` mints, mirrored from `scripts/stub-api.mjs`. */
@@ -125,6 +191,7 @@ export async function setupApi(page: Page, options: SetupOptions = {}): Promise<
       state: { session_user_id: SIGNED_IN_USER, ...(options.state ?? {}) },
       variant: options.variant ?? "normal_morning",
       density: options.density ?? "med",
+      chatTurn: options.chatTurn ?? "grounded",
     }),
   });
   if (!response.ok) throw new Error(`stub-api reset failed: ${response.status}`);

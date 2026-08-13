@@ -262,6 +262,26 @@ class ValidatedFacts:
         return next((f for f in self.snapshots if f.fact_id == fact_id), None)
 
 
+@dataclass(frozen=True)
+class CitedSentence:
+    """One sentence that carried a citation the served payload could honour.
+
+    §25.4 puts a fact-citation underline inside the bubble, and the validator
+    is the only thing in the pipeline that knows WHICH words stand on a fact —
+    it decided sentence by sentence, and then `strip_citations` erased the
+    evidence. Recording it here is cheaper and far more honest than a second
+    pass over the text guessing where the markers used to be.
+
+    The `text` is the sentence without its markers, terminal stop included —
+    `text.sentences` splits on the whitespace AFTER an ender, so the ender
+    rides along. The presenter trims it back off the span: §25.4's underline
+    should sit under the claim, not under its full stop.
+    """
+
+    text: str
+    fact_ids: tuple[str, ...]
+
+
 # --------------------------------------------------------------------------
 # Memory (§32.4, §32.5)
 # --------------------------------------------------------------------------
@@ -304,20 +324,17 @@ class MemoryChip:
 # --------------------------------------------------------------------------
 
 
-class PresenceState(IntEnum):
-    WELCOME = 1
-    LISTENING = 2
-    SPEAKING_SOFT = 3
-    THOUGHTFUL = 4
-    CALM_GUIDANCE = 5
-    CONCERN_KIND = 6
-    ENCOURAGEMENT = 7
-    CELEBRATION = 8
-    NIGHT = 9
-    FESTIVAL = 10
-    #: "neutral, steady — used L2+; no smile, no astrology framing" (§4.3).
-    SAFETY_STILL = 11
-    PROFILE_PORTRAIT = 12
+# §4.3's twelve moved to `packages/schemas` in M8-P10, for the reason every
+# closed set eventually moves there: the client needed to render one. It was an
+# IntEnum here and a differently-named, differently-ORDERED list of twelve in
+# `apps/web`, so a positional read resolved this module's SAFETY_STILL (11) —
+# the state §29.5 puts in the chat header at L2+ — to the client's `reading`.
+#
+# It is a StrEnum now. §4.3's numbering survives in the schema package as
+# `PRESENCE_ORDINAL`, for reading a list against the spec line; the ID is what
+# crosses the wire and what a trace records, because a positional contract is
+# exactly what drifted here.
+from sitara_schemas.presence import PresenceState  # noqa: E402, I001
 
 
 # --------------------------------------------------------------------------
@@ -336,6 +353,12 @@ class TurnRequest:
     profile: BirthProfile = field(default_factory=BirthProfile)
     place_label: str | None = None
     history: tuple[dict[str, str], ...] = ()
+    #: §25.4's swipe-to-reply: "the pipeline receives the quoted turn
+    #: explicitly". Explicitly is the load-bearing word — a quote that only
+    #: rendered in the bubble would give the user the feature's appearance and
+    #: the model none of its context, so the reply would answer the wrong turn
+    #: while the screen showed which turn it was supposed to be answering.
+    quoted_message_id: str | None = None
     #: Rolling summary of everything older than `history` (§9 token budget).
     summary: str | None = None
     tokens_used_today: int = 0
@@ -376,6 +399,11 @@ class TurnResult:
     fact_ids: tuple[str, ...] = ()
     fact_snapshots: tuple[FactSnapshot, ...] = ()
     memory_chips: tuple[MemoryChip, ...] = ()
+    #: §25.4's fact-citation underlines, as the grounding validator saw them —
+    #: one entry per claim-bearing sentence a served fact backed. Empty on any
+    #: turn that was templated, declined or fell back: those stand on no fact.
+    #: `chat_orchestration.presenter` turns these into offsets into `text`.
+    cited_sentences: tuple[CitedSentence, ...] = ()
     message_key: str | None = None
     regenerations: int = 0
     review_queued: bool = False

@@ -65,6 +65,9 @@
       "name_invalid": "Is naam mein aise characters hain jo hum naam ki tarah nahin padh pa rahe. Check karke dobara koshish karein.",
       "no_sunrise_at_location": "Us jagah par us din ka sooryoday nahi nikal pa rahi hoon, isliye wahan ka sahi samay nahi bata sakti."
     },
+    "voice": {
+      "session_not_found": "Woh baatcheet ab khuli nahi hai. Nayi shuru karein, Tara aage badha dengi."
+    },
     "sys": {
       "validation": "Request mein kuch theek nahin tha. Dobara koshish karein.",
       "internal": "Hamari taraf se kuch gadbad ho gayi. Thodi der mein dobara try karein.",
@@ -149,6 +152,11 @@
       "saturn": "Shani",
       "rahu": "Rahu",
       "ketu": "Ketu"
+    },
+    "dasha_level": {
+      "maha": "mahadasha",
+      "antar": "antardasha",
+      "pratyantar": "pratyantar dasha"
     },
     "day_timing": {
       "rahu_kaal": "Rahu Kaal",
@@ -260,20 +268,21 @@
       "you": "Aap"
     },
     "tara": {
+      "name": "Tara",
       "ai_label": "Tara · AI guide",
       "state": {
-        "warm_neutral": "Tara",
+        "welcome": "Tara, muskurate hue",
         "listening": "Tara, sun rahi hain",
         "speaking_soft": "Tara, bol rahi hain",
-        "smile": "Tara, muskurate hue",
-        "full_smile": "Tara, khulkar muskurate hue",
         "thoughtful": "Tara, sochte hue",
-        "concerned_kind": "Tara, dhyaan se sunte hue",
+        "calm_guidance": "Tara, aapki kundli dekhte hue",
+        "concern_kind": "Tara, dhyaan se sunte hue",
+        "encouragement": "Tara, khulkar muskurate hue",
         "celebration": "Tara, khushi manate hue",
         "night": "Tara, raat mein",
         "festival": "Tara, tyohaar ke liye taiyaar",
-        "reading": "Tara, aapki kundli dekhte hue",
-        "safety": "Tara"
+        "safety_still": "Tara",
+        "profile_portrait": "Tara"
       }
     },
     "module": {
@@ -330,17 +339,17 @@
       "source_turn": "Yeh kahan se aaya",
       "consent_stamp": "Aapne {date} ko sehmati di",
       "type": {
-        "life_fact": "Life fact",
-        "relationship": "Rishta",
+        "person": "Vyakti",
+        "significant_event": "Ahem ghatna",
+        "date_anniversary": "Taareekh aur saalgirah",
         "preference": "Pasand",
-        "goal": "Goal",
-        "concern": "Chinta",
-        "health_context": "Sehat ka context",
-        "belief_practice": "Aastha aur sadhana",
-        "important_date": "Khaas taareekh",
-        "name_pronunciation": "Naam ka uchcharan",
-        "language_style": "Bhasha aur style",
-        "conversation_thread": "Baatcheet ka silsila"
+        "goal_intention": "Goal",
+        "decision_context": "Chal raha faisla",
+        "mood_pattern": "Mann ka dhang",
+        "health_adjacent": "Sehat ka context",
+        "work_finance": "Kaam aur paisa",
+        "spiritual_practice": "Aadhyatmik sadhana",
+        "pronunciation_identity": "Naam aur uchcharan"
       }
     },
     "voice": {
@@ -356,6 +365,44 @@
     "chat": {
       "open_trust": "Tara ne “{text}” kyun kaha",
       "retry": "Phir bhejein"
+    },
+    "ask": {
+      "title": "Tara se poochein",
+      "presence_line": "aapke liye yahan hoon",
+      "placeholder": "Tara se kuch bhi poochein",
+      "send": "Bhejein",
+      "typing": "Tara likh rahi hain…",
+      "listening": "Tara sun rahi hain…",
+      "delivered": "Tara tak pahunch gaya",
+      "empty_title": "Mann mein kya hai?",
+      "empty_body": "Apne din ke baare mein poochein, kisi faisle ke baare mein, ya kuch bhi.",
+      "suggestion_day": "Mera din kaisa rahega?",
+      "suggestion_timing": "Aaj achha samay kab hai?",
+      "suggestion_number": "Mera ank kya kehta hai?",
+      "date_today": "Aaj",
+      "date_yesterday": "Kal",
+      "handoff": "Live connection toot gaya, isliye Tara samanya tareeke se jawab de rahi hain. Kuch bhi khoya nahi.",
+      "reconnecting": "Phir se jud rahe hain…",
+      "quoting": "Jawab de rahe hain",
+      "quote_clear": "Jawab radd karein",
+      "action_copy": "Copy karein",
+      "action_journal": "Journal mein sahejein",
+      "action_remember": "Yeh yaad rakhein",
+      "action_why": "Yeh kyon?",
+      "action_report": "Report karein",
+      "actions_for": "Is sandesh ke liye vikalp",
+      "copied": "Copy ho gaya",
+      "saved": "Aapke journal mein saheja gaya",
+      "reported": "Dhanyavaad — koi vyakti ise dekhega."
+    },
+    "safety": {
+      "title": "Thodi der ke liye sitaron ko rokte hain.",
+      "body": "Aapne jo kaha woh kisi bhi kundli se zyada maayne rakhta hai. Ye log abhi madad kar sakte hain — asli log, isi ke liye prashikshit.",
+      "helpline_in": "Bharat · AASRA · 91-9820466726 (24×7)",
+      "helpline_intl": "Agar aap Bharat se bahar hain, to apna local emergency number sabse tez raasta hai.",
+      "back_to_tara": "Tara ke paas wapas",
+      "get_help": "Madad aur sahayata",
+      "disclosure": "Tara koi crisis service nahi hain aur na hi clinician."
     },
     "audio": {
       "play": "Chalayein",

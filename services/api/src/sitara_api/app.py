@@ -93,6 +93,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             numerology_adapter=app.state.numerology_adapter,
             place_resolver=app.state.place_resolver,
             memory_retriever=app.state.memory_service,
+            # Built above, and passed here rather than left to default: the
+            # chart fact tools decline without it (see build_pipeline).
+            astrology_facade=app.state.astrology,
         )
         # §7.1's pipeline, for the on-open path `GET /v1/today` needs (§28.2).
         # Built ONCE here rather than per request: it provisions a CSFLE codec

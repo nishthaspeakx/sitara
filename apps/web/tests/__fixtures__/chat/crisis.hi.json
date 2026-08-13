@@ -1,0 +1,15 @@
+{
+  "message_id": "6a7bfd6a7acfebbe7804ebae",
+  "text": "मुझे बताने के लिए धन्यवाद। इस बात के लिए सही मदद मैं नहीं हूँ, और मैं नहीं चाहती कि आप इसे अकेले सहें। ऐसे क्षणों के लिए प्रशिक्षित लोग हैं, और मैं आपको अभी उन तक पहुँचा सकती हूँ — “सहायता लें” दबाइए। मैं यहीं आपके साथ हूँ।",
+  "locale": "hi",
+  "confidence": "cannot_calculate",
+  "safety_level": "l4_crisis",
+  "presence_state": "safety_still",
+  "intent": "emotional_support",
+  "trace_id": "b5d95643506b47c593d542a07dd6f487",
+  "citations": [],
+  "memory_chips": [],
+  "review_queued": true,
+  "message_key": "chat.safety.crisis",
+  "budget_notice_key": null
+}

@@ -69,10 +69,192 @@ def ts_type(declared: str) -> str:
     return f"{inner} | null" if optional else inner
 
 
+# ------------------------------------------------------- shared emitters
+#
+# `today.json` was the only source declaring structure, so its enum and shape
+# emitters lived inline in `gen_python`/`gen_typescript`. §25.4's chat payloads
+# and §34.6's now-typed control-event payloads are the second and third, and a
+# third copy of "walk fields, map types, write a class" is how the three drift
+# in exactly the way every closed set in this package exists to prevent.
+
+
+def py_enum(spec: dict) -> list[str]:
+    """A StrEnum from a `{enum_name, members:[{id}]}` block."""
+    lines = ["", f"class {spec['enum_name']}(StrEnum):", f'    """{spec["$comment"]}"""', ""]
+    for m in spec["members"]:
+        lines.append(f'    {py_ident(m["id"])} = "{m["id"]}"')
+    lines.append("")
+    return lines
+
+
+def py_shape(name: str, shape: dict) -> list[str]:
+    lines = [
+        "",
+        f"class {name}(BaseModel):",
+        f'    """{shape["$comment"]}"""',
+        "",
+        "    model_config = ConfigDict(frozen=True)",
+        "",
+    ]
+    for f in shape["fields"]:
+        default = " = None" if f["type"].endswith("?") else ""
+        lines.append(f'    {f["name"]}: {py_type(f["type"])}{default}')
+    lines.append("")
+    return lines
+
+
+def ts_enum(spec: dict) -> list[str]:
+    ids = ", ".join(f'"{m["id"]}"' for m in spec["members"])
+    return [
+        f"/** {spec['$comment']} */",
+        f"export const {spec['const_name']} = [{ids}] as const;",
+        f"export type {spec['enum_name']} = (typeof {spec['const_name']})[number];",
+        "",
+    ]
+
+
+def ts_shape(name: str, shape: dict) -> list[str]:
+    lines = [f"/** {shape['$comment']} */", f"export interface {name} {{"]
+    for f in shape["fields"]:
+        lines.append(f'  {f["name"]}: {ts_type(f["type"])};')
+    lines += ["}", ""]
+    return lines
+
+
+def ordinals(spec: dict) -> dict[str, int]:
+    """§4.3 numbers its presence states and §32.4 numbers its memory types. The
+    ordinal is documentation and a threshold operand — never the wire format."""
+    return {m["id"]: m["ordinal"] for m in spec["members"] if "ordinal" in m}
+
+
 # ---------------------------------------------------------------- python
 
-def gen_python(modules: dict, codes: dict, envelope: dict, ws: dict, today: dict) -> None:
+def gen_python(
+    modules: dict,
+    codes: dict,
+    envelope: dict,
+    ws: dict,
+    today: dict,
+    presence: dict,
+    memory_types: dict,
+    chat: dict,
+) -> None:
     PY_OUT.mkdir(parents=True, exist_ok=True)
+
+    # presence.py
+    lines = [
+        f'"""{HEADER}',
+        "",
+        "SPEC §4.3 — Tara's twelve presence states.",
+        "",
+        "`sitara_api.chat_orchestration` and `apps/web`'s component library both",
+        "import from here. They each held their own twelve until M8-P10, and the",
+        "two disagreed on five of them by name AND by position — see the source",
+        "JSON's comment. The ID is the wire format; ORDINAL is §4.3's numbering.",
+        '"""',
+        "",
+        "from enum import StrEnum",
+        "",
+    ]
+    lines += py_enum(presence)
+    lines += [
+        "",
+        "#: §4.3's own numbering. Kept so a trace can record the number the spec",
+        "#: uses and a reader can check this file against the spec line. NOT the",
+        "#: wire format: a positional contract is what drifted in the first place.",
+        f"PRESENCE_ORDINAL: dict[{presence['enum_name']}, int] = {{",
+    ]
+    for member_id, ordinal in ordinals(presence).items():
+        lines.append(f"    {presence['enum_name']}.{py_ident(member_id)}: {ordinal},")
+    lines += [
+        "}",
+        "",
+        "#: §4.3's ● marks — the states that have a cinemagraph loop. The delivered",
+        "#: kit is stills only (cinemagraphs are deferred post-beta, recorded in",
+        "#: apps/web's TARA_MOTION_STATUS); this is what §4.3 SPECIFIES, not what",
+        "#: has shipped, and the two are checked against each other there.",
+        f"PRESENCE_CINEMAGRAPH: frozenset[{presence['enum_name']}] = frozenset({{",
+    ]
+    for m in presence["members"]:
+        if m.get("cinemagraph"):
+            lines.append(f"    {presence['enum_name']}.{py_ident(m['id'])},")
+    lines += ["})", ""]
+    (PY_OUT / "presence.py").write_text("\n".join(lines), encoding="utf-8")
+
+    # memory_types.py
+    lines = [
+        f'"""{HEADER}',
+        "",
+        "SPEC §32.4 — the eleven memory types.",
+        "",
+        "The closed set of IDs only. The RULES attached to each type — consent,",
+        "visibility gates, decay half-lives — belong to the memory module (§6.3)",
+        "and stay in `sitara_api.memory.taxonomy`, which imports its enum from",
+        "here rather than declaring a second one.",
+        '"""',
+        "",
+        "from enum import StrEnum",
+        "",
+    ]
+    lines += py_enum(memory_types)
+    lines += [
+        "",
+        "#: §32.4's numbering, so the vault renders 1–11 as the spec numbers them.",
+        f"MEMORY_TYPE_ORDER: tuple[{memory_types['enum_name']}, ...] = (",
+    ]
+    for m in memory_types["members"]:
+        lines.append(f"    {memory_types['enum_name']}.{py_ident(m['id'])},")
+    lines += [")", ""]
+    (PY_OUT / "memory_types.py").write_text("\n".join(lines), encoding="utf-8")
+
+    # chat.py
+    lines = [
+        f'"""{HEADER}',
+        "",
+        "SPEC §25.4 / §30.4 — one chat turn, as it crosses the wire.",
+        "",
+        "Served identically by `POST /v1/chat/turn` and by the §34.6 socket's",
+        "`captions.final`, because a turn that renders one way over HTTP and",
+        "another over the socket is two chat screens wearing one name.",
+        '"""',
+        "",
+        "from enum import StrEnum",
+        "",
+        "from pydantic import BaseModel, ConfigDict",
+        "",
+        "from sitara_schemas.facts import ConfidenceState",
+        "from sitara_schemas.memory_types import MemoryType",
+        "from sitara_schemas.presence import PresenceState",
+        "",
+        "__all__ = [",
+    ]
+    chat_exports = [
+        *(e["enum_name"] for e in chat["enums"].values()),
+        *chat["shapes"],
+        *chat["constants"],
+        "SAFETY_LEVEL_ORDINAL",
+    ]
+    for name in sorted(chat_exports):
+        lines.append(f'    "{name}",')
+    lines += ["]", ""]
+    for enum in chat["enums"].values():
+        lines += py_enum(enum)
+    safety = chat["enums"]["safety_level"]
+    lines += [
+        "",
+        "#: §9's ladder as numbers, for the ONE comparison the client and the",
+        "#: server both make: is this L3 or above?",
+        f"SAFETY_LEVEL_ORDINAL: dict[{safety['enum_name']}, int] = {{",
+    ]
+    for member_id, ordinal in ordinals(safety).items():
+        lines.append(f"    {safety['enum_name']}.{py_ident(member_id)}: {ordinal},")
+    lines += ["}", ""]
+    for name, const in chat["constants"].items():
+        lines += ["", f"#: {const['$comment']}", f"{name} = {const['value']}"]
+    lines.append("")
+    for name, shape in chat["shapes"].items():
+        lines += py_shape(name, shape)
+    (PY_OUT / "chat.py").write_text("\n".join(lines), encoding="utf-8")
 
     # modules.py
     lines = [
@@ -158,6 +340,9 @@ def gen_python(modules: dict, codes: dict, envelope: dict, ws: dict, today: dict
         "",
         "from pydantic import BaseModel, ConfigDict",
         "",
+        "from sitara_schemas.chat import ChatRole, ChatTurn",
+        "from sitara_schemas.presence import PresenceState",
+        "",
         "",
         "class ControlEventType(StrEnum):",
         '    """SPEC §34.6 — the CLOSED control-event type set for the voice/call WS protocol."""',
@@ -169,15 +354,32 @@ def gen_python(modules: dict, codes: dict, envelope: dict, ws: dict, today: dict
         "",
         "",
         "class ControlEvent(BaseModel):",
-        '    """SPEC §34.6 — JSON text-frame control event {type, seq, ts, payload}."""',
+        '    """SPEC §34.6 — JSON text-frame control event {type, seq, ts, ack, payload}."""',
         "",
         "    model_config = ConfigDict(frozen=True)",
         "",
         "    type: ControlEventType",
         "    seq: int",
         "    ts: float",
+        "    ack: int | None = None",
         "    payload: dict[str, Any]",
         "",
+    ]
+    lines += [
+        "",
+        "# --------------------------------------------------------------------",
+        "# Payload shapes — the TEXT-chat subset only.",
+        "#",
+        "# §34.6 says payloads are 'typed per event in M9'. The members the text",
+        "# chat uses are typed HERE, one milestone early, because S18 sends them",
+        "# now; the voice members (vad.state, barge_in, tts.*, entitlement.warning)",
+        "# stay untyped until M9 builds the thing that emits them. Typing an event",
+        "# nobody produces yet would be a guess with a schema around it.",
+        "# --------------------------------------------------------------------",
+    ]
+    for name, shape in ws["payload_shapes"].items():
+        lines += py_shape(name, shape)
+    lines += [
         "",
         "# Binary frame contract (SPEC §34.6): 16kHz mono PCM, 8-byte header.",
         f'BINARY_AUDIO_FORMAT = "{bf["audio_format"]}"',
@@ -227,10 +429,7 @@ def gen_python(modules: dict, codes: dict, envelope: dict, ws: dict, today: dict
     lines += ["]", ""]
 
     for enum in today["enums"].values():
-        lines += ["", f"class {enum['enum_name']}(StrEnum):", f'    """{enum["$comment"]}"""', ""]
-        for m in enum["members"]:
-            lines.append(f'    {py_ident(m["id"])} = "{m["id"]}"')
-        lines.append("")
+        lines += py_enum(enum)
 
     bands = today["time_bands"]
     lines += ["", f"class {bands['enum_name']}(StrEnum):", f'    """{bands["$comment"]}"""', ""]
@@ -259,18 +458,7 @@ def gen_python(modules: dict, codes: dict, envelope: dict, ws: dict, today: dict
     ]
 
     for name, shape in today["shapes"].items():
-        lines += [
-            "",
-            f"class {name}(BaseModel):",
-            f'    """{shape["$comment"]}"""',
-            "",
-            "    model_config = ConfigDict(frozen=True)",
-            "",
-        ]
-        for f in shape["fields"]:
-            default = " = None" if f["type"].endswith("?") else ""
-            lines.append(f'    {f["name"]}: {py_type(f["type"])}{default}')
-        lines.append("")
+        lines += py_shape(name, shape)
     (PY_OUT / "today.py").write_text("\n".join(lines), encoding="utf-8")
 
     # __init__.py
@@ -286,7 +474,24 @@ def gen_python(modules: dict, codes: dict, envelope: dict, ws: dict, today: dict
         "    ErrorCode,",
         "    ErrorEnvelope,",
         ")",
+        "from sitara_schemas.chat import (",
+        "    SAFETY_LEVEL_ORDINAL,",
+        "    SAFETY_TAKEOVER_FROM_ORDINAL,",
+        "    ChatCitation,",
+        "    ChatRole,",
+        "    ChatTrust,",
+        "    ChatTurn,",
+        "    MemoryChipOffer,",
+        "    SafetyLevel,",
+        "    SourceState,",
+        ")",
+        "from sitara_schemas.memory_types import MEMORY_TYPE_ORDER, MemoryType",
         "from sitara_schemas.modules import MORNING_MODULE_ORDER, MorningModule",
+        "from sitara_schemas.presence import (",
+        "    PRESENCE_CINEMAGRAPH,",
+        "    PRESENCE_ORDINAL,",
+        "    PresenceState,",
+        ")",
         "from sitara_schemas.ws_events import (",
         "    BINARY_AUDIO_FORMAT,",
         "    BINARY_CHANNELS,",
@@ -299,26 +504,61 @@ def gen_python(modules: dict, codes: dict, envelope: dict, ws: dict, today: dict
         "    RESUME_WINDOW_S,",
         "    ControlEvent,",
         "    ControlEventType,",
+        "    HandoffToTextPayload,",
+        "    PresenceStatePayload,",
+        "    ResumeOfferPayload,",
+        "    SessionReadyPayload,",
+        "    SessionStartPayload,",
+        "    TaraTurnPayload,",
+        "    UserTurnPayload,",
         ")",
         "",
         "__all__ = [",
-        '    "BINARY_AUDIO_FORMAT",',
-        '    "BINARY_CHANNELS",',
-        '    "BINARY_HEADER_BYTES",',
-        '    "BINARY_HEADER_FLAGS_BYTES",',
-        '    "BINARY_HEADER_SEQ_BYTES",',
-        '    "BINARY_SAMPLE_RATE_HZ",',
-        '    "DEFAULT_RETRYABLE",',
-        '    "HEARTBEAT_INTERVAL_S",',
-        '    "HTTP_STATUS",',
-        '    "MORNING_MODULE_ORDER",',
-        '    "REAP_AFTER_SILENCE_S",',
-        '    "RESUME_WINDOW_S",',
-        '    "ControlEvent",',
-        '    "ControlEventType",',
-        '    "ErrorCode",',
-        '    "ErrorEnvelope",',
-        '    "MorningModule",',
+    ]
+    for name in sorted(
+        [
+            "BINARY_AUDIO_FORMAT",
+            "BINARY_CHANNELS",
+            "BINARY_HEADER_BYTES",
+            "BINARY_HEADER_FLAGS_BYTES",
+            "BINARY_HEADER_SEQ_BYTES",
+            "BINARY_SAMPLE_RATE_HZ",
+            "DEFAULT_RETRYABLE",
+            "HEARTBEAT_INTERVAL_S",
+            "HTTP_STATUS",
+            "MEMORY_TYPE_ORDER",
+            "MORNING_MODULE_ORDER",
+            "PRESENCE_CINEMAGRAPH",
+            "PRESENCE_ORDINAL",
+            "REAP_AFTER_SILENCE_S",
+            "RESUME_WINDOW_S",
+            "SAFETY_LEVEL_ORDINAL",
+            "SAFETY_TAKEOVER_FROM_ORDINAL",
+            "ChatCitation",
+            "ChatRole",
+            "ChatTrust",
+            "ChatTurn",
+            "ControlEvent",
+            "ControlEventType",
+            "ErrorCode",
+            "ErrorEnvelope",
+            "HandoffToTextPayload",
+            "MemoryChipOffer",
+            "MemoryType",
+            "MorningModule",
+            "PresenceState",
+            "PresenceStatePayload",
+            "ResumeOfferPayload",
+            "SafetyLevel",
+            "SessionReadyPayload",
+            "SessionStartPayload",
+            "SourceState",
+            "TaraTurnPayload",
+            "UserTurnPayload",
+        ]
+    ):
+        lines.append(f'    "{name}",')
+    lines += [
         "]",
         "",
     ]
@@ -328,7 +568,15 @@ def gen_python(modules: dict, codes: dict, envelope: dict, ws: dict, today: dict
 # ------------------------------------------------------------ typescript
 
 def gen_typescript(
-    modules: dict, codes: dict, envelope: dict, ws: dict, confidence: dict, today: dict
+    modules: dict,
+    codes: dict,
+    envelope: dict,
+    ws: dict,
+    confidence: dict,
+    today: dict,
+    presence: dict,
+    memory_types: dict,
+    chat: dict,
 ) -> None:
     TS_OUT.mkdir(parents=True, exist_ok=True)
     bf = ws["binary_frame"]
@@ -396,6 +644,7 @@ def gen_typescript(
         "  type: ControlEventType;",
         "  seq: number;",
         "  ts: number;",
+        "  ack: number | null;",
         "  payload: Record<string, unknown>;",
         "}",
         "",
@@ -410,6 +659,55 @@ def gen_typescript(
         f"export const REAP_AFTER_SILENCE_S = {ws['reap_after_silence_s']} as const;",
         f"export const RESUME_WINDOW_S = {ws['resume_window_s']} as const;",
         "",
+        "// ---------------------------------------------------------------------------",
+        "// SPEC §4.3 — Tara's twelve presence states.",
+        "// ONE source, because the client and the server each had their own twelve",
+        "// and five of them disagreed — by name and by position. See the JSON.",
+        "// ---------------------------------------------------------------------------",
+    ]
+    lines += ts_enum(presence)
+    lines += [
+        "/** §4.3's own numbering. Documentation and a threshold operand — never the wire. */",
+        "export const PRESENCE_ORDINAL: Record<PresenceState, number> = {",
+    ]
+    for member_id, ordinal in ordinals(presence).items():
+        lines.append(f"  {member_id}: {ordinal},")
+    lines += [
+        "};",
+        "",
+        "// ---------------------------------------------------------------------------",
+        "// SPEC §32.4 — the eleven memory types. Vault filters use exactly these.",
+        "// ---------------------------------------------------------------------------",
+    ]
+    lines += ts_enum(memory_types)
+    lines += [
+        "// ---------------------------------------------------------------------------",
+        "// SPEC §25.4 / §30.4 — one chat turn, as it crosses the wire.",
+        "// ---------------------------------------------------------------------------",
+    ]
+    for enum in chat["enums"].values():
+        lines += ts_enum(enum)
+    safety = chat["enums"]["safety_level"]
+    lines += [
+        "/** §9's ladder as numbers, for the one comparison both sides make. */",
+        f"export const SAFETY_LEVEL_ORDINAL: Record<{safety['enum_name']}, number> = {{",
+    ]
+    for member_id, ordinal in ordinals(safety).items():
+        lines.append(f"  {member_id}: {ordinal},")
+    lines += ["};", ""]
+    for name, const in chat["constants"].items():
+        lines += [f"/** {const['$comment']} */", f"export const {name} = {const['value']} as const;", ""]
+    for name, shape in chat["shapes"].items():
+        lines += ts_shape(name, shape)
+    lines += [
+        "// ---------------------------------------------------------------------------",
+        "// SPEC §34.6 — control-event payloads, the TEXT-chat subset only. The voice",
+        "// members stay untyped until M9 builds the thing that emits them.",
+        "// ---------------------------------------------------------------------------",
+    ]
+    for name, shape in ws["payload_shapes"].items():
+        lines += ts_shape(name, shape)
+    lines += [
         "// ---------------------------------------------------------------------------",
         "// SPEC §28.2 — the Today payload and the closed sets it carries.",
         "// `variant` is deliberately absent: §32.1's precedence is a RULE over this",
@@ -451,10 +749,7 @@ def gen_typescript(
         "",
     ]
     for name, shape in today["shapes"].items():
-        lines += [f"/** {shape['$comment']} */", f"export interface {name} {{"]
-        for f in shape["fields"]:
-            lines.append(f'  {f["name"]}: {ts_type(f["type"])};')
-        lines += ["}", ""]
+        lines += ts_shape(name, shape)
     (TS_OUT / "index.ts").write_text("\n".join(lines), encoding="utf-8")
 
 
@@ -465,18 +760,33 @@ def main() -> None:
     ws = load("ws-events.json")
     confidence = load("confidence-states.json")
     today = load("today.json")
+    presence = load("presence-states.json")
+    memory_types = load("memory-types.json")
+    chat = load("chat.json")
 
     assert len(modules["members"]) == 17, "SPEC §34.3: exactly 17 morning modules"
     assert len(confidence["members"]) == 5, "SPEC §5.4: exactly 5 confidence states"
     assert len(ws["members"]) == 15, "SPEC §34.6: closed set of 15 control events"
+    assert len(presence["members"]) == 12, "SPEC §4.3: exactly 12 presence states"
+    assert len(memory_types["members"]) == 11, "SPEC §32.4: exactly 11 memory types"
+    # §4.3 and §32.4 both NUMBER their members, and the numbering is what a
+    # reader checks this file against the spec with. A gap in it means one was
+    # dropped in an edit and the list still looks complete.
+    for source, spec in ((presence, "§4.3"), (memory_types, "§32.4")):
+        assert [m["ordinal"] for m in source["members"]] == list(
+            range(1, len(source["members"]) + 1)
+        ), f"{spec} numbers its members 1..n with no gaps"
     for m in codes["members"]:
         assert any(m["code"].startswith(ns) for ns in codes["namespaces"]), (
             f"error code {m['code']} outside closed namespaces"
         )
 
-    gen_python(modules, codes, envelope, ws, today)
-    gen_typescript(modules, codes, envelope, ws, confidence, today)
-    print("generated: python/sitara_schemas/{__init__,modules,errors,ws_events,today}.py")
+    gen_python(modules, codes, envelope, ws, today, presence, memory_types, chat)
+    gen_typescript(modules, codes, envelope, ws, confidence, today, presence, memory_types, chat)
+    print(
+        "generated: python/sitara_schemas/"
+        "{__init__,modules,errors,ws_events,today,presence,memory_types,chat}.py"
+    )
     print("generated: typescript/src/index.ts")
 
 

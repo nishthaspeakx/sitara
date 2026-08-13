@@ -203,7 +203,7 @@ export function LaunchSequence({ onFinished }: { onFinished: () => void }) {
           still, which is already its behaviour when no loop exists. */}
       {path === "full" ? (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <TaraPresence size="lg" state="smile" still showAiLabel />
+          <TaraPresence size="lg" state="welcome" still showAiLabel />
         </div>
       ) : null}
 

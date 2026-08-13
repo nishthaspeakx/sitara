@@ -64,7 +64,7 @@ export default function LanguagePage() {
   return (
     <main className="mx-auto flex max-w-md flex-col gap-6 px-6 pb-12">
       <div className="flex justify-center">
-        <TaraPresence size="md" state="warm_neutral" still showAiLabel />
+        <TaraPresence size="md" state="profile_portrait" still showAiLabel />
       </div>
 
       <SectionHeader titleKey="start.language.title" subtitleKey="start.language.subtitle" />

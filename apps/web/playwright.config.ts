@@ -26,6 +26,16 @@ const APP_PORT = 3100;
 /** The stand-in for `sitara-api`. See scripts/stub-api.mjs for why it is a real
  *  process rather than a `page.route` intercept. */
 const STUB_API_PORT = 3101;
+/**
+ * The stand-in for `sitara-realtime`. A REAL RFC 6455 server, for a reason
+ * stronger than CL-013's: `page.route` cannot intercept a WebSocket at all, so
+ * the only browser-side alternative would be replacing `window.WebSocket` — and
+ * then the suite verifies that the client handles frames the test invented over
+ * a transport that was never opened. The handshake, the close, the reconnect
+ * and the ordering of frames against the DOM updates they cause would all be
+ * invisible. See scripts/stub-realtime.mjs.
+ */
+const STUB_REALTIME_PORT = 3102;
 
 /**
  * Which servers this run actually needs.
@@ -102,6 +112,20 @@ export default defineConfig({
           url: `http://127.0.0.1:${STUB_API_PORT}/healthz`,
           reuseExistingServer: false,
           timeout: 30_000,
+          env: {
+            // The socket origin is SERVED to the client by
+            // POST /v1/chat/session, never compiled into the app — so pointing
+            // the suite at the stub is a server-side env var and needs no
+            // rebuild. That is the same reason NEXT_PUBLIC_REALTIME_WS_URL was
+            // removed.
+            STUB_REALTIME_WS_URL: `ws://127.0.0.1:${STUB_REALTIME_PORT}/chat/session`,
+          },
+        },
+        {
+          command: `node scripts/stub-realtime.mjs ${STUB_REALTIME_PORT}`,
+          url: `http://127.0.0.1:${STUB_REALTIME_PORT}/healthz`,
+          reuseExistingServer: false,
+          timeout: 30_000,
         },
         {
           command: `pnpm exec next start --port ${APP_PORT}`,
@@ -129,7 +153,7 @@ export default defineConfig({
     {
       name: "library",
       testMatch:
-        /library\.spec\.ts|tara-disclosure\.spec\.ts|dist-dirs\.spec\.ts|api-routing\.spec\.ts|today-variant\.spec\.ts|today-fixtures\.spec\.ts/,
+        /library\.spec\.ts|tara-disclosure\.spec\.ts|dist-dirs\.spec\.ts|api-routing\.spec\.ts|today-variant\.spec\.ts|today-fixtures\.spec\.ts|chat-thread\.spec\.ts/,
     },
     {
       name: "components",
@@ -148,7 +172,7 @@ export default defineConfig({
       // loose `today-.*` would run them twice and make the cheap command
       // wait on a `next start`.
       testMatch:
-        /screens\.spec\.ts|onboarding-.*\.spec\.ts|ceremony-degradation\.spec\.ts|today-(empty|degraded|screens|routes)\.spec\.ts/,
+        /screens\.spec\.ts|onboarding-.*\.spec\.ts|ceremony-degradation\.spec\.ts|today-(empty|degraded|screens|routes)\.spec\.ts|ask-.*\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
         viewport: { width: 390, height: 844 },

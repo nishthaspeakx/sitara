@@ -43,22 +43,19 @@ export type TaraSize = (typeof TARA_SIZES)[number];
 /**
  * Tara's 12 presence states (§4.3), used by TaraPresence and the §29.5 usage
  * map. She is a photographic presence — never call this an avatar (glossary).
+ *
+ * Re-exported from `@sitara/schemas`, for the reason the confidence states
+ * below record and for a worse instance of it. This file used to declare its
+ * own twelve — `warm_neutral`, `smile`, `full_smile`, `reading`, `safety` —
+ * none of which are §4.3's names, while `calm_guidance` and `encouragement`
+ * were missing outright. The API has always emitted §4.3's set on every turn.
+ * So five of the twelve it can serve had no asset and no alt text here, and
+ * because the two lists also differed in ORDER, a positional read of the served
+ * state resolved index 11 (safety-still — the one §29.5 puts in the chat header
+ * at L2+) to `reading`. Nothing failed, because until S18 no screen had ever
+ * consumed a served presence state.
  */
-export const TARA_STATES = [
-  "warm_neutral",
-  "listening",
-  "speaking_soft",
-  "smile",
-  "full_smile",
-  "thoughtful",
-  "concerned_kind",
-  "celebration",
-  "night",
-  "festival",
-  "reading",
-  "safety",
-] as const;
-export type TaraState = (typeof TARA_STATES)[number];
+export { PRESENCE_STATES, PRESENCE_ORDINAL, type PresenceState } from "@sitara/schemas";
 
 /**
  * §5.4/§34.7 — all five ConfidenceChip treatments. Never caution/danger colours.

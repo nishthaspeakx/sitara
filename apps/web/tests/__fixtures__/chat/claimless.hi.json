@@ -1,0 +1,15 @@
+{
+  "message_id": "6a7bfd6a7acfebbe7804eb96",
+  "text": "मैं यहीं हूँ। बताइए मन में क्या है, वहीं से शुरू करते हैं।",
+  "locale": "hi",
+  "confidence": "verified",
+  "safety_level": "l1_clear",
+  "presence_state": "calm_guidance",
+  "intent": "natal_chart_question",
+  "trace_id": "6fe7a024959b454fa4947d856f800ce5",
+  "citations": [],
+  "memory_chips": [],
+  "review_queued": false,
+  "message_key": null,
+  "budget_notice_key": null
+}
