@@ -16,9 +16,11 @@ from __future__ import annotations
 import datetime as dt
 
 import pytest
+from fastapi import FastAPI, Request
 from sitara_schemas.facts import (
     DashaLevel,
     DashaPeriodValue,
+    DashaYearBasis,
     FactKind,
     FactMethod,
     FactPrecision,
@@ -28,6 +30,7 @@ from sitara_schemas.facts import (
 )
 
 from sitara_api import trust
+from sitara_api.chat_orchestration.facts import AstrologyFacadeProvider
 
 pytestmark = pytest.mark.asyncio
 
@@ -37,11 +40,17 @@ pytestmark = pytest.mark.asyncio
 # ---------------------------------------------------------------------------
 
 
-class _FakeRequest:
-    """Just enough of a Starlette request for `_birth_profile`."""
+def _fake_request(facade: object | None) -> Request:
+    """Just enough of a Starlette request for `_birth_profile`.
 
-    def __init__(self, facade: object | None) -> None:
-        self.app = type("App", (), {"state": type("S", (), {"astrology": facade})()})()
+    Built as a real `Request` over a minimal scope rather than a duck-typed
+    stand-in: `_birth_profile` is typed against `Request`, and a fake that
+    pyright has to be told to ignore is a fake that can drift from the thing
+    it stands for without anything noticing.
+    """
+    app = FastAPI()
+    app.state.astrology = facade
+    return Request({"type": "http", "app": app, "headers": []})
 
 
 class _Facade:
@@ -77,7 +86,7 @@ async def test_the_router_loads_the_birth_profile_from_the_facade() -> None:
     from sitara_api.chat_orchestration.router import _birth_profile
 
     birth = _Birth(time=dt.time(4, 55), place_name="Jaipur", tz="Asia/Kolkata")
-    request = _FakeRequest(_Facade(birth))
+    request = _fake_request(_Facade(birth))
     profile = await _birth_profile(request, "6a70000000000000000000a1")
 
     assert profile.has_date is True
@@ -91,7 +100,8 @@ async def test_a_row_without_a_birth_time_is_the_moon_chart_path() -> None:
     profile says so rather than claiming an exact time it does not have."""
     from sitara_api.chat_orchestration.router import _birth_profile
 
-    request = _FakeRequest(_Facade(_Birth(time=None, place_name="Jaipur", tz="Asia/Kolkata")))
+    birth = _Birth(time=None, place_name="Jaipur", tz="Asia/Kolkata")
+    request = _fake_request(_Facade(birth))
     profile = await _birth_profile(request, "6a70000000000000000000a1")
 
     assert profile.has_date is True
@@ -105,7 +115,7 @@ async def test_a_facade_failure_degrades_rather_than_failing_the_turn() -> None:
     from sitara_api.chat_orchestration.router import _birth_profile
 
     for facade in (_Facade(raises=True), _Facade(None), None):
-        profile = await _birth_profile(_FakeRequest(facade), "6a70000000000000000000a1")
+        profile = await _birth_profile(_fake_request(facade), "6a70000000000000000000a1")
         assert profile.has_date is False
 
 
@@ -134,7 +144,9 @@ def test_build_pipeline_passes_the_astrology_facade_to_the_fact_provider() -> No
         astrology_facade=sentinel,
     )
     assert pipeline is not None
-    assert pipeline._facts._astrology is sentinel  # noqa: SLF001
+    provider = pipeline._facts  # noqa: SLF001
+    assert isinstance(provider, AstrologyFacadeProvider)
+    assert provider._astrology is sentinel  # noqa: SLF001
 
 
 def test_the_app_hands_the_facade_it_built_to_the_pipeline() -> None:
@@ -219,7 +231,7 @@ def _dasha_fact(level: DashaLevel, lord: Graha, parents: tuple[Graha, ...]) -> F
         ),
         precision=FactPrecision(tolerance=0, unit="exact"),
         method=FactMethod(
-            dasha_year="days_365_25",
+            dasha_year=DashaYearBasis.DAYS_365_25,
             tz=TzMethod(tz="Asia/Kolkata", utc_offset_seconds=19800),
         ),
         valid_from=dt.datetime(2026, 8, 13, tzinfo=dt.UTC),
