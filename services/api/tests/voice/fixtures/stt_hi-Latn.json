@@ -1,0 +1,14 @@
+{
+  "$comment": "RECORDED from the live Cartesia API — do not hand-edit. Re-record with `CARTESIA_API_KEY=... uv run python -m tests.voice.record`.",
+  "$reference": "Mera rahu kaal kab hai aaj, and should I start the new job on Monday?",
+  "$why": "the case that matters: 40-60% English tokens mid-sentence (§3.3). Both the code-mixing AND the Latin script must survive",
+  "locale": "hi-Latn",
+  "stt_language_sent": "en",
+  "response": {
+    "type": "transcript",
+    "is_final": true,
+    "language": "en",
+    "duration": 3.68,
+    "text": "Mera Rahukaal kab hai aaj? And should I start the new job on Monday?"
+  }
+}

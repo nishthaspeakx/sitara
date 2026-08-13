@@ -111,7 +111,24 @@ async function settle(page: Page, theme: string) {
   await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
 }
 
+/**
+ * A fixed wall clock, so a bubble's timestamp is not a baseline's expiry date.
+ *
+ * §25.4 puts the time INSIDE the bubble, and `MessageList.timeIn` formats
+ * `message.at` — which is `Date.now()` at the moment the message was created.
+ * Every message-bearing baseline here therefore encoded the minute it was
+ * recorded in, and passed only while the clock happened to read the same
+ * "10:29 AM". Outside that minute all thirty-six failed on a diff nobody had
+ * changed anything to cause. Found while re-baselining for M9's mic button;
+ * the mic is a real visual change and the timestamps were never one.
+ *
+ * `setFixedTime` freezes `Date.now()` without freezing timers, so the socket,
+ * the reconnect backoff and the typing indicator all still run.
+ */
+const SHUTTER = new Date("2026-08-13T10:29:00Z");
+
 async function open(page: Page, locale: string, theme: string) {
+  await page.clock.setFixedTime(SHUTTER);
   await page.addInitScript((t) => {
     document.documentElement.setAttribute("data-theme", t as string);
   }, theme);
@@ -120,7 +137,35 @@ async function open(page: Page, locale: string, theme: string) {
   await settle(page, theme);
 }
 
-async function ask(page: Page, text = "what is Saturn doing?") {
+/**
+ * Type a question — after the socket is live, unless told otherwise.
+ *
+ * **`page.goto` resolving is not the socket being open.** `ChatSocket.connect`
+ * first POSTs `/v1/chat/session` for a ticket and only then upgrades, so there
+ * is a window in which the screen is fully rendered and `send()` returns false.
+ * The page then correctly falls back to `POST /v1/chat/turn` (§32.11's handoff
+ * path) and the stub-api answers it — successfully. Which means a test meaning
+ * to observe a socket DROP instead observed a perfectly good HTTP reply, and no
+ * "Send again" button ever appeared.
+ *
+ * Idle this never happened; under four workers it did, intermittently, and only
+ * ever in whichever locale lost the race that run. Waiting on the state the
+ * product publishes (`data-connected`) is what makes these deterministic
+ * — the same wait `ask-voice.spec.ts` does before a recording, for the same
+ * reason.
+ *
+ * `awaitSocket: false` is for the scenarios where a socket is never expected:
+ * `unavailable` 503s the session grant, so waiting for a connection that is
+ * designed not to happen would hang until the timeout.
+ */
+async function ask(
+  page: Page,
+  text = "what is Saturn doing?",
+  { awaitSocket = true }: { awaitSocket?: boolean } = {},
+) {
+  if (awaitSocket) {
+    await expect(page.getByTestId("ask")).toHaveAttribute("data-connected", "true");
+  }
   const field = page.getByTestId("composer").getByRole("textbox");
   await field.fill(text);
   await field.press("Enter");
@@ -190,7 +235,9 @@ async function reach(page: Page, state: AskState, locale: string) {
       return;
 
     case "unavailable":
-      await ask(page);
+      // No socket here by design: the `chat_unavailable` scenario fails the
+      // session grant, so the turn goes over HTTP and fails there too.
+      await ask(page, "what is Saturn doing?", { awaitSocket: false });
       await expect(page.getByRole("button", { name: sendAgain(locale) })).toBeVisible({
         timeout: 15_000,
       });

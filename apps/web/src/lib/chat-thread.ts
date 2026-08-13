@@ -20,7 +20,13 @@
  * shape of every chat client that has ever eaten a message.
  */
 
-import type { ChatTurn, ControlEvent, PresenceState } from "@sitara/schemas";
+import type {
+  ChatTurn,
+  ControlEvent,
+  PlaybackPolicy,
+  PresenceState,
+  TranscriptStatus,
+} from "@sitara/schemas";
 
 /**
  * §25.4's ticks, and the whole of them.
@@ -40,6 +46,27 @@ export interface UserMessage {
   delivery: DeliveryState;
   /** §25.4 swipe-to-reply — the id of the message this quotes. */
   quotedId?: string;
+  /**
+   * §25.4/§33.1's voice note. Present only when the user SPOKE this turn.
+   *
+   * There is deliberately no field here that could carry a TTS asset id.
+   * §25.4's promise is that replay plays the user's own recording "never a TTS
+   * reconstruction", and the way that breaks is a wiring mistake, not a
+   * decision — so the user bubble has no prop the mistake could travel in.
+   * Her audio lives on `TaraMessage.audio` and nowhere else.
+   */
+  voice?: UserVoiceNote;
+}
+
+export interface UserVoiceNote {
+  /** §6.4's `source_audio_asset_id`. Null once expired or never stored. */
+  assetId: string | null;
+  durationMs: number;
+  transcriptStatus: TranscriptStatus;
+  /** Decides whether the bubble offers playback at all (§33.1). */
+  playbackPolicy: PlaybackPolicy;
+  /** ISO instant the original is deleted on — §33.1's 30-day promise, shown. */
+  expiresAt?: string | null;
 }
 
 export interface TaraMessage {
@@ -49,6 +76,20 @@ export interface TaraMessage {
   at: number;
   /** The user message this answers, so a resumed turn cannot duplicate. */
   replyTo: string;
+  /**
+   * §25.4: "Tara's replies arrive as voice-note bubbles rendered from her TTS
+   * with transcript toggle — this is the voice-adoption engine."
+   *
+   * Set from `tts.start`/`tts.end`, which the server sends AFTER her
+   * `captions.final` — so `turn.text` (the transcript the toggle shows) is
+   * already here, and is the same validated text the audio was rendered from.
+   */
+  audio?: TaraVoiceReply;
+}
+
+export interface TaraVoiceReply {
+  assetId: string;
+  durationMs: number;
 }
 
 export type Message = UserMessage | TaraMessage;
@@ -84,6 +125,7 @@ export const EMPTY_THREAD: ThreadState = {
 
 export type ThreadAction =
   | { type: "send"; id: string; text: string; at: number; quotedId?: string }
+  | { type: "speak"; id: string; at: number; durationMs: number; quotedId?: string }
   | { type: "event"; event: ControlEvent; at: number }
   | { type: "socket_lost"; at: number }
   | { type: "handoff_reply"; turn: ChatTurn; replyTo: string; at: number }
@@ -113,6 +155,37 @@ function withReply(
   ];
 }
 
+/**
+ * Fill the voice bubble the finger already created (§25.4).
+ *
+ * `playback_policy` is served, never inferred. A client that decided for itself
+ * whether a recording exists would guess wrong in exactly §33.1's two
+ * interesting cases — the ephemeral account and the note whose thirty days are
+ * up — and would render a play control over nothing.
+ */
+function withTranscript(state: ThreadState, payload: Record<string, unknown>): ThreadState {
+  const id = String(payload.client_message_id ?? "");
+  return {
+    ...state,
+    messages: state.messages.map((m) =>
+      m.kind === "user" && m.id === id
+        ? {
+            ...m,
+            text: String(payload.text ?? ""),
+            delivery: "delivered" as const,
+            voice: {
+              assetId: (payload.source_audio_asset_id as string | null) ?? null,
+              durationMs: Number(payload.duration_ms ?? m.voice?.durationMs ?? 0),
+              transcriptStatus: payload.transcript_status as TranscriptStatus,
+              playbackPolicy: payload.playback_policy as PlaybackPolicy,
+              expiresAt: (payload.source_audio_expires_at as string | null) ?? null,
+            },
+          }
+        : m,
+    ),
+  };
+}
+
 export function threadReducer(state: ThreadState, action: ThreadAction): ThreadState {
   switch (action.type) {
     case "send":
@@ -128,6 +201,36 @@ export function threadReducer(state: ThreadState, action: ThreadAction): ThreadS
             at: action.at,
             delivery: "sending",
             quotedId: action.quotedId,
+          },
+        ],
+      };
+
+    case "speak":
+      // §25.4's voice bubble exists from the moment the finger lifts, with no
+      // text in it: the transcript arrives seconds later on `captions.final`.
+      // Creating it now is what gives every PCM frame a bubble to belong to,
+      // and what stops the note appearing from nowhere when STT returns.
+      return {
+        ...state,
+        error: null,
+        messages: [
+          ...state.messages,
+          {
+            kind: "user",
+            id: action.id,
+            text: "",
+            at: action.at,
+            delivery: "sending",
+            quotedId: action.quotedId,
+            voice: {
+              assetId: null,
+              durationMs: action.durationMs,
+              transcriptStatus: "pending",
+              // Nothing is stored yet, so the bubble promises no playback.
+              // `captions.final` upgrades this once the server says where the
+              // recording landed — or leaves it, in §33.1's ephemeral mode.
+              playbackPolicy: "transcript_only",
+            },
           },
         ],
       };
@@ -188,9 +291,11 @@ function applyEvent(state: ThreadState, event: ControlEvent, at: number): Thread
       };
 
     case "captions.final": {
-      // Only Tara's direction is inbound. A `role: "user"` frame is this
-      // client's own message coming back, which nothing sends and nothing
-      // should render twice.
+      // §34.6's user direction was inbound-never until M9. It is now the
+      // FINALISED TRANSCRIPT of a voice note: the words the user spoke, plus
+      // where their recording was stored. It fills a bubble that already
+      // exists rather than appending one (`speak` created it).
+      if (payload.role === "user") return withTranscript(state, payload);
       if (payload.role !== "tara") return state;
       const turn = payload.turn as ChatTurn | undefined;
       const replyTo = String(payload.client_message_id ?? "");
@@ -231,9 +336,32 @@ function applyEvent(state: ThreadState, event: ControlEvent, at: number): Thread
       };
     }
 
-    // Every other member of §34.6's closed set belongs to voice (M9). Ignored
-    // rather than switched on exhaustively, so M9 adding behaviour here is an
-    // addition and not a rewrite.
+    case "tts.start":
+    case "tts.end": {
+      // §25.4's voice-adoption engine. Both members carry `client_message_id`,
+      // which is the QUESTION's id — her bubble is found by `replyTo`, the
+      // same key `withReply` used to place it.
+      const replyTo = String(payload.client_message_id ?? "");
+      return {
+        ...state,
+        messages: state.messages.map((m) =>
+          m.kind === "tara" && m.replyTo === replyTo
+            ? {
+                ...m,
+                audio: {
+                  assetId: String(payload.tts_audio_asset_id ?? m.audio?.assetId ?? ""),
+                  durationMs: Number(payload.duration_ms ?? m.audio?.durationMs ?? 0),
+                },
+              }
+            : m,
+        ),
+      };
+    }
+
+    // `captions.partial`, `vad.state`, `barge_in` and `entitlement.warning`
+    // reach here. The first two are the client's own echo; the last two belong
+    // to live calls (M10). Ignored rather than switched on exhaustively, so
+    // M10 adding behaviour is an addition and not a rewrite.
     default:
       return state;
   }

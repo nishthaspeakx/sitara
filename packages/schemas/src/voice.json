@@ -1,0 +1,54 @@
+{
+  "$comment": "SPEC §33.1 / §6.4 / §25.4 — the vocabulary of a voice note. Added in M9 for the reason every other set in this package was added: the two languages already held different versions of it. `services/api`'s message store wrote `transcript_status: \"not_applicable\"` and `playback_policy: \"text_only\"`; `apps/web`'s VoiceNoteBubble declared `TranscriptStatus = \"ready\" | \"pending\" | \"failed\" | \"none\"`. Neither had ever crossed the wire, so nothing failed — the same invisibility that hid the confidence states, the presence states and the memory types until the first screen rendered one. M9's bubble is that first screen, so the set lands here before it does.",
+  "$spec": "§33.1, §6.4, §25.4, §28.3",
+  "enums": {
+    "transcript_status": {
+      "$comment": "§6.4's `messages.transcript_status`, one of §33.1's six explicit fields. `not_applicable` is a TYPED message — the field is required on every message row, so text needs a member that says 'this was never spoken' rather than a null that reads as 'transcription is still coming'. §28.3's failure row is `failed`: 'transcribe-fail → send as text? original audio preserved' — the audio survives a failed transcript, which is why this is a status and not a delete trigger.",
+      "enum_name": "TranscriptStatus",
+      "const_name": "TRANSCRIPT_STATUSES",
+      "members": [
+        { "id": "not_applicable", "note": "a typed message; nothing was spoken" },
+        { "id": "pending", "note": "audio received, STT not finished (§28.3: transcript <2s post-release)" },
+        { "id": "ready", "note": "the transcript is the content" },
+        { "id": "failed", "note": "§28.3 — STT failed; the ORIGINAL audio is preserved regardless" }
+      ]
+    },
+    "playback_policy": {
+      "$comment": "§6.4's `messages.playback_policy`, and the field §25.4's central promise rests on: 'replay plays the user's ORIGINAL recording per the §33.1 storage policy, never a TTS reconstruction'. That sentence is only enforceable if a bubble can tell the three cases apart, which is what this enum is for. `synthesised` is the ONLY member under which audio is a reconstruction, and §25.4 makes it illegal on a user message — a rule the store enforces structurally rather than by review.",
+      "enum_name": "PlaybackPolicy",
+      "const_name": "PLAYBACK_POLICIES",
+      "members": [
+        { "id": "text_only", "note": "a typed message; there is no audio and no control" },
+        { "id": "original_audio", "note": "§25.4/§33.1 default — replay plays the user's own recording" },
+        {
+          "id": "transcript_only",
+          "note": "§33.1 — audio expired, was deleted, or was never stored (delete-after-transcription). The bubble drops playback and shows the transcript with a 'voice input' marker. This is the honest state, not a degraded one."
+        },
+        {
+          "id": "synthesised",
+          "note": "§25.4 — Tara's own voice-note reply, rendered from her TTS with a transcript toggle. NEVER valid on a user message: that substitution is precisely what §25.4 names as the thing not to do."
+        }
+      ]
+    },
+    "vad_state": {
+      "$comment": "§34.6's `vad.state` payload. In M9 this brackets a HELD recording rather than reporting server-side voice activity detection — §25.4's grammar is hold-to-record or tap-lock, so the client knows when speech starts and stops because the user's finger says so. M10's live calls add the server-VAD sense of the same member (§25.3's barge-in ducking); the members below are chosen so that addition is a widening, not a rename.",
+      "enum_name": "VadState",
+      "const_name": "VAD_STATES",
+      "members": [
+        { "id": "speech_start", "note": "the hold began; binary frames may now follow" },
+        { "id": "speech_end", "note": "released or locked-then-stopped; the note is complete" },
+        { "id": "cancelled", "note": "§28.3's cancel-slide — discard, never transcribe, never store" }
+      ]
+    }
+  },
+  "constants": {
+    "SOURCE_AUDIO_RETENTION_DAYS": {
+      "$comment": "§33.1 — 'the original recording is stored encrypted for 30 days BY DEFAULT'. Default, so a user setting may shorten it; the expiry job reads the per-note `source_audio_expires_at` rather than this constant, which exists so both sides can render the same promise in the same words.",
+      "value": 30
+    },
+    "MAX_NOTE_DURATION_MS": {
+      "$comment": "A cap, not a spec value. §34.6's frame is 16kHz mono s16le = 32 kB/s, so two minutes is ~3.8 MB — comfortably inside MongoDB's 16 MB document limit, which is where §33.1's CSFLE key class puts the bytes. The client stops recording here rather than letting a pocket-dial write a document that cannot be stored.",
+      "value": 120000
+    }
+  }
+}

@@ -152,6 +152,53 @@ export class ChatSocket {
     return true;
   }
 
+  /**
+   * Open §34.6's recording bracket (M9).
+   *
+   * The bracket is what binds the PCM about to follow to a bubble, a locale
+   * and a consent posture — the server refuses binary outside one. Minting the
+   * id here, before the first byte, is what stops the transcript appearing in
+   * the thread from nowhere when STT returns.
+   */
+  startRecording(clientMessageId: string, quotedMessageId?: string): boolean {
+    return this.vad("speech_start", clientMessageId, quotedMessageId);
+  }
+
+  /** One §34.6 binary frame: 8-byte header + 16 kHz mono s16le. */
+  sendAudio(frameBuffer: ArrayBuffer): boolean {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return false;
+    this.ws.send(frameBuffer);
+    return true;
+  }
+
+  /** Close the bracket and ask for a transcript. */
+  finishRecording(clientMessageId: string): boolean {
+    return this.vad("speech_end", clientMessageId);
+  }
+
+  /**
+   * §28.3's cancel-slide. The server discards without transcribing or storing.
+   *
+   * Sent even when the socket has gone: there is nothing to cancel on a dead
+   * socket, and the client-side recorder discards its own buffer regardless —
+   * so a failed send here is not a failure the user needs to hear about.
+   */
+  cancelRecording(clientMessageId: string): boolean {
+    return this.vad("cancelled", clientMessageId);
+  }
+
+  private vad(state: string, clientMessageId: string, quotedMessageId?: string): boolean {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return false;
+    this.ws.send(
+      frame("vad.state", {
+        state,
+        client_message_id: clientMessageId,
+        quoted_message_id: quotedMessageId ?? null,
+      }),
+    );
+    return true;
+  }
+
   close(): void {
     this.closedByUs = true;
     this.ws?.send(frame("session.end", {}));

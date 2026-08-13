@@ -1,12 +1,13 @@
 """GENERATED FILE — do not edit. Source: packages/schemas/src/*.json (run scripts/generate.py)."""
 
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
 from sitara_schemas.chat import ChatRole, ChatTurn
 from sitara_schemas.presence import PresenceState
+from sitara_schemas.voice import PlaybackPolicy, TranscriptStatus, VadState
 
 
 class ControlEventType(StrEnum):
@@ -42,13 +43,17 @@ class ControlEvent(BaseModel):
 
 
 # --------------------------------------------------------------------
-# Payload shapes — the TEXT-chat subset only.
+# Payload shapes — the text chat (S18) and the voice notes (M9).
 #
-# §34.6 says payloads are 'typed per event in M9'. The members the text
-# chat uses are typed HERE, one milestone early, because S18 sends them
-# now; the voice members (vad.state, barge_in, tts.*, entitlement.warning)
-# stay untyped until M9 builds the thing that emits them. Typing an event
-# nobody produces yet would be a guess with a schema around it.
+# §34.6 says payloads are 'typed per event in M9'. S18 typed the text-chat
+# members a milestone early because it sent them; M9 types vad.state and
+# tts.* for the same reason, now that voice notes emit them.
+#
+# `barge_in` and `entitlement.warning` stay UNTYPED. They belong to live
+# calls (§25.3's server-side VAD ducking, §7.3's minute pool), which §33.5
+# gates behind a conditional release and M10 owns. The rule has not moved:
+# a payload is typed by the milestone that emits it, because typing an
+# event nobody produces is a guess with a schema around it.
 # --------------------------------------------------------------------
 
 class SessionStartPayload(BaseModel):
@@ -73,7 +78,7 @@ class SessionReadyPayload(BaseModel):
 
 
 class UserTurnPayload(BaseModel):
-    """Client → server, on `captions.final`. Discriminated from the Tara direction by `role`."""
+    """Client → server on `captions.final` when typed; server → client on the same member when the turn was SPOKEN and STT has finalised it. One shape for both because §34.6's whole premise is that a typed message and a transcribed one are the same event — the difference is which of the three §33.1 fields below are populated, not which member carries it. On a typed message they are `not_applicable` / `text_only` / null, which is exactly what the store already writes."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -81,6 +86,61 @@ class UserTurnPayload(BaseModel):
     text: str
     client_message_id: str
     quoted_message_id: str | None = None
+    transcript_status: TranscriptStatus
+    playback_policy: PlaybackPolicy
+    source_audio_asset_id: str | None = None
+    duration_ms: int | None = None
+    source_audio_expires_at: str | None = None
+
+
+class PartialCaptionPayload(BaseModel):
+    """Server → client, on `captions.partial`. `role` is the CONSTANT "user" and not a ChatRole, which is the whole point of the shape: §9 runs grounding, language-quality and safety-post after generation, so a partial caption of TARA's words would be pre-validation text racing three validators to the screen. Through M8 that was guaranteed by nobody writing the frame. Now the frame exists, for the user's own speech, and the guarantee is that there is no value of `role` here that could carry hers."""
+
+    model_config = ConfigDict(frozen=True)
+
+    role: Literal["user"]
+    text: str
+    client_message_id: str
+
+
+class VadStatePayload(BaseModel):
+    """Client → server, on `vad.state`. Brackets a held recording. `client_message_id` is minted before the first PCM byte leaves, so every binary frame in the bracket already belongs to a bubble the thread is drawing — the transcript lands in a message that exists rather than appearing from nowhere when STT returns."""
+
+    model_config = ConfigDict(frozen=True)
+
+    state: VadState
+    client_message_id: str
+    quoted_message_id: str | None = None
+
+
+class TtsStartPayload(BaseModel):
+    """Server → client, on `tts.start`. §25.4: 'Tara's replies arrive as voice-note bubbles rendered from her TTS with transcript toggle'. Emitted after her `captions.final`, so the transcript the toggle shows is on screen before any audio plays — and is the same validated text the audio was rendered from, not a second generation."""
+
+    model_config = ConfigDict(frozen=True)
+
+    client_message_id: str
+    tts_audio_asset_id: str
+    sample_rate_hz: int
+    voice_id: str | None = None
+
+
+class TtsChunkMetaPayload(BaseModel):
+    """Server → client, on `tts.chunk_meta`. §13 — shapes, never content. There is deliberately no text field: the words already crossed on `captions.final`, and a second copy travelling beside the audio is a second thing to keep in step with the validators."""
+
+    model_config = ConfigDict(frozen=True)
+
+    client_message_id: str
+    seq: int
+    byte_length: int
+
+
+class TtsEndPayload(BaseModel):
+    """Server → client, on `tts.end`. Total duration for the bubble's scrubber, and the signal that no further chunk meta is coming."""
+
+    model_config = ConfigDict(frozen=True)
+
+    client_message_id: str
+    duration_ms: int
 
 
 class TaraTurnPayload(BaseModel):

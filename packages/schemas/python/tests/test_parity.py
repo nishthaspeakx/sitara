@@ -116,6 +116,42 @@ def test_eleven_memory_types_everywhere() -> None:
     assert ts_const_array("MEMORY_TYPES") == ids
 
 
+def test_voice_note_vocabulary_agrees_across_both_languages() -> None:
+    """§33.1/§6.4's message fields, which the two languages already disagreed on.
+
+    `sitara_api...store` wrote `transcript_status: "not_applicable"` and
+    `playback_policy: "text_only"`; `apps/web`'s VoiceNoteBubble declared
+    `"ready" | "pending" | "failed" | "none"`. Neither had crossed the wire, so
+    nothing failed — the same invisibility that hid the confidence states, the
+    presence states and the memory types until the first screen rendered one.
+    """
+    from sitara_schemas import PLAYBACK_POLICIES, TRANSCRIPT_STATUSES, VAD_STATES
+
+    source = src("voice.json")
+    for key, const_tuple, ts_name in (
+        ("transcript_status", TRANSCRIPT_STATUSES, "TRANSCRIPT_STATUSES"),
+        ("playback_policy", PLAYBACK_POLICIES, "PLAYBACK_POLICIES"),
+        ("vad_state", VAD_STATES, "VAD_STATES"),
+    ):
+        ids = [m["id"] for m in source["enums"][key]["members"]]
+        assert [m.value for m in const_tuple] == ids, key
+        assert ts_const_array(ts_name) == ids, ts_name
+
+
+def test_playback_policy_can_tell_a_recording_from_a_reconstruction() -> None:
+    """§25.4: "replay plays the user's ORIGINAL recording, never a TTS
+    reconstruction". The promise is only checkable if the wire can distinguish
+    the two, so the distinction is asserted here rather than left to the
+    stores and components that depend on it.
+    """
+    from sitara_schemas import PlaybackPolicy
+
+    assert PlaybackPolicy.ORIGINAL_AUDIO != PlaybackPolicy.SYNTHESISED
+    # §33.1's ephemeral mode and its expiry both land here, and neither is an
+    # error state: the bubble shows the transcript with a "voice input" marker.
+    assert PlaybackPolicy.TRANSCRIPT_ONLY in PlaybackPolicy
+
+
 def test_chat_turn_agrees_across_both_languages() -> None:
     """§25.4's turn, over HTTP and over the socket, is ONE shape."""
     import sitara_schemas.chat as chat_mod
@@ -165,11 +201,17 @@ def test_control_event_carries_an_ack() -> None:
     assert m and re.findall(r"^\s+(\w+):", m.group(1), re.M) == declared
 
 
-def test_only_the_text_chat_payloads_are_typed() -> None:
-    """§34.6 defers payload typing to M9. S18 needs the text-chat subset now,
-    so those are typed early — and the voice members are deliberately NOT,
-    because typing an event nothing emits yet is a guess with a schema around
-    it. This asserts the line stays where it was drawn.
+def test_a_payload_is_typed_by_the_milestone_that_emits_it() -> None:
+    """§34.6 defers payload typing to "M9". The rule this encodes is narrower
+    and is the one that has actually held: a member gets a payload shape in the
+    milestone that starts EMITTING it, never before — because typing an event
+    nothing produces is a guess with a schema around it.
+
+    S18 typed the text-chat subset a milestone early on that rule. M9 types
+    `vad.state` and `tts.*` on the same rule, now that voice notes emit them.
+    `barge_in` and `entitlement.warning` stay untyped: they belong to live
+    calls (§25.3's ducking, §7.3's minute pool), which §33.5 gates behind a
+    conditional release and M10 owns.
     """
     import sitara_schemas.ws_events as ws_mod
 
@@ -178,13 +220,40 @@ def test_only_the_text_chat_payloads_are_typed() -> None:
         declared = [f["name"] for f in shape["fields"]]
         assert list(getattr(ws_mod, name).model_fields) == declared, name
 
-    voice_only = {"vad.state", "barge_in", "tts.start", "tts.chunk_meta", "tts.end"}
-    typed = " ".join(source["payload_shapes"])
-    for member in voice_only:
-        stem = member.replace(".", "_").replace("_", "")
-        assert stem.lower() not in typed.lower().replace("_", ""), (
-            f"{member} has a payload shape but nothing emits it yet — M9 owns that"
+    typed = " ".join(source["payload_shapes"]).lower().replace("_", "")
+    for member in ("barge_in", "entitlement.warning"):
+        stem = member.replace(".", "").replace("_", "").lower()
+        assert stem not in typed, (
+            f"{member} has a payload shape but nothing emits it yet — M10 owns that"
         )
+    # And the converse, so this test fails if M9's shapes are ever dropped
+    # rather than only if M10's arrive early.
+    for member in ("VadStatePayload", "TtsStartPayload", "TtsEndPayload"):
+        assert member in source["payload_shapes"], f"{member} is emitted in M9 and must be typed"
+
+
+def test_a_partial_caption_can_only_ever_be_the_users_own_speech() -> None:
+    """§34.6's `$never_emitted_for_tara`, made unrepresentable.
+
+    §9 runs grounding, language-quality and safety-post AFTER generation, so a
+    partial caption of Tara's words would be pre-validation text racing three
+    validators to the screen. Through M8 the guarantee was that no code wrote
+    the frame. M9 writes it — for the user's own speech — so the guarantee has
+    to live in the type instead: `role` is the constant "user", not a ChatRole.
+    """
+    import pydantic
+    import pytest
+    from sitara_schemas import PartialCaptionPayload
+
+    assert PartialCaptionPayload(role="user", text="aaj", client_message_id="c1").role == "user"
+    with pytest.raises(pydantic.ValidationError):
+        PartialCaptionPayload(role="tara", text="the Moon is in Rohini", client_message_id="c1")
+
+    ts = re.search(r"export interface PartialCaptionPayload \{(.*?)\n\}", TS_INDEX, re.S)
+    assert ts and 'role: "user";' in ts.group(1), (
+        "the TypeScript side must pin `role` too — a client that can construct a "
+        "Tara partial is a client that can render one"
+    )
 
 
 def test_envelope_shape() -> None:

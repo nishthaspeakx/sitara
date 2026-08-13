@@ -21,9 +21,13 @@
  *
  * ── Dependency-free, like the other stubs ──────────────────────────────────
  *
- * Text frames only, which is all §34.6's control events need — binary is
- * refused on the chat socket until M9 anyway, so there is nothing this has to
- * frame that does not fit. Node's `crypto` and `net` are enough.
+ * Text frames AND binary (M9): §34.6's control events are text, and a voice
+ * note is real PCM inside a `vad.state` bracket. The bracket rule is enforced
+ * here exactly as `services/realtime` enforces it — audio outside one is
+ * SYS_VALIDATION, and a sequence gap fails the note — because a stub that
+ * accepted what the real service refuses is a fake that accepts what the real
+ * system rejects, which is the root CLAUDE.md rule and the one the onboarding
+ * stub broke. Node's `crypto` and `net` are enough.
  *
  * ── The turns are RECORDED, never authored ─────────────────────────────────
  *
@@ -92,6 +96,11 @@ function scenarioFor(client) {
 
 function accept(key) {
   return createHash("sha1").update(key + GUID).digest("base64");
+}
+
+/** 16 kHz mono s16le → milliseconds, so the bubble shows a real duration. */
+function durationOf(bytes) {
+  return Math.round((bytes / 2 / 16000) * 1000);
 }
 
 /** Server→client text frame. Never masked, never fragmented. */
@@ -188,6 +197,9 @@ server.on("upgrade", (req, socket) => {
   const send = (type, payload, ack = null) =>
     socket.write(encode(JSON.stringify({ type, seq: seq++, ts: Date.now(), ack, payload })));
 
+  /** The open §34.6 bracket, or null. One at a time, as the real service does. */
+  let recording = null;
+
   socket.on("data", (chunk) => {
     buffered = Buffer.concat([buffered, chunk]);
     for (;;) {
@@ -198,6 +210,38 @@ server.on("upgrade", (req, socket) => {
       if (frame.opcode === 0x8) {
         socket.end();
         return;
+      }
+      if (frame.opcode === 0x2) {
+        // §34.6's binary frame — real PCM over a real socket, which is the
+        // whole point of this file existing. Accepted only inside a bracket,
+        // exactly as `services/realtime` does, so a client that sends audio
+        // without one fails here the way it fails in production.
+        if (!recording) {
+          send("error", {
+            code: "SYS_VALIDATION",
+            message_key: "errors.sys.validation",
+            trace_id: "",
+            retryable: false,
+          });
+          continue;
+        }
+        const seq = frame.payload.readUInt32BE(0);
+        if (seq !== recording.nextSeq) {
+          // A gap fails the note. Splicing across it would transcribe into a
+          // sentence nobody said, and no §9 validator can catch that — the
+          // fabrication is on the user's side of the turn.
+          recording = null;
+          send("error", {
+            code: "SYS_VALIDATION",
+            message_key: "errors.sys.validation",
+            trace_id: "",
+            retryable: false,
+          });
+          continue;
+        }
+        recording.nextSeq += 1;
+        recording.bytes += frame.payload.length - 8;
+        continue;
       }
       if (frame.opcode !== 0x1) continue;
 
@@ -272,6 +316,102 @@ server.on("upgrade", (req, socket) => {
 
         send("captions.final", { role: "tara", client_message_id: cid, turn }, event.seq);
         if (scenario.behaviour === "drop_after_reply") socket.destroy();
+        continue;
+      }
+
+      if (event.type === "vad.state") {
+        const cid = event.payload?.client_message_id;
+        const state = event.payload?.state;
+
+        if (state === "speech_start") {
+          if (!cid) {
+            send("error", {
+              code: "SYS_VALIDATION",
+              message_key: "errors.sys.validation",
+              trace_id: "",
+              retryable: false,
+            }, event.seq);
+            continue;
+          }
+          recording = { cid, nextSeq: 0, bytes: 0 };
+          continue;
+        }
+
+        if (state === "cancelled") {
+          // §28.3: discarded. Nothing transcribed, nothing stored, nothing sent.
+          recording = null;
+          continue;
+        }
+
+        if (state === "speech_end") {
+          const held = recording;
+          recording = null;
+          if (!held || held.bytes === 0) {
+            send("error", {
+              code: "SYS_VALIDATION",
+              message_key: "errors.sys.validation",
+              trace_id: "",
+              retryable: false,
+            }, event.seq);
+            continue;
+          }
+
+          for (const stage of scenario.voiceStages ?? ["transcription", "generation"]) {
+            send("presence.state", { state: presenceFor(stage), stage });
+          }
+
+          if (scenario.behaviour === "transcribe_fail") {
+            // §28.3's designed state: the transcript failed, the RECORDING did
+            // not. Carried on the user's own bubble, never as an error
+            // envelope — that would put a retry over a note that was recorded
+            // and stored successfully.
+            send("captions.final", {
+              role: "user",
+              client_message_id: held.cid,
+              text: "",
+              transcript_status: "failed",
+              playback_policy: "original_audio",
+              source_audio_asset_id: "6a70000000000000000000e1",
+              duration_ms: durationOf(held.bytes),
+              source_audio_expires_at: "2026-09-12T09:30:00+00:00",
+              quoted_message_id: null,
+            }, event.seq);
+            continue;
+          }
+
+          const ephemeral = scenario.behaviour === "ephemeral_audio";
+          send("captions.final", {
+            role: "user",
+            client_message_id: held.cid,
+            text: scenario.transcript ?? "Mera rahu kaal kab hai aaj?",
+            transcript_status: "ready",
+            // §33.1's ephemeral mode: nothing was stored, so the bubble
+            // promises no playback and shows the "voice input" marker.
+            playback_policy: ephemeral ? "transcript_only" : "original_audio",
+            source_audio_asset_id: ephemeral ? null : "6a70000000000000000000e1",
+            duration_ms: durationOf(held.bytes),
+            source_audio_expires_at: ephemeral ? null : "2026-09-12T09:30:00+00:00",
+            quoted_message_id: null,
+          }, event.seq);
+
+          const turn = turns.get(`${scenario.turn}.${scenario.locale}`);
+          if (!turn) continue;
+          send("captions.final", { role: "tara", client_message_id: held.cid, turn }, event.seq);
+
+          // §25.4's voice-note reply, AFTER her words — so the transcript the
+          // toggle shows is on screen before any audio plays.
+          if (scenario.behaviour !== "no_tts") {
+            send("tts.start", {
+              client_message_id: held.cid,
+              tts_audio_asset_id: "6a70000000000000000000e2",
+              sample_rate_hz: 16000,
+              voice_id: null,
+            });
+            send("tts.end", { client_message_id: held.cid, duration_ms: 3400 });
+          }
+          continue;
+        }
+
         continue;
       }
 

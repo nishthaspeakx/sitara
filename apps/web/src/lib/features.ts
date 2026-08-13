@@ -7,18 +7,26 @@
  */
 
 /**
- * §25.4's voice notes — dark until M9.
+ * §25.4's voice notes — LIVE since M9.
  *
- * `VoiceNoteBubble` and `VoiceBar` are in the §24.3 library with their full
- * state sets, `ChatBubble` has its audio variant wired, and none of it renders
- * in the composer or the thread. What is NOT built is the half that makes any
- * of it honest: §33.1's encrypted 30-day storage of the original recording, and
- * §25.4's rule that replay plays **the user's own audio and never a TTS
- * reconstruction**. Shipping a microphone button before that storage exists
- * would mean either losing the recording or quietly replacing it with
- * synthesis — and §25.4 names the second one as the thing not to do.
+ * The flag stays as a kill switch rather than being deleted: voice touches a
+ * microphone, a vendor and thirty days of stored audio, and an operator needs
+ * one lever that turns all three off without a deploy.
  *
- * M9 flips this after the audio path lands. `tests/ask-voice-dark.spec.ts`
- * asserts that nothing renders while it is false.
+ * What it used to gate, and what changed. Through M7–M8 this was false because
+ * §33.1's encrypted storage of the ORIGINAL recording did not exist, and
+ * without it §25.4's "replay plays the user's own audio, never a TTS
+ * reconstruction" could not be honoured — a mic button before that storage is a
+ * promise the app cannot keep. M9 built it: `voice_assets` under its own CSFLE
+ * key class, a 30-day expiry job that hard-deletes and tombstones, per-note
+ * delete, and §33.1's ephemeral mode that never writes at all.
+ *
+ * One correction worth recording here, because this file made the claim. The
+ * old comment cited `tests/ask-voice-dark.spec.ts` as asserting that nothing
+ * rendered while the flag was false. **That file never existed**, and
+ * `Composer.tsx` carried `{VOICE_NOTES_ENABLED ? null : null}` — a no-op that
+ * reads as a gate. The flag was documented as mechanically enforced and was
+ * not. `tests/ask-voice.spec.ts` is the real test, and it drives a recording
+ * against the real socket stub rather than asserting an absence.
  */
-export const VOICE_NOTES_ENABLED = false;
+export const VOICE_NOTES_ENABLED = true;

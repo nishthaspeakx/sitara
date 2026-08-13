@@ -66,7 +66,9 @@
       "no_sunrise_at_location": "I can't work out sunrise for that place on that date, so I can't give you accurate timings there."
     },
     "voice": {
-      "session_not_found": "That conversation isn't open any more. Start a new one and Tara will pick things up."
+      "session_not_found": "That conversation isn't open any more. Start a new one and Tara will pick things up.",
+      "provider_unavailable": "Voice notes aren't working just now. Typing always works — Tara's right here.",
+      "note_expired": "That recording has been deleted. What you said is still here."
     },
     "sys": {
       "validation": "Something in the request wasn't right. Please try again.",
@@ -360,7 +362,12 @@
       "error": "That didn't come through — try once more",
       "barge_in": "Stop and speak",
       "mic_denied": "Microphone is off. Typing always works too.",
-      "mic_help": "How to turn the microphone on"
+      "mic_help": "How to turn the microphone on",
+      "slide_to_cancel": "Slide to cancel",
+      "cancelled": "Cancelled — nothing was sent.",
+      "locked": "Recording. Tap to stop.",
+      "too_long": "That's as long as a voice note can be. Send it, or start again.",
+      "mic_help_body": "Your browser won't ask twice, so the microphone has to be turned back on in its settings — look for the site permissions for this page. Typing always works in the meantime."
     },
     "chat": {
       "open_trust": "Why Tara said “{text}”",
@@ -416,7 +423,12 @@
       "transcript_pending": "Writing this out…",
       "transcript_failed": "I couldn't write this one out — the audio still plays.",
       "expires_on": "This recording is kept until {date}, then deleted.",
-      "unavailable": "Today's audio didn't come through. Your brief is here to read."
+      "unavailable": "Today's audio didn't come through. Your brief is here to read.",
+      "voice_input": "Voice input",
+      "expired": "This recording has been deleted. The transcript stays.",
+      "delete_note": "Delete this recording",
+      "deleted": "Recording deleted.",
+      "transcript_toggle": "Show what Tara said"
     },
     "call": {
       "mute": "Mute",

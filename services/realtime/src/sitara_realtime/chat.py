@@ -35,10 +35,12 @@ So the answer waits, and `resume.offer` carries it.
 from __future__ import annotations
 
 import asyncio
+import base64
 import contextlib
 import json
 import logging
 import secrets
+import struct
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -46,12 +48,16 @@ from typing import Any
 import httpx
 from fastapi import WebSocket, WebSocketDisconnect
 from sitara_schemas import (
+    BINARY_HEADER_BYTES,
+    BINARY_SAMPLE_RATE_HZ,
     HEARTBEAT_INTERVAL_S,
+    MAX_NOTE_DURATION_MS,
     REAP_AFTER_SILENCE_S,
     RESUME_WINDOW_S,
     ControlEvent,
     ControlEventType,
     PresenceState,
+    VadState,
 )
 
 from sitara_realtime.config import Settings
@@ -66,6 +72,10 @@ logger = logging.getLogger(__name__)
 #: animates through every internal step; and a stage list that grows in M9
 #: must not start emitting presence changes nobody designed.
 STAGE_PRESENCE: dict[str, PresenceState] = {
+    # M9's first stage: the note has arrived and STT is running. §25.4 asks for
+    # "Tara is listening…" and this is the one moment in the product where that
+    # indicator is literally true.
+    "transcription": PresenceState.LISTENING,
     # She has the message and is working out what it needs.
     "safety_pre": PresenceState.LISTENING,
     "intent": PresenceState.LISTENING,
@@ -84,6 +94,62 @@ class PendingTurn:
     turn: dict[str, Any]
     client_message_id: str
     stored_at: float
+
+
+class FrameError(ValueError):
+    """A binary frame that cannot be trusted (§34.6). Maps to SYS_VALIDATION."""
+
+
+@dataclass
+class Recording:
+    """One held note, open between `vad.state: speech_start` and its close.
+
+    This class IS the rule that replaced "binary frames are refused until M9".
+    The replacement is narrower than "accepted": PCM is admissible only inside
+    a bracket, because the bracket is what binds a run of bytes to a
+    `client_message_id`, a locale and a consent posture. Bytes arriving with
+    none of those attached are audio nobody can account for — and §33.1 is a
+    section about being able to account for audio.
+
+    **A sequence gap fails the note.** Not a warning, not a best-effort splice:
+    a note missing its middle still transcribes, into a fluent sentence the
+    user never said, which then goes to §9 as their question and gets answered.
+    No downstream validator can catch that — §9 gates what TARA says, and this
+    fabrication is on the user's side of the turn. §28.3 already designs the
+    honest failure ("transcribe-fail → 'send as text?' original audio
+    preserved").
+    """
+
+    client_message_id: str
+    quoted_message_id: str | None = None
+    chunks: list[bytes] = field(default_factory=list)
+    next_seq: int = 0
+    byte_length: int = 0
+
+    def add(self, frame: bytes) -> None:
+        if len(frame) < BINARY_HEADER_BYTES:
+            raise FrameError("frame shorter than the §34.6 header")
+        seq, _flags = struct.unpack(">II", frame[:BINARY_HEADER_BYTES])
+        pcm = frame[BINARY_HEADER_BYTES:]
+        if len(pcm) % 2:
+            raise FrameError("frame payload is not a whole number of 16-bit samples")
+        if seq != self.next_seq:
+            raise FrameError(f"frame {seq} arrived where {self.next_seq} was expected")
+        self.next_seq += 1
+        self.chunks.append(pcm)
+        self.byte_length += len(pcm)
+        if self.byte_length > MAX_NOTE_BYTES:
+            raise FrameError("note exceeds the §34.6 duration cap")
+
+    def pcm(self) -> bytes:
+        return b"".join(self.chunks)
+
+
+#: 16 kHz mono s16le = 32 kB/s, so the schema's two-minute cap is ~3.8 MB —
+#: inside MongoDB's 16 MB document limit, which is where §33.1's CSFLE key
+#: class puts the bytes. Enforced here as well as on the client, because a
+#: client that ignores the cap is not a client this service controls.
+MAX_NOTE_BYTES = int(MAX_NOTE_DURATION_MS / 1000 * BINARY_SAMPLE_RATE_HZ * 2)
 
 
 @dataclass
@@ -230,6 +296,108 @@ class ChatSession:
         code, key = failed or ("SYS_INTERNAL", "errors.sys.internal")
         await self.send_error(code, key, ack=ack)
 
+    async def run_voice_note(self, recording: Recording, ack: int) -> None:
+        """A held note → `POST /v1/chat/ws/voice-note` → the §34.6 events.
+
+        This service still holds no pipeline, no model client, no STT and no
+        database: it forwards bytes and relays what comes back. §33.1's storage
+        and §9's validators both live on the other side of that call, which is
+        what keeps there from being a second copy of either.
+
+        The API answers in the same NDJSON shape `/ws/turn` uses, so the stage
+        frames drive the same presence mapping and there is still no field on
+        this stream that pre-validation text could travel in.
+        """
+        assert self._ws_session is not None
+        transcript: dict[str, Any] | None = None
+        turn: dict[str, Any] | None = None
+        tts: dict[str, Any] | None = None
+        failed: tuple[str, str] | None = None
+
+        try:
+            async with httpx.AsyncClient(
+                base_url=self._settings.api_base_url,
+                timeout=self._settings.api_timeout_seconds,
+            ) as client:
+                async with client.stream(
+                    "POST",
+                    "/v1/chat/ws/voice-note",
+                    json={
+                        # The socket speaks §34.6's binary frame; the API speaks
+                        # JSON. base64 is the boring bridge — an inner multipart
+                        # body would be a second wire format to keep in step for
+                        # no gain at a note's size.
+                        "audio_b64": base64.b64encode(recording.pcm()).decode(),
+                        "sample_rate_hz": BINARY_SAMPLE_RATE_HZ,
+                        "client_message_id": recording.client_message_id,
+                        "quoted_message_id": recording.quoted_message_id,
+                    },
+                    headers={
+                        "X-Sitara-Service-Key": self._settings.service_key or "",
+                        "X-Sitara-WS-Session": self._ws_session,
+                    },
+                ) as response:
+                    if response.status_code >= 400:
+                        failed = _envelope_from(await response.aread())
+                    else:
+                        async for line in response.aiter_lines():
+                            if not line.strip():
+                                continue
+                            frame = json.loads(line)
+                            if "stage" in frame:
+                                await self._presence_for(frame["stage"])
+                            elif "transcript" in frame:
+                                transcript = frame["transcript"]
+                            elif "turn" in frame:
+                                turn = frame["turn"]
+                            elif "tts" in frame:
+                                tts = frame["tts"]
+                            elif "error" in frame:
+                                failed = (
+                                    frame["error"]["code"],
+                                    frame["error"]["message_key"],
+                                )
+        except (httpx.HTTPError, json.JSONDecodeError):
+            logger.exception("voice-note call failed")
+            failed = ("SYS_UNAVAILABLE", "errors.sys.unavailable")
+
+        # The user's own bubble first, whatever happened next: the transcript
+        # (or its honest failure) belongs to a message they can already see.
+        if transcript is not None:
+            await self.send(
+                ControlEventType.CAPTIONS_FINAL,
+                {"role": "user", **transcript},
+                ack=ack,
+            )
+
+        if turn is not None:
+            if self._resume_token:
+                self._buffer.put(self._resume_token, turn, recording.client_message_id)
+            await self.send(
+                ControlEventType.CAPTIONS_FINAL,
+                {
+                    "role": "tara",
+                    "client_message_id": recording.client_message_id,
+                    "turn": turn,
+                },
+                ack=ack,
+            )
+            # §25.4's voice-note reply, announced AFTER her words have landed —
+            # so the transcript the toggle shows is on screen before any audio
+            # plays, and is the same validated text the audio was rendered from.
+            if tts is not None:
+                await self.send(ControlEventType.TTS_START, tts["start"])
+                await self.send(ControlEventType.TTS_END, tts["end"])
+            return
+
+        if transcript is not None and failed is None:
+            # Transcription failed but the recording survived (§28.3). That is
+            # a designed state carried on the user's bubble, not an error.
+            return
+
+        code, key = failed or ("SYS_INTERNAL", "errors.sys.internal")
+        await self.send_error(code, key, ack=ack)
+
     async def _presence_for(self, stage: str) -> None:
         state = STAGE_PRESENCE.get(stage)
         if state is None:
@@ -318,12 +486,17 @@ def _envelope_from(body: bytes) -> tuple[str, str]:
 
 
 async def chat_socket(ws: WebSocket, settings: Settings, buffer: ResumeBuffer) -> None:
-    """`WS /chat/session`. Binary frames are refused until M9."""
+    """`WS /chat/session`.
+
+    Binary frames are admissible only inside a `vad.state` bracket (M9); see
+    `Recording` for why that is narrower than "accepted" on purpose.
+    """
     await ws.accept()
     session = ChatSession(ws, settings, buffer)
     buffer.sweep()
     last_seen = time.monotonic()
     turn_task: asyncio.Task[None] | None = None
+    recording: Recording | None = None
 
     async def heartbeat() -> None:
         """§34.6: ping every 10s, reap at 30s of silence (§29.2).
@@ -346,10 +519,22 @@ async def chat_socket(ws: WebSocket, settings: Settings, buffer: ResumeBuffer) -
 
             if message["type"] == "websocket.disconnect":
                 break
-            if message.get("bytes") is not None:
-                # §33.1 is a storage question and M9 is where it gets answered.
-                # A socket that quietly accepts PCM has opened it early.
-                await session.send_error("SYS_VALIDATION", "errors.sys.validation")
+            frame = message.get("bytes")
+            if frame is not None:
+                # Outside a bracket this is still exactly what it was before
+                # M9: audio nobody asked for and nobody can account for.
+                if recording is None or not session.started:
+                    await session.send_error("SYS_VALIDATION", "errors.sys.validation")
+                    continue
+                try:
+                    recording.add(frame)
+                except FrameError as exc:
+                    # The note dies here rather than being spliced. Dropping
+                    # the bracket too means the client cannot "continue" into a
+                    # note that already lost its middle.
+                    logger.info("voice note failed: %s", exc)
+                    recording = None
+                    await session.send_error("SYS_VALIDATION", "errors.sys.validation")
                 continue
 
             raw = message.get("text")
@@ -401,9 +586,56 @@ async def chat_socket(ws: WebSocket, settings: Settings, buffer: ResumeBuffer) -
                 )
                 continue
 
-            # Every other member of the closed set belongs to voice (M9). It is
-            # not an error for a client to send one; it is simply not answered
-            # yet, and saying so is more useful than silence.
+            if event.type is ControlEventType.VAD_STATE:
+                payload = event.payload
+                state = payload.get("state")
+                client_message_id = str(payload.get("client_message_id") or "")
+
+                if state == VadState.SPEECH_START.value:
+                    if not client_message_id:
+                        # Without it the PCM about to arrive belongs to no
+                        # bubble, and the transcript would appear from nowhere.
+                        await session.send_error(
+                            "SYS_VALIDATION", "errors.sys.validation", ack=event.seq
+                        )
+                        continue
+                    recording = Recording(
+                        client_message_id=client_message_id,
+                        quoted_message_id=payload.get("quoted_message_id"),
+                    )
+                    continue
+
+                if state == VadState.CANCELLED.value:
+                    # §28.3's cancel-slide: discard. Never transcribed, never
+                    # stored, never sent anywhere — the bytes just stop existing.
+                    recording = None
+                    continue
+
+                if state == VadState.SPEECH_END.value:
+                    held, recording = recording, None
+                    if held is None or not held.chunks:
+                        await session.send_error(
+                            "SYS_VALIDATION", "errors.sys.validation", ack=event.seq
+                        )
+                        continue
+                    if turn_task is not None and not turn_task.done():
+                        await session.send_error(
+                            "SYS_RATE_LIMITED", "errors.sys.rate_limited", ack=event.seq
+                        )
+                        continue
+                    turn_task = asyncio.create_task(
+                        session.run_voice_note(held, event.seq)
+                    )
+                    continue
+
+                await session.send_error(
+                    "SYS_VALIDATION", "errors.sys.validation", ack=event.seq
+                )
+                continue
+
+            # Every remaining member of the closed set belongs to live calls
+            # (§25.3, M10). It is not an error for a client to send one; it is
+            # simply not answered yet, and saying so is more useful than silence.
             logger.info("control event not handled by the text chat", extra={"type": event.type})
     except WebSocketDisconnect:
         pass
