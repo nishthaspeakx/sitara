@@ -123,7 +123,13 @@ export type SocketBehaviour =
   | "drop_before_reply"
   | "drop_after_reply"
   | "handoff"
-  | "error";
+  | "error"
+  /** §28.3 — STT failed, the recording survived. Not an error envelope. */
+  | "transcribe_fail"
+  /** §33.1's ephemeral mode — transcript only, nothing stored, no playback. */
+  | "ephemeral_audio"
+  /** She answers in text: a TTS outage degrades the bubble (§8, §30.1). */
+  | "no_tts";
 
 /**
  * Configure the REAL socket server for this client.
@@ -140,6 +146,10 @@ export async function setupSocket(
     locale?: string;
     behaviour?: SocketBehaviour;
     stages?: string[];
+    /** §9 stages for a VOICE turn; `transcription` is M9's first (§25.4). */
+    voiceStages?: string[];
+    /** What STT returns. Recorded transcripts, never invented ones. */
+    transcript?: string;
     pending?: string;
     code?: string;
     message_key?: string;
@@ -154,6 +164,8 @@ export async function setupSocket(
       locale: options.locale ?? "en",
       behaviour: options.behaviour ?? "reply",
       stages: options.stages ?? ["safety_pre", "memory_retrieval", "generation"],
+      voiceStages: options.voiceStages ?? ["transcription", "generation"],
+      transcript: options.transcript,
       pending: options.pending,
       code: options.code,
       message_key: options.message_key,

@@ -22,8 +22,10 @@
 import { useTranslations } from "next-intl";
 import type { ChatCitation, ChatTurn } from "@sitara/schemas";
 
-import { ChatBubble, ConfidenceChip, type CitedSpan } from "@/components/ui";
+import { ChatBubble, ConfidenceChip, VoiceNoteBubble, type CitedSpan } from "@/components/ui";
 import type { Message } from "@/lib/chat-thread";
+import { voiceNoteAudioUrl } from "@/lib/api";
+import { formatDuration } from "@/lib/voice-note";
 
 /** Split a turn's text into plain runs and cited spans, in order. */
 export function contentParts(turn: ChatTurn): Array<string | CitedSpan> {
@@ -60,13 +62,49 @@ export function MessageBubble({
   if (message.kind === "user") {
     return (
       <div className="flex flex-col items-end gap-1">
-        <ChatBubble
-          author="user"
-          content={[message.text]}
-          timestamp={timestamp}
-          failed={message.delivery === "failed"}
-          onRetry={onRetry}
-        />
+        {message.voice ? (
+          // §25.4/§33.1, and the single most important wiring decision in this
+          // file: `src` is the ORIGINAL recording, addressed by
+          // `source_audio_asset_id`. It is NEVER `tts_audio_asset_id` — there
+          // is no field on a `UserMessage` that could carry one, which is how
+          // "replay plays the user's own audio, never a TTS reconstruction"
+          // stops depending on whoever writes this line next.
+          //
+          // `playbackPolicy` is SERVED, never inferred. A client deciding for
+          // itself whether a recording exists would guess wrong in exactly the
+          // two interesting cases — the ephemeral account and the note whose
+          // thirty days are up — and would draw a play control over nothing.
+          <div className="max-w-reading rounded-bubble rounded-ee-sm bg-surface-sunken px-3 py-2">
+            <VoiceNoteBubble
+              mode="idle"
+              duration={formatDuration(message.voice.durationMs)}
+              transcriptStatus={message.voice.transcriptStatus}
+              transcript={message.text || undefined}
+              src={
+                message.voice.playbackPolicy === "original_audio" && message.voice.assetId
+                  ? voiceNoteAudioUrl(message.voice.assetId)
+                  : undefined
+              }
+              // §33.1: the bubble "honestly drops playback of expired/deleted
+              // audio and shows the transcript with a 'voice input' marker".
+              markerKey={
+                message.voice.playbackPolicy === "transcript_only"
+                  ? "ui.audio.voice_input"
+                  : undefined
+              }
+              expiresOn={message.voice.expiresAt ?? undefined}
+            />
+            <span className="block pt-1 text-caption text-ink-muted">{timestamp}</span>
+          </div>
+        ) : (
+          <ChatBubble
+            author="user"
+            content={[message.text]}
+            timestamp={timestamp}
+            failed={message.delivery === "failed"}
+            onRetry={onRetry}
+          />
+        )}
         {/* §25.4: a single ✓ confirms delivery to Tara, nothing more. There
             are no read receipts and no second tick — the state set has no
             member that could render one. */}

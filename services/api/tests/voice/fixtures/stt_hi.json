@@ -1,0 +1,14 @@
+{
+  "$comment": "RECORDED from the live Cartesia API — do not hand-edit. Re-record with `CARTESIA_API_KEY=... uv run python -m tests.voice.record`.",
+  "$reference": "मेरा राहु काल आज कब है, और क्या मुझे सोमवार को नया काम शुरू करना चाहिए?",
+  "$why": "Devanagari in, Devanagari out; carries two §3.4 astrology terms",
+  "locale": "hi",
+  "stt_language_sent": "hi",
+  "response": {
+    "type": "transcript",
+    "is_final": true,
+    "language": "hi",
+    "duration": 4.72,
+    "text": "मेरा राहुकाल आज कब है और क्या मुझे सोमवार को नया काम शुरू करना चाहिए?"
+  }
+}

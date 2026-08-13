@@ -153,7 +153,7 @@ export default defineConfig({
     {
       name: "library",
       testMatch:
-        /library\.spec\.ts|tara-disclosure\.spec\.ts|dist-dirs\.spec\.ts|api-routing\.spec\.ts|today-variant\.spec\.ts|today-fixtures\.spec\.ts|chat-thread\.spec\.ts/,
+        /library\.spec\.ts|tara-disclosure\.spec\.ts|dist-dirs\.spec\.ts|api-routing\.spec\.ts|today-variant\.spec\.ts|today-fixtures\.spec\.ts|chat-thread\.spec\.ts|voice-note\.spec\.ts/,
     },
     {
       name: "components",

@@ -1,4 +1,4 @@
-# Sitara — build rules (spec = docs/spec/SPEC.md, FROZEN v3.8)
+# Sitara — build rules (spec = docs/spec/SPEC.md, FROZEN v3.9)
 NEVER change a frozen decision. If a task seems to require it, STOP and say so.
 
 ## Non-negotiables (spec §)
@@ -8,7 +8,7 @@ NEVER change a frozen decision. If a task seems to require it, STOP and say so.
 - Locales: en, hi-Latn (Hinglish), hi first; string keys never hardcoded in components
 - Error envelope: {code, message_key, trace_id, retryable}; codes namespaced AUTH_/ASTRO_/VOICE_/PAY_/SAFE_/SYS_ (§34.4)
 - Auth: Firebase ID token → POST /auth/session once → httpOnly cookies; Firebase UID=auth id, Mongo _id=product id, auth_identities maps them (§33.2, §34.5)
-- Voice notes: original audio stored encrypted 30d default; call audio NEVER stored (§33.1)
+- Voice notes: original audio stored encrypted 30d default under its OWN CSFLE key class, in Mongo (§33.1 names the mechanism); call audio NEVER stored. Expiry is a JOB that hard-deletes and leaves a `deleted_at` tombstone — never a TTL index, which would delete the tombstone too (§36.2, CC-009). Replay plays the user's ORIGINAL bytes; `playback_policy: synthesised` is refused on a user message at the storage boundary (§25.4)
 - messages fields: source_audio_asset_id, tts_audio_asset_id, transcript_status, source_audio_expires_at, source_audio_deleted_at, playback_policy (§6.4)
 - WS protocol: binary=16kHz PCM w/ 8-byte header; JSON control events, closed type set (§34.6); schema lives in packages/schemas
 - 17 morning modules enum (§7.1/§34.3) — ranking engine emits ONLY these IDs
@@ -28,4 +28,6 @@ NEVER change a frozen decision. If a task seems to require it, STOP and say so.
 - Python 3.12, FastAPI, Pydantic v2, uv, pytest; TS strict, Next.js 15 App Router, next-intl, Zustand+TanStack Query
 - Tests first for engine/pipeline code; golden-set tests are release-blocking CI
 - Conventional commits; one short-lived branch per milestone (`feat/m5-memory`), merged to main as soon as its shipcheck is green; never commit .env
+- **Voice providers sit behind `sitara_api.voice.providers` and are chosen by configuration (§3.2).** Cartesia (Sonic TTS, Ink STT) is the first implementation and M9's default per CC-009; Sarvam stays declared as the Indic STT comparison arm. **§3.2's eight-measure acceptance gate is FINAL and NOT MET** — no bake-off has run, so nothing may describe Cartesia as a shipped primary.
+- **A locale is not a language code.** `hi-Latn` IS Hinglish (Latin script), and `locale.split("-")[0]` sends it to `hi`, which fills every Hinglish thread with Devanagari while every accuracy metric stays green. The map is declared data in `voice/providers/base.py`, differs between STT and TTS at exactly that locale, and an unmapped locale DECLINES (§2.4).
 - When unsure, read docs/spec/SPEC.md section cited in the task — do not invent

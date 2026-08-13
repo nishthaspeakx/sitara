@@ -18,7 +18,7 @@ export type ConfidenceState = (typeof CONFIDENCE_STATES)[number];
 // ---------------------------------------------------------------------------
 // SPEC §6.3 / §34.4 — namespaced error codes + the ONE canonical envelope.
 // ---------------------------------------------------------------------------
-export const ERROR_CODES = ["AUTH_INVALID_TOKEN", "AUTH_SESSION_EXPIRED", "AUTH_FORBIDDEN", "AUTH_UNDERAGE", "AUTH_OTP_THROTTLED", "AUTH_PROVIDER_CONFLICT", "ASTRO_INSUFFICIENT_BIRTH_DATA", "ASTRO_PLACE_UNRESOLVED", "ASTRO_ENGINE_UNAVAILABLE", "ASTRO_PROVIDER_DISPUTED", "ASTRO_NAME_UNCONFIRMED", "ASTRO_NAME_INVALID", "VOICE_PROVIDER_UNAVAILABLE", "VOICE_MINUTES_EXHAUSTED", "VOICE_SESSION_NOT_FOUND", "PAY_PAYMENT_REQUIRED", "PAY_WEBHOOK_DUPLICATE", "PAY_PROVIDER_ERROR", "SAFE_CONTENT_BLOCKED", "SAFE_REVIEW_PENDING", "SYS_VALIDATION", "SYS_RATE_LIMITED", "SYS_IDEMPOTENCY_CONFLICT", "SYS_INTERNAL", "SYS_UNAVAILABLE"] as const;
+export const ERROR_CODES = ["AUTH_INVALID_TOKEN", "AUTH_SESSION_EXPIRED", "AUTH_FORBIDDEN", "AUTH_UNDERAGE", "AUTH_OTP_THROTTLED", "AUTH_PROVIDER_CONFLICT", "ASTRO_INSUFFICIENT_BIRTH_DATA", "ASTRO_PLACE_UNRESOLVED", "ASTRO_ENGINE_UNAVAILABLE", "ASTRO_PROVIDER_DISPUTED", "ASTRO_NAME_UNCONFIRMED", "ASTRO_NAME_INVALID", "VOICE_PROVIDER_UNAVAILABLE", "VOICE_MINUTES_EXHAUSTED", "VOICE_SESSION_NOT_FOUND", "VOICE_NOTE_EXPIRED", "PAY_PAYMENT_REQUIRED", "PAY_WEBHOOK_DUPLICATE", "PAY_PROVIDER_ERROR", "SAFE_CONTENT_BLOCKED", "SAFE_REVIEW_PENDING", "SYS_VALIDATION", "SYS_RATE_LIMITED", "SYS_IDEMPOTENCY_CONFLICT", "SYS_INTERNAL", "SYS_UNAVAILABLE"] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];
 
 export const ERROR_HTTP_STATUS: Record<ErrorCode, number> = {
@@ -37,6 +37,7 @@ export const ERROR_HTTP_STATUS: Record<ErrorCode, number> = {
   VOICE_PROVIDER_UNAVAILABLE: 503,
   VOICE_MINUTES_EXHAUSTED: 402,
   VOICE_SESSION_NOT_FOUND: 404,
+  VOICE_NOTE_EXPIRED: 410,
   PAY_PAYMENT_REQUIRED: 402,
   PAY_WEBHOOK_DUPLICATE: 409,
   PAY_PROVIDER_ERROR: 502,
@@ -65,6 +66,7 @@ export const ERROR_DEFAULT_RETRYABLE: Record<ErrorCode, boolean> = {
   VOICE_PROVIDER_UNAVAILABLE: true,
   VOICE_MINUTES_EXHAUSTED: false,
   VOICE_SESSION_NOT_FOUND: false,
+  VOICE_NOTE_EXPIRED: false,
   PAY_PAYMENT_REQUIRED: false,
   PAY_WEBHOOK_DUPLICATE: false,
   PAY_PROVIDER_ERROR: true,
@@ -215,8 +217,33 @@ export interface ChatTurn {
 }
 
 // ---------------------------------------------------------------------------
-// SPEC §34.6 — control-event payloads, the TEXT-chat subset only. The voice
-// members stay untyped until M9 builds the thing that emits them.
+// SPEC §33.1 / §6.4 / §25.4 — the vocabulary of a voice note.
+// `playback_policy` is what makes §25.4's promise checkable: replay plays the
+// user's ORIGINAL recording, and `synthesised` — the one member under which
+// audio is a reconstruction — is never valid on a user message.
+// ---------------------------------------------------------------------------
+/** §6.4's `messages.transcript_status`, one of §33.1's six explicit fields. `not_applicable` is a TYPED message — the field is required on every message row, so text needs a member that says 'this was never spoken' rather than a null that reads as 'transcription is still coming'. §28.3's failure row is `failed`: 'transcribe-fail → send as text? original audio preserved' — the audio survives a failed transcript, which is why this is a status and not a delete trigger. */
+export const TRANSCRIPT_STATUSES = ["not_applicable", "pending", "ready", "failed"] as const;
+export type TranscriptStatus = (typeof TRANSCRIPT_STATUSES)[number];
+
+/** §6.4's `messages.playback_policy`, and the field §25.4's central promise rests on: 'replay plays the user's ORIGINAL recording per the §33.1 storage policy, never a TTS reconstruction'. That sentence is only enforceable if a bubble can tell the three cases apart, which is what this enum is for. `synthesised` is the ONLY member under which audio is a reconstruction, and §25.4 makes it illegal on a user message — a rule the store enforces structurally rather than by review. */
+export const PLAYBACK_POLICIES = ["text_only", "original_audio", "transcript_only", "synthesised"] as const;
+export type PlaybackPolicy = (typeof PLAYBACK_POLICIES)[number];
+
+/** §34.6's `vad.state` payload. In M9 this brackets a HELD recording rather than reporting server-side voice activity detection — §25.4's grammar is hold-to-record or tap-lock, so the client knows when speech starts and stops because the user's finger says so. M10's live calls add the server-VAD sense of the same member (§25.3's barge-in ducking); the members below are chosen so that addition is a widening, not a rename. */
+export const VAD_STATES = ["speech_start", "speech_end", "cancelled"] as const;
+export type VadState = (typeof VAD_STATES)[number];
+
+/** §33.1 — 'the original recording is stored encrypted for 30 days BY DEFAULT'. Default, so a user setting may shorten it; the expiry job reads the per-note `source_audio_expires_at` rather than this constant, which exists so both sides can render the same promise in the same words. */
+export const SOURCE_AUDIO_RETENTION_DAYS = 30 as const;
+
+/** A cap, not a spec value. §34.6's frame is 16kHz mono s16le = 32 kB/s, so two minutes is ~3.8 MB — comfortably inside MongoDB's 16 MB document limit, which is where §33.1's CSFLE key class puts the bytes. The client stops recording here rather than letting a pocket-dial write a document that cannot be stored. */
+export const MAX_NOTE_DURATION_MS = 120000 as const;
+
+// ---------------------------------------------------------------------------
+// SPEC §34.6 — control-event payloads: the text chat (S18) and voice notes
+// (M9). `barge_in` and `entitlement.warning` stay untyped — they belong to
+// live calls, which §33.5 gates and M10 owns.
 // ---------------------------------------------------------------------------
 /** Client → server. The ticket is single-use and 60-second; §34.5's session cookies are httpOnly and first-party, and a WebSocket handshake to another origin does not carry them. */
 export interface SessionStartPayload {
@@ -233,12 +260,52 @@ export interface SessionReadyPayload {
   conversation_id: string;
 }
 
-/** Client → server, on `captions.final`. Discriminated from the Tara direction by `role`. */
+/** Client → server on `captions.final` when typed; server → client on the same member when the turn was SPOKEN and STT has finalised it. One shape for both because §34.6's whole premise is that a typed message and a transcribed one are the same event — the difference is which of the three §33.1 fields below are populated, not which member carries it. On a typed message they are `not_applicable` / `text_only` / null, which is exactly what the store already writes. */
 export interface UserTurnPayload {
   role: ChatRole;
   text: string;
   client_message_id: string;
   quoted_message_id: string | null;
+  transcript_status: TranscriptStatus;
+  playback_policy: PlaybackPolicy;
+  source_audio_asset_id: string | null;
+  duration_ms: number | null;
+  source_audio_expires_at: string | null;
+}
+
+/** Server → client, on `captions.partial`. `role` is the CONSTANT "user" and not a ChatRole, which is the whole point of the shape: §9 runs grounding, language-quality and safety-post after generation, so a partial caption of TARA's words would be pre-validation text racing three validators to the screen. Through M8 that was guaranteed by nobody writing the frame. Now the frame exists, for the user's own speech, and the guarantee is that there is no value of `role` here that could carry hers. */
+export interface PartialCaptionPayload {
+  role: "user";
+  text: string;
+  client_message_id: string;
+}
+
+/** Client → server, on `vad.state`. Brackets a held recording. `client_message_id` is minted before the first PCM byte leaves, so every binary frame in the bracket already belongs to a bubble the thread is drawing — the transcript lands in a message that exists rather than appearing from nowhere when STT returns. */
+export interface VadStatePayload {
+  state: VadState;
+  client_message_id: string;
+  quoted_message_id: string | null;
+}
+
+/** Server → client, on `tts.start`. §25.4: 'Tara's replies arrive as voice-note bubbles rendered from her TTS with transcript toggle'. Emitted after her `captions.final`, so the transcript the toggle shows is on screen before any audio plays — and is the same validated text the audio was rendered from, not a second generation. */
+export interface TtsStartPayload {
+  client_message_id: string;
+  tts_audio_asset_id: string;
+  sample_rate_hz: number;
+  voice_id: string | null;
+}
+
+/** Server → client, on `tts.chunk_meta`. §13 — shapes, never content. There is deliberately no text field: the words already crossed on `captions.final`, and a second copy travelling beside the audio is a second thing to keep in step with the validators. */
+export interface TtsChunkMetaPayload {
+  client_message_id: string;
+  seq: number;
+  byte_length: number;
+}
+
+/** Server → client, on `tts.end`. Total duration for the bubble's scrubber, and the signal that no further chunk meta is coming. */
+export interface TtsEndPayload {
+  client_message_id: string;
+  duration_ms: number;
 }
 
 /** Server → client, on `captions.final`. Carries the whole validated turn and nothing else — there is no field here for text that has not been through §9's validators. */

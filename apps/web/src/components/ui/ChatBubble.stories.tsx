@@ -47,6 +47,7 @@ export const AllStates: Story = {
           timestamp="07:05"
           audio={
             <VoiceNoteBubble
+              src={"data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YQAAAAA="}
               mode="idle"
               duration="0:12"
               speed={1}
@@ -61,6 +62,7 @@ export const AllStates: Story = {
           timestamp="07:05"
           audio={
             <VoiceNoteBubble
+              src={"data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YQAAAAA="}
               mode="idle"
               duration="0:08"
               speed={1}

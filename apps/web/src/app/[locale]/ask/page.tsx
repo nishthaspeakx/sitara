@@ -23,6 +23,7 @@ import { useRouter } from "@/i18n/navigation";
 import { apiCall } from "@/lib/api";
 import { ChatSocket } from "@/lib/chat-socket";
 import { EMPTY_THREAD, threadReducer } from "@/lib/chat-thread";
+import { useVoiceNote } from "@/lib/use-voice-note";
 
 /**
  * One conversation per browser session, so a reload continues the thread the
@@ -131,6 +132,19 @@ export default function AskPage() {
     [thread.messages, sendOverHttp],
   );
 
+  /**
+   * §25.4's voice note. The bubble is created HERE, at `speech_start`, so every
+   * PCM frame already belongs to a message the thread is drawing — the
+   * transcript then fills a bubble that exists instead of appearing from
+   * nowhere seconds later on `captions.final`.
+   */
+  const voice = useVoiceNote({
+    socket,
+    mintId: clientMessageId,
+    onSpeak: (id, durationMs, quoted) =>
+      dispatch({ type: "speak", id, at: Date.now(), durationMs, quotedId: quoted }),
+  });
+
   const acceptMemory = useCallback(
     (offer: MemoryChipOffer, summary: string) => {
       // §32.4: the chip IS the consent, and the record travels with the write —
@@ -158,6 +172,7 @@ export default function AskPage() {
       onGetHelp={() => router.push("/you/help")}
       onAcceptMemory={acceptMemory}
       onDeclineMemory={() => {}}
+      voice={voice}
     />
   );
 }

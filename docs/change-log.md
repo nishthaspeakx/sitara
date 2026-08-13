@@ -776,3 +776,67 @@ city anyone chose.
 **Residual risk.** The density control §28.2 calls "user-tunable in settings" is
 unbuilt: density is read from `profiles.density` (set at S09), and the dev
 switcher is what exercises LOW and HIGH.
+
+---
+
+## CL-015 — A term with a space has more than one spelling
+
+**Found:** M9 voice notes, from the live Cartesia round-trip. **Fixed in:**
+`chat_orchestration/grounding.py`. **No spec change** — §5.3's cite-or-die rule
+is unaltered; this is a defect in the lexicon that implements it.
+
+**The hole.** Every multi-word strong term in `policy/claim_terms.json` was
+listed in exactly one spelling. Closing a single space walked a claim straight
+past the grounding validator, in all three locales:
+
+```
+en        Rahu kaal today runs from 3:00 PM to 4:30 PM.   → REJECTED
+en        Rahukaal today runs from 3:00 PM to 4:30 PM.    → PASSED UNCITED
+hi-Latn   Aaj rahu kaal 3:00 se 4:30 tak hai.             → REJECTED
+hi-Latn   Aaj Rahukaal 3:00 se 4:30 tak hai.              → PASSED UNCITED
+hi        आज राहु काल 3:00 से 4:30 तक है।                    → REJECTED
+hi        आज राहुकाल 3:00 से 4:30 तक है।                     → PASSED UNCITED
+```
+
+An uncited timing claim, with real clock values in it, on a surface §30.2 says
+must name the place it was computed for. `rahu kaal` was not the only one:
+`sun sign`/`sunsign`, `moon sign`/`moonsign`, `rising sign`/`risingsign` and
+`चंद्र राशि`/`चंद्रराशि` were all in the same state — five terms in `en`, two
+in each of `hi` and `hi-Latn`, and none of their compound forms in the net.
+
+**How it surfaced, and why that is misleading.** Cartesia Ink transcribes
+spoken "rahu kaal" as "Rahukaal", which is what drew attention to the pair. But
+the hole was never about STT: grounding validates what TARA says, not what the
+user says, and a transcript never reaches it. Tara writes these words herself,
+both spellings are ordinary English and ordinary Hinglish, and the validator
+knew one of them. The defect predates M9 by every milestone that had a
+validator.
+
+**The tell that it would spread.** `celestial_compounds` — a different block in
+the same file — already carried `राहुकाल` and `rahukaal` for `hi` and `hi-Latn`
+and *not* for `en`. Someone had met this once, patched the two locales in front
+of them, and moved on. That is what a hand-maintained list looks like shortly
+before it goes wrong somewhere else.
+
+**The fix is derived, not enumerated.** `_separator_variants` expands every
+multi-word term into its spaced, joined and hyphenated spellings inside
+`_alternation`, which every term set already flows through — so the strong set,
+the weak set and `celestial_compounds` are all covered, and a term added to the
+JSON tomorrow is covered without anyone remembering this entry exists. Widening
+a matcher can only make it fire on more text, and a surface like `themoon` is
+one no sentence contains, so the variants cost nothing where they do not apply.
+
+The celestial *surface map* (`_celestial_map`) is deliberately NOT expanded: its
+pattern and its lookup table must stay in step, and a check confirms no
+celestial surface is multi-word — grahas, rashis and nakshatras are single
+words in all three scripts.
+
+**Tests.** `test_a_compound_spelling_does_not_walk_past_cite_or_die` pins the
+seven observed cases. `test_the_spaced_and_compound_spellings_are_treated_identically`
+is the property behind them: for every multi-word term the lexicon carries, both
+spellings must reach the same verdict — so a future term with a space cannot
+reintroduce the gap quietly.
+
+**Residual risk.** Other separator conventions are not covered: a term written
+with an underscore, or split across a line break, still misses. Neither appears
+in a rendered reply, which is the only text this validator sees.

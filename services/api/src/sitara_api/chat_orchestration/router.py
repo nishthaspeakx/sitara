@@ -22,10 +22,13 @@ three layers server-side there is nothing the snapshots were for, and
 from __future__ import annotations
 
 import asyncio
+import base64
+import binascii
 import datetime as dt
 import json
 import logging
 from collections.abc import AsyncIterator, Callable
+from typing import Any
 
 from fastapi import APIRouter, Header, Request
 from fastapi.responses import StreamingResponse
@@ -90,6 +93,20 @@ class RedeemResponse(BaseModel):
 
 class WsTurnPayload(BaseModel):
     text: str = Field(min_length=1, max_length=4000)
+    quoted_message_id: str | None = Field(default=None, max_length=64)
+
+
+class WsVoiceNotePayload(BaseModel):
+    """One held recording, from `sitara-realtime` (§33.1, §34.6).
+
+    base64 rather than multipart: the socket speaks §34.6's binary frame and
+    this hop speaks JSON, and at a note's size an inner multipart body would be
+    a second wire format to keep in step for no gain.
+    """
+
+    audio_b64: str = Field(min_length=1)
+    sample_rate_hz: int = Field(ge=8_000, le=48_000)
+    client_message_id: str = Field(min_length=1, max_length=64)
     quoted_message_id: str | None = Field(default=None, max_length=64)
 
 
@@ -332,3 +349,192 @@ async def chat_ws_turn(
         yield json.dumps({"turn": turn.model_dump(mode="json")}).encode() + b"\n"
 
     return StreamingResponse(body(), media_type="application/x-ndjson")
+
+
+@router.post("/ws/voice-note")
+async def chat_ws_voice_note(
+    payload: WsVoiceNotePayload,
+    request: Request,
+    service_key: str | None = Header(default=None, alias="X-Sitara-Service-Key"),
+    ws_session: str | None = Header(default=None, alias="X-Sitara-WS-Session"),
+) -> StreamingResponse:
+    """§25.4's voice note, over the SAME §9 pipeline the keyboard uses.
+
+    NDJSON like `/ws/turn`, with two extra line kinds: `{"transcript": …}` for
+    the user's own bubble and `{"tts": …}` for §25.4's voice-note reply. The
+    stage frames are unchanged, so `sitara-realtime` maps them onto the same
+    presence events and there is still no field on this stream that
+    pre-validation text could travel in.
+
+    Everything that makes this honest happens in `voice.service`, deliberately:
+    the storage-before-transcription order (§28.3), the ephemeral mode that
+    never writes at all (§33.1), and the rule that synthesis only ever sees the
+    presented turn text. A router that re-implemented any of it would be a
+    second place for those to be true.
+    """
+    require_service_key(service_key, request.app.state.settings.service_key)
+    if not ws_session:
+        raise ApiError(ErrorCode.AUTH_FORBIDDEN, "errors.auth.forbidden")
+    grant = await _tickets(request).resolve_session(ws_session)
+
+    service = getattr(request.app.state, "voice_notes", None)
+    if service is None:
+        # A blank CARTESIA_API_KEY is "provider down", not a boot failure —
+        # the same rule `build_pipeline` follows for ANTHROPIC_API_KEY.
+        raise ApiError(ErrorCode.VOICE_PROVIDER_UNAVAILABLE, "errors.voice.provider_unavailable")
+
+    try:
+        audio = base64.b64decode(payload.audio_b64, validate=True)
+    except (ValueError, binascii.Error):
+        raise ApiError(ErrorCode.SYS_VALIDATION, "errors.sys.validation") from None
+
+    stages: asyncio.Queue[str | None] = asyncio.Queue()
+    stages.put_nowait("transcription")  # §25.4's "Tara is listening…", truthfully
+
+    def on_stage(stage: Stage) -> None:
+        stages.put_nowait(stage.value)
+
+    async def body() -> AsyncIterator[bytes]:
+        task = asyncio.create_task(
+            _run_voice_note(
+                request,
+                service=service,
+                grant=grant,
+                audio=audio,
+                payload=payload,
+                on_stage=on_stage,
+            )
+        )
+        task.add_done_callback(lambda _: stages.put_nowait(None))
+
+        while True:
+            stage = await stages.get()
+            if stage is None:
+                break
+            yield json.dumps({"stage": stage}).encode() + b"\n"
+
+        try:
+            result = await task
+        except ApiError as exc:
+            yield (
+                json.dumps(
+                    {"error": {"code": exc.code.value, "message_key": exc.message_key}}
+                ).encode()
+                + b"\n"
+            )
+            return
+        except Exception:
+            logger.exception("voice note failed", extra={"conversation": grant.conversation_id})
+            yield (
+                json.dumps(
+                    {
+                        "error": {
+                            "code": ErrorCode.SYS_INTERNAL.value,
+                            "message_key": "errors.sys.internal",
+                        }
+                    }
+                ).encode()
+                + b"\n"
+            )
+            return
+
+        # The user's bubble first — it exists whether or not §9 ever ran.
+        yield json.dumps({"transcript": _transcript_frame(payload, result)}).encode() + b"\n"
+
+        if result.turn is not None:
+            turn = present_turn(result.turn)
+            yield json.dumps({"turn": turn.model_dump(mode="json")}).encode() + b"\n"
+            if result.tts_audio_asset_id is not None:
+                yield (
+                    json.dumps({"tts": _tts_frames(payload, result)}).encode() + b"\n"
+                )
+
+    return StreamingResponse(body(), media_type="application/x-ndjson")
+
+
+async def _run_voice_note(
+    request: Request,
+    *,
+    service: Any,
+    grant: Any,
+    audio: bytes,
+    payload: WsVoiceNotePayload,
+    on_stage: Callable[[Stage], None],
+):
+    """The one call. `profile` comes from the same facade the typed path uses
+    (§5.3, §13) — a voice turn that skipped it would answer chart questions
+    with an all-False BirthProfile, which is the live defect M8-P10 fixed."""
+    from sitara_api.voice.service import VoiceNoteRequest
+
+    profile = await _birth_profile(request, grant.user_id)
+    return await service.handle(
+        VoiceNoteRequest(
+            user_id=grant.user_id,
+            conversation_id=grant.conversation_id,
+            audio=audio,
+            sample_rate_hz=payload.sample_rate_hz,
+            locale=grant.locale,
+            client_message_id=payload.client_message_id,
+            now=dt.datetime.now(dt.UTC),
+            profile=profile,
+            quoted_message_id=payload.quoted_message_id,
+            delete_after_transcription=await _ephemeral_audio(request, grant.user_id),
+        ),
+        on_stage=on_stage,
+    )
+
+
+async def _ephemeral_audio(request: Request, user_id: str) -> bool:
+    """§33.1's "delete my audio after transcription" account setting.
+
+    Fails CLOSED, toward privacy: if the profile cannot be read we assume the
+    user asked for ephemeral mode. The cost of being wrong that way is a note
+    the user could not replay; the other way it is a recording they asked us
+    not to keep.
+    """
+    profiles = getattr(request.app.state, "profiles", None)
+    if profiles is None:
+        return True
+    try:
+        return bool(await profiles.delete_audio_after_transcription(user_id))
+    except Exception:
+        logger.warning("audio-retention preference unreadable; defaulting to ephemeral (§33.1)")
+        return True
+
+
+def _transcript_frame(payload: WsVoiceNotePayload, result: Any) -> dict[str, Any]:
+    return {
+        "client_message_id": payload.client_message_id,
+        "text": result.transcript or "",
+        "transcript_status": result.transcript_status.value,
+        "playback_policy": result.playback_policy.value,
+        "source_audio_asset_id": result.source_audio_asset_id,
+        "duration_ms": result.duration_ms,
+        "source_audio_expires_at": (
+            result.source_audio_expires_at.isoformat()
+            if result.source_audio_expires_at
+            else None
+        ),
+        "quoted_message_id": payload.quoted_message_id,
+    }
+
+
+def _tts_frames(payload: WsVoiceNotePayload, result: Any) -> dict[str, Any]:
+    """§34.6's `tts.start`/`tts.end` payloads.
+
+    No `tts.chunk_meta`: a note is synthesised whole and stored, so there are
+    no chunks to meter. M10's streamed call audio is what that member is for,
+    and emitting a fabricated one here would make the metering look live.
+    """
+    return {
+        "start": {
+            "client_message_id": payload.client_message_id,
+            "tts_audio_asset_id": result.tts_audio_asset_id,
+            "sample_rate_hz": payload.sample_rate_hz,
+            "voice_id": None,
+        },
+        "end": {
+            "client_message_id": payload.client_message_id,
+            "duration_ms": result.tts_duration_ms or 0,
+        },
+    }

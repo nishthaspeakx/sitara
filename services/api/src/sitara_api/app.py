@@ -33,6 +33,9 @@ from sitara_api.panchang.places import default_resolver
 from sitara_api.panchang.registry import build_registry
 from sitara_api.panchang.router import router as panchang_router
 from sitara_api.panchang.service import PanchangService
+from sitara_api.voice.config import VoiceSettings
+from sitara_api.voice.providers.registry import build_voice_service
+from sitara_api.voice.router import router as voice_router
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -97,6 +100,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             # chart fact tools decline without it (see build_pipeline).
             astrology_facade=app.state.astrology,
         )
+        # §25.4's voice notes (M9, CC-009). Built after the pipeline because it
+        # RUNS that pipeline — voice is not a second orchestration — and after
+        # the crypto because §33.1 puts the original recording under its own
+        # CSFLE key class. Returns None when no vendor key is configured, which
+        # is "provider down" and not a boot failure (§30.1: text always works).
+        app.state.voice_notes = build_voice_service(
+            settings=app.state.voice_settings,
+            db=db,
+            crypto=app.state.field_crypto,
+            pipeline=app.state.chat_pipeline,
+        )
         # §7.1's pipeline, for the on-open path `GET /v1/today` needs (§28.2).
         # Built ONCE here rather than per request: it provisions a CSFLE codec
         # holding a key-vault connection, and Today is the app's busiest screen.
@@ -113,9 +127,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(title="sitara-api", version=__version__, lifespan=lifespan)
     app.state.settings = settings
     app.state.chat_settings = ChatSettings()
+    app.state.voice_settings = VoiceSettings()
     app.state.memory_settings = MemorySettings()
     app.state.astrology = None
     app.state.chat_pipeline = None
+    app.state.voice_notes = None
     app.state.memory_service = None
     # §2.4: the service renders §9's safety and decline strings itself. A
     # missing catalog must surface here, not when an L4 turn needs the crisis
@@ -139,6 +155,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(numerology_router)
     app.include_router(panchang_router)
     app.include_router(chat_router)
+    app.include_router(voice_router)
     app.include_router(memory_router)
     app.include_router(onboarding_router)
     app.include_router(today_router)

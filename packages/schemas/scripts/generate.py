@@ -53,8 +53,22 @@ def _split_type(declared: str) -> tuple[str, bool, bool]:
     return base, is_list, optional
 
 
+#: `const:user` -> a field PINNED to one value.
+#:
+#: The fifth and (deliberately) last member of the type vocabulary, added in M9
+#: for `PartialCaptionPayload.role`. It earns its place by making a rule
+#: unrepresentable rather than merely documented: §34.6 forbids a partial
+#: caption of Tara's words, and through M8 that held only because no code wrote
+#: the frame. A `ChatRole` there would re-open it the moment M9 wrote one. A
+#: constant closes it in the type — which is the same move `PriceCard` makes by
+#: having no countdown prop and `TrustSheet` by having no fact-id prop.
+_CONST_PREFIX = "const:"
+
+
 def py_type(declared: str) -> str:
     base, is_list, optional = _split_type(declared)
+    if base.startswith(_CONST_PREFIX):
+        return f'Literal["{base[len(_CONST_PREFIX):]}"]'
     inner = _PY_SCALARS.get(base, base)
     if is_list:
         inner = f"tuple[{inner}, ...]"
@@ -63,6 +77,8 @@ def py_type(declared: str) -> str:
 
 def ts_type(declared: str) -> str:
     base, is_list, optional = _split_type(declared)
+    if base.startswith(_CONST_PREFIX):
+        return f'"{base[len(_CONST_PREFIX):]}"'
     inner = _TS_SCALARS.get(base, base)
     if is_list:
         inner = f"{inner}[]"
@@ -138,6 +154,7 @@ def gen_python(
     presence: dict,
     memory_types: dict,
     chat: dict,
+    voice: dict,
 ) -> None:
     PY_OUT.mkdir(parents=True, exist_ok=True)
 
@@ -256,6 +273,46 @@ def gen_python(
         lines += py_shape(name, shape)
     (PY_OUT / "chat.py").write_text("\n".join(lines), encoding="utf-8")
 
+    # voice.py
+    lines = [
+        f'"""{HEADER}',
+        "",
+        "SPEC §33.1 / §6.4 / §25.4 — the vocabulary of a voice note.",
+        "",
+        "`sitara_api.chat_orchestration.store` writes `transcript_status` and",
+        "`playback_policy` onto every message row; `apps/web`'s VoiceNoteBubble",
+        "renders them. They held different sets until M9 — see the source JSON.",
+        '"""',
+        "",
+        "from enum import StrEnum",
+        "",
+        "__all__ = [",
+    ]
+    voice_exports = [
+        *(e["enum_name"] for e in voice["enums"].values()),
+        *(e["const_name"] for e in voice["enums"].values()),
+        *voice["constants"],
+    ]
+    for name in sorted(voice_exports):
+        lines.append(f'    "{name}",')
+    lines += ["]", ""]
+    for enum in voice["enums"].values():
+        lines += py_enum(enum)
+        # The tuple form exists so a test, a validator or a Mongo `enum:` clause
+        # can iterate the set without importing the class — the same service
+        # MEMORY_TYPE_ORDER does for §32.4.
+        lines += [
+            "",
+            f"{enum['const_name']}: tuple[{enum['enum_name']}, ...] = (",
+            *(f"    {enum['enum_name']}.{py_ident(m['id'])}," for m in enum["members"]),
+            ")",
+            "",
+        ]
+    for name, const in voice["constants"].items():
+        lines += ["", f"#: {const['$comment']}", f"{name} = {const['value']}"]
+    lines.append("")
+    (PY_OUT / "voice.py").write_text("\n".join(lines), encoding="utf-8")
+
     # modules.py
     lines = [
         f'"""{HEADER}"""',
@@ -336,12 +393,13 @@ def gen_python(
         f'"""{HEADER}"""',
         "",
         "from enum import StrEnum",
-        "from typing import Any",
+        "from typing import Any, Literal",
         "",
         "from pydantic import BaseModel, ConfigDict",
         "",
         "from sitara_schemas.chat import ChatRole, ChatTurn",
         "from sitara_schemas.presence import PresenceState",
+        "from sitara_schemas.voice import PlaybackPolicy, TranscriptStatus, VadState",
         "",
         "",
         "class ControlEventType(StrEnum):",
@@ -368,13 +426,17 @@ def gen_python(
     lines += [
         "",
         "# --------------------------------------------------------------------",
-        "# Payload shapes — the TEXT-chat subset only.",
+        "# Payload shapes — the text chat (S18) and the voice notes (M9).",
         "#",
-        "# §34.6 says payloads are 'typed per event in M9'. The members the text",
-        "# chat uses are typed HERE, one milestone early, because S18 sends them",
-        "# now; the voice members (vad.state, barge_in, tts.*, entitlement.warning)",
-        "# stay untyped until M9 builds the thing that emits them. Typing an event",
-        "# nobody produces yet would be a guess with a schema around it.",
+        "# §34.6 says payloads are 'typed per event in M9'. S18 typed the text-chat",
+        "# members a milestone early because it sent them; M9 types vad.state and",
+        "# tts.* for the same reason, now that voice notes emit them.",
+        "#",
+        "# `barge_in` and `entitlement.warning` stay UNTYPED. They belong to live",
+        "# calls (§25.3's server-side VAD ducking, §7.3's minute pool), which §33.5",
+        "# gates behind a conditional release and M10 owns. The rule has not moved:",
+        "# a payload is typed by the milestone that emits it, because typing an",
+        "# event nobody produces is a guess with a schema around it.",
         "# --------------------------------------------------------------------",
     ]
     for name, shape in ws["payload_shapes"].items():
@@ -492,6 +554,16 @@ def gen_python(
         "    PRESENCE_ORDINAL,",
         "    PresenceState,",
         ")",
+        "from sitara_schemas.voice import (",
+        "    MAX_NOTE_DURATION_MS,",
+        "    PLAYBACK_POLICIES,",
+        "    SOURCE_AUDIO_RETENTION_DAYS,",
+        "    TRANSCRIPT_STATUSES,",
+        "    VAD_STATES,",
+        "    PlaybackPolicy,",
+        "    TranscriptStatus,",
+        "    VadState,",
+        ")",
         "from sitara_schemas.ws_events import (",
         "    BINARY_AUDIO_FORMAT,",
         "    BINARY_CHANNELS,",
@@ -505,12 +577,17 @@ def gen_python(
         "    ControlEvent,",
         "    ControlEventType,",
         "    HandoffToTextPayload,",
+        "    PartialCaptionPayload,",
         "    PresenceStatePayload,",
         "    ResumeOfferPayload,",
         "    SessionReadyPayload,",
         "    SessionStartPayload,",
         "    TaraTurnPayload,",
+        "    TtsChunkMetaPayload,",
+        "    TtsEndPayload,",
+        "    TtsStartPayload,",
         "    UserTurnPayload,",
+        "    VadStatePayload,",
         ")",
         "",
         "__all__ = [",
@@ -526,14 +603,19 @@ def gen_python(
             "DEFAULT_RETRYABLE",
             "HEARTBEAT_INTERVAL_S",
             "HTTP_STATUS",
+            "MAX_NOTE_DURATION_MS",
             "MEMORY_TYPE_ORDER",
             "MORNING_MODULE_ORDER",
+            "PLAYBACK_POLICIES",
             "PRESENCE_CINEMAGRAPH",
             "PRESENCE_ORDINAL",
             "REAP_AFTER_SILENCE_S",
             "RESUME_WINDOW_S",
             "SAFETY_LEVEL_ORDINAL",
             "SAFETY_TAKEOVER_FROM_ORDINAL",
+            "SOURCE_AUDIO_RETENTION_DAYS",
+            "TRANSCRIPT_STATUSES",
+            "VAD_STATES",
             "ChatCitation",
             "ChatRole",
             "ChatTrust",
@@ -546,6 +628,8 @@ def gen_python(
             "MemoryChipOffer",
             "MemoryType",
             "MorningModule",
+            "PartialCaptionPayload",
+            "PlaybackPolicy",
             "PresenceState",
             "PresenceStatePayload",
             "ResumeOfferPayload",
@@ -554,7 +638,13 @@ def gen_python(
             "SessionStartPayload",
             "SourceState",
             "TaraTurnPayload",
+            "TranscriptStatus",
+            "TtsChunkMetaPayload",
+            "TtsEndPayload",
+            "TtsStartPayload",
             "UserTurnPayload",
+            "VadState",
+            "VadStatePayload",
         ]
     ):
         lines.append(f'    "{name}",')
@@ -577,6 +667,7 @@ def gen_typescript(
     presence: dict,
     memory_types: dict,
     chat: dict,
+    voice: dict,
 ) -> None:
     TS_OUT.mkdir(parents=True, exist_ok=True)
     bf = ws["binary_frame"]
@@ -701,8 +792,25 @@ def gen_typescript(
         lines += ts_shape(name, shape)
     lines += [
         "// ---------------------------------------------------------------------------",
-        "// SPEC §34.6 — control-event payloads, the TEXT-chat subset only. The voice",
-        "// members stay untyped until M9 builds the thing that emits them.",
+        "// SPEC §33.1 / §6.4 / §25.4 — the vocabulary of a voice note.",
+        "// `playback_policy` is what makes §25.4's promise checkable: replay plays the",
+        "// user's ORIGINAL recording, and `synthesised` — the one member under which",
+        "// audio is a reconstruction — is never valid on a user message.",
+        "// ---------------------------------------------------------------------------",
+    ]
+    for enum in voice["enums"].values():
+        lines += ts_enum(enum)
+    for name, const in voice["constants"].items():
+        lines += [
+            f"/** {const['$comment']} */",
+            f"export const {name} = {const['value']} as const;",
+            "",
+        ]
+    lines += [
+        "// ---------------------------------------------------------------------------",
+        "// SPEC §34.6 — control-event payloads: the text chat (S18) and voice notes",
+        "// (M9). `barge_in` and `entitlement.warning` stay untyped — they belong to",
+        "// live calls, which §33.5 gates and M10 owns.",
         "// ---------------------------------------------------------------------------",
     ]
     for name, shape in ws["payload_shapes"].items():
@@ -763,6 +871,7 @@ def main() -> None:
     presence = load("presence-states.json")
     memory_types = load("memory-types.json")
     chat = load("chat.json")
+    voice = load("voice.json")
 
     assert len(modules["members"]) == 17, "SPEC §34.3: exactly 17 morning modules"
     assert len(confidence["members"]) == 5, "SPEC §5.4: exactly 5 confidence states"
@@ -781,11 +890,24 @@ def main() -> None:
             f"error code {m['code']} outside closed namespaces"
         )
 
-    gen_python(modules, codes, envelope, ws, today, presence, memory_types, chat)
-    gen_typescript(modules, codes, envelope, ws, confidence, today, presence, memory_types, chat)
+    # §25.4 rests on one sentence — "replay plays the user's ORIGINAL recording,
+    # never a TTS reconstruction" — and `playback_policy` is what makes it
+    # checkable at runtime. If the member naming the reconstruction were ever
+    # renamed or dropped, every guard that refuses it on a user message would
+    # still compile and would simply stop refusing anything.
+    policies = {m["id"] for m in voice["enums"]["playback_policy"]["members"]}
+    assert "synthesised" in policies and "original_audio" in policies, (
+        "SPEC §25.4/§33.1: playback_policy must distinguish the user's original "
+        "recording from a TTS reconstruction — that distinction IS the promise"
+    )
+
+    gen_python(modules, codes, envelope, ws, today, presence, memory_types, chat, voice)
+    gen_typescript(
+        modules, codes, envelope, ws, confidence, today, presence, memory_types, chat, voice
+    )
     print(
         "generated: python/sitara_schemas/"
-        "{__init__,modules,errors,ws_events,today,presence,memory_types,chat}.py"
+        "{__init__,modules,errors,ws_events,today,presence,memory_types,chat,voice}.py"
     )
     print("generated: typescript/src/index.ts")
 

@@ -1,139 +1,145 @@
 {
- "$comment": "SPEC §6.3 / §34.4 — namespaced error-code enum. Prefixes are the closed namespace set AUTH_/ASTRO_/VOICE_/PAY_/SAFE_/SYS_. HTTP status follows the §6.3 convention: 400 validation · 401/403 auth · 402 entitlement · 409 conflict/idempotency · 422 domain rule · 429 rate · 5xx system. New codes are PR-reviewed like analytics events (taxonomy owner: backend lead, W2). This is the M0 seed, not the full taxonomy.",
- "enum_name": "ErrorCode",
- "namespaces": [
-  "AUTH_",
-  "ASTRO_",
-  "VOICE_",
-  "PAY_",
-  "SAFE_",
-  "SYS_"
- ],
- "members": [
-  {
-   "code": "AUTH_INVALID_TOKEN",
-   "http_status": 401,
-   "retryable": false
-  },
-  {
-   "code": "AUTH_SESSION_EXPIRED",
-   "http_status": 401,
-   "retryable": false
-  },
-  {
-   "code": "AUTH_FORBIDDEN",
-   "http_status": 403,
-   "retryable": false
-  },
-  {
-   "code": "AUTH_UNDERAGE",
-   "http_status": 422,
-   "retryable": false
-  },
-  {
-   "code": "AUTH_OTP_THROTTLED",
-   "http_status": 429,
-   "retryable": true
-  },
-  {
-   "code": "AUTH_PROVIDER_CONFLICT",
-   "http_status": 409,
-   "retryable": false
-  },
-  {
-   "code": "ASTRO_INSUFFICIENT_BIRTH_DATA",
-   "http_status": 422,
-   "retryable": false
-  },
-  {
-   "code": "ASTRO_PLACE_UNRESOLVED",
-   "http_status": 422,
-   "retryable": false
-  },
-  {
-   "code": "ASTRO_ENGINE_UNAVAILABLE",
-   "http_status": 503,
-   "retryable": true
-  },
-  {
-   "code": "ASTRO_PROVIDER_DISPUTED",
-   "http_status": 409,
-   "retryable": false
-  },
-  {
-   "code": "ASTRO_NAME_UNCONFIRMED",
-   "http_status": 422,
-   "retryable": false
-  },
-  {
-   "code": "ASTRO_NAME_INVALID",
-   "http_status": 400,
-   "retryable": false
-  },
-  {
-   "code": "VOICE_PROVIDER_UNAVAILABLE",
-   "http_status": 503,
-   "retryable": true
-  },
-  {
-   "code": "VOICE_MINUTES_EXHAUSTED",
-   "http_status": 402,
-   "retryable": false
-  },
-  {
-   "code": "VOICE_SESSION_NOT_FOUND",
-   "http_status": 404,
-   "retryable": false
-  },
-  {
-   "code": "PAY_PAYMENT_REQUIRED",
-   "http_status": 402,
-   "retryable": false
-  },
-  {
-   "code": "PAY_WEBHOOK_DUPLICATE",
-   "http_status": 409,
-   "retryable": false
-  },
-  {
-   "code": "PAY_PROVIDER_ERROR",
-   "http_status": 502,
-   "retryable": true
-  },
-  {
-   "code": "SAFE_CONTENT_BLOCKED",
-   "http_status": 422,
-   "retryable": false
-  },
-  {
-   "code": "SAFE_REVIEW_PENDING",
-   "http_status": 422,
-   "retryable": false
-  },
-  {
-   "code": "SYS_VALIDATION",
-   "http_status": 400,
-   "retryable": false
-  },
-  {
-   "code": "SYS_RATE_LIMITED",
-   "http_status": 429,
-   "retryable": true
-  },
-  {
-   "code": "SYS_IDEMPOTENCY_CONFLICT",
-   "http_status": 409,
-   "retryable": false
-  },
-  {
-   "code": "SYS_INTERNAL",
-   "http_status": 500,
-   "retryable": true
-  },
-  {
-   "code": "SYS_UNAVAILABLE",
-   "http_status": 503,
-   "retryable": true
-  }
- ]
+  "$comment": "SPEC §6.3 / §34.4 — namespaced error-code enum. Prefixes are the closed namespace set AUTH_/ASTRO_/VOICE_/PAY_/SAFE_/SYS_. HTTP status follows the §6.3 convention: 400 validation · 401/403 auth · 402 entitlement · 409 conflict/idempotency · 422 domain rule · 429 rate · 5xx system. New codes are PR-reviewed like analytics events (taxonomy owner: backend lead, W2). This is the M0 seed, not the full taxonomy.",
+  "enum_name": "ErrorCode",
+  "namespaces": [
+    "AUTH_",
+    "ASTRO_",
+    "VOICE_",
+    "PAY_",
+    "SAFE_",
+    "SYS_"
+  ],
+  "members": [
+    {
+      "code": "AUTH_INVALID_TOKEN",
+      "http_status": 401,
+      "retryable": false
+    },
+    {
+      "code": "AUTH_SESSION_EXPIRED",
+      "http_status": 401,
+      "retryable": false
+    },
+    {
+      "code": "AUTH_FORBIDDEN",
+      "http_status": 403,
+      "retryable": false
+    },
+    {
+      "code": "AUTH_UNDERAGE",
+      "http_status": 422,
+      "retryable": false
+    },
+    {
+      "code": "AUTH_OTP_THROTTLED",
+      "http_status": 429,
+      "retryable": true
+    },
+    {
+      "code": "AUTH_PROVIDER_CONFLICT",
+      "http_status": 409,
+      "retryable": false
+    },
+    {
+      "code": "ASTRO_INSUFFICIENT_BIRTH_DATA",
+      "http_status": 422,
+      "retryable": false
+    },
+    {
+      "code": "ASTRO_PLACE_UNRESOLVED",
+      "http_status": 422,
+      "retryable": false
+    },
+    {
+      "code": "ASTRO_ENGINE_UNAVAILABLE",
+      "http_status": 503,
+      "retryable": true
+    },
+    {
+      "code": "ASTRO_PROVIDER_DISPUTED",
+      "http_status": 409,
+      "retryable": false
+    },
+    {
+      "code": "ASTRO_NAME_UNCONFIRMED",
+      "http_status": 422,
+      "retryable": false
+    },
+    {
+      "code": "ASTRO_NAME_INVALID",
+      "http_status": 400,
+      "retryable": false
+    },
+    {
+      "code": "VOICE_PROVIDER_UNAVAILABLE",
+      "http_status": 503,
+      "retryable": true
+    },
+    {
+      "code": "VOICE_MINUTES_EXHAUSTED",
+      "http_status": 402,
+      "retryable": false
+    },
+    {
+      "code": "VOICE_SESSION_NOT_FOUND",
+      "http_status": 404,
+      "retryable": false
+    },
+    {
+      "code": "VOICE_NOTE_EXPIRED",
+      "http_status": 410,
+      "retryable": false,
+      "$comment": "§33.1 — the original recording expired, was deleted per-note, or was never stored (ephemeral voice-input mode). Gone, and deliberately so: the transcript remains and the bubble shows a 'voice input' marker."
+    },
+    {
+      "code": "PAY_PAYMENT_REQUIRED",
+      "http_status": 402,
+      "retryable": false
+    },
+    {
+      "code": "PAY_WEBHOOK_DUPLICATE",
+      "http_status": 409,
+      "retryable": false
+    },
+    {
+      "code": "PAY_PROVIDER_ERROR",
+      "http_status": 502,
+      "retryable": true
+    },
+    {
+      "code": "SAFE_CONTENT_BLOCKED",
+      "http_status": 422,
+      "retryable": false
+    },
+    {
+      "code": "SAFE_REVIEW_PENDING",
+      "http_status": 422,
+      "retryable": false
+    },
+    {
+      "code": "SYS_VALIDATION",
+      "http_status": 400,
+      "retryable": false
+    },
+    {
+      "code": "SYS_RATE_LIMITED",
+      "http_status": 429,
+      "retryable": true
+    },
+    {
+      "code": "SYS_IDEMPOTENCY_CONFLICT",
+      "http_status": 409,
+      "retryable": false
+    },
+    {
+      "code": "SYS_INTERNAL",
+      "http_status": 500,
+      "retryable": true
+    },
+    {
+      "code": "SYS_UNAVAILABLE",
+      "http_status": 503,
+      "retryable": true
+    }
+  ]
 }

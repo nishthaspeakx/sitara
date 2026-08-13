@@ -159,3 +159,61 @@ def test_verdict_is_frozen() -> None:
     verdict = GroundingVerdict(ok=True, clean_text="hi")
     with pytest.raises(dataclasses.FrozenInstanceError):
         verdict.ok = False  # type: ignore[misc]
+
+
+# --------------------------------------------------------------------------
+# A term with a space has more than one spelling (CL-015)
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("locale", "text"),
+    [
+        ("en", "Rahukaal today runs from 3:00 PM to 4:30 PM."),
+        ("en", "Rahu-kaal today runs from 3:00 PM to 4:30 PM."),
+        ("en", "Your sunsign is Leo, so today favours bold moves."),
+        ("en", "Your moonsign is Pisces, so today favours quiet work."),
+        ("hi-Latn", "Aaj Rahukaal 3:00 se 4:30 tak hai."),
+        ("hi-Latn", "Aapka chandrarashi Meen hai, isliye aaj shaant rahega."),
+        ("hi", "आज राहुकाल 3:00 से 4:30 तक है।"),
+    ],
+)
+def test_a_compound_spelling_does_not_walk_past_cite_or_die(
+    validator: GroundingValidator, saturn_facts, locale: str, text: str
+) -> None:
+    """Closing one space used to bypass the validator entirely.
+
+    Every multi-word strong term in every locale was listed in exactly one
+    spelling, so `rahu kaal` was a claim and `rahukaal` was not — and the second
+    sentence shipped uncited with real clock values in it. Same for `sun sign`,
+    `moon sign`, `rising sign` and `चंद्र राशि`.
+
+    Surfaced by the M9 live run (Cartesia Ink transcribes spoken "rahu kaal" as
+    "Rahukaal"), but the hole was never about STT: Tara writes these words too,
+    both spellings are ordinary, and only one was in the net.
+    `celestial_compounds` had already been hand-patched for `hi` and `hi-Latn`
+    and not for `en` — which is what a hand-maintained list looks like shortly
+    before it goes wrong somewhere else. The variants are DERIVED now, so a term
+    added tomorrow is covered without anyone remembering.
+    """
+    assert not validator.check(text, saturn_facts, locale=locale).ok
+
+
+def test_the_spaced_and_compound_spellings_are_treated_identically(
+    validator: GroundingValidator, saturn_facts
+) -> None:
+    """The property, not a list of examples: for every multi-word term the
+    lexicon carries, both spellings must reach the same verdict."""
+    from sitara_api.chat_orchestration.config import claim_terms
+
+    source = claim_terms()
+    for locale, blocks in source["terms"].items():
+        for term in blocks.get("strong", ()):
+            if " " not in term:
+                continue
+            spaced = f"Aaj {term} 3:00 se 4:30 tak hai."
+            joined = f"Aaj {term.replace(' ', '')} 3:00 se 4:30 tak hai."
+            assert (
+                validator.check(spaced, saturn_facts, locale=locale).ok
+                == validator.check(joined, saturn_facts, locale=locale).ok
+            ), f"{locale}: {term!r} and its compound spelling disagree"

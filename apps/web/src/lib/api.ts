@@ -111,3 +111,16 @@ export async function apiCall<T>(path: string, init?: RequestInit): Promise<ApiR
     return { ok: false, error: TRANSPORT_FAILURE };
   }
 }
+
+/**
+ * §25.4's playback URL for a stored ORIGINAL recording (§33.1).
+ *
+ * Built here rather than inline in the bubble for the reason this whole module
+ * records about `NEXT_PUBLIC_API_BASE_URL`: an origin that must agree with a
+ * cookie posture and a deployment topology is a way for the two to disagree
+ * silently. `<audio src>` sends the httpOnly session cookie only on a
+ * same-origin request, and the endpoint checks ownership against it.
+ */
+export function voiceNoteAudioUrl(assetId: string): string {
+  return apiUrl(`/v1/voice/notes/${encodeURIComponent(assetId)}/audio`);
+}

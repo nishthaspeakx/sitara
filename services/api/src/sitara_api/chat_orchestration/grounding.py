@@ -462,6 +462,40 @@ class GroundingValidator:
         return self._ordinals[key]
 
 
+def _separator_variants(terms: Iterable[str]) -> set[str]:
+    """Every multi-word term, plus its joined and hyphenated spellings.
+
+    **A term with a space has more than one spelling, and the lexicon only ever
+    listed one of them.** Every multi-word strong term in every locale was
+    missing its compound form: `rahu kaal`/`rahukaal`, `sun sign`/`sunsign`,
+    `moon sign`/`moonsign`, `rising sign`/`risingsign`, `चंद्र राशि`/`चंद्रराशि`.
+    Closing a single space therefore walked a claim straight past cite-or-die —
+    "Rahukaal today runs from 3:00 PM to 4:30 PM" passed UNCITED in all three
+    locales, with real clock values in it.
+
+    Found from the M9 live run, where Cartesia Ink transcribed spoken
+    "rahu kaal" as "Rahukaal" — but the hole was never about STT. Tara writes
+    these words too, both spellings are ordinary, and the validator only knew
+    one. `celestial_compounds` had already been patched by hand for `hi` and
+    `hi-Latn` and not for `en`, which is what a hand-maintained list looks like
+    just before it goes wrong somewhere else.
+
+    Derived rather than enumerated, so a term added to `claim_terms.json`
+    tomorrow is covered without anyone remembering this. Widening a matcher can
+    only make it fire on MORE text, and a surface like "themoon" is one no
+    sentence contains — so the variants cost nothing where they do not apply.
+    """
+    out: set[str] = set()
+    for term in terms:
+        out.add(term)
+        if " " not in term.strip():
+            continue
+        parts = term.split()
+        out.add("".join(parts))
+        out.add("-".join(parts))
+    return out
+
+
 def _alternation(terms: Iterable[str], *, min_length: int = 3) -> re.Pattern[str]:
     """Whole-word alternation via the shared, script-aware helper.
 
@@ -469,7 +503,7 @@ def _alternation(terms: Iterable[str], *, min_length: int = 3) -> re.Pattern[str
     two characters ("है", "आज"), and dropping them would exempt exactly the
     sentences the rule is meant to catch.
     """
-    return textutil.alternation(terms, min_length=min_length)
+    return textutil.alternation(_separator_variants(terms), min_length=min_length)
 
 
 @lru_cache(maxsize=1)

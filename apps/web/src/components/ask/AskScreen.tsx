@@ -25,8 +25,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChatCitation, MemoryChipOffer, PresenceState } from "@sitara/schemas";
 import { SAFETY_LEVEL_ORDINAL, SAFETY_TAKEOVER_FROM_ORDINAL } from "@sitara/schemas";
 
-import { Card, ErrorState, TabBar, TrustSheet } from "@/components/ui";
+import { Card, ErrorState, Sheet, TabBar, TrustSheet } from "@/components/ui";
 import type { Message, ThreadState } from "@/lib/chat-thread";
+import type { UseVoiceNote } from "@/lib/use-voice-note";
 
 import { ChatHeader } from "./ChatHeader";
 import { Composer } from "./Composer";
@@ -66,6 +67,7 @@ export function AskScreen({
   onGetHelp,
   onAcceptMemory,
   onDeclineMemory,
+  voice,
 }: {
   thread: ThreadState;
   locale: string;
@@ -82,12 +84,21 @@ export function AskScreen({
   onGetHelp: () => void;
   onAcceptMemory: (offer: MemoryChipOffer, summary: string) => void;
   onDeclineMemory: (offer: MemoryChipOffer) => void;
+  /**
+   * §25.4's voice notes. Optional so a screen that has not wired a microphone
+   * — Storybook, the screenshot suite — renders the composer without one
+   * rather than needing a fake recorder to exist.
+   */
+  voice?: UseVoiceNote;
 }) {
   const t = useTranslations();
   const [openCitation, setOpenCitation] = useState<ChatCitation | null>(null);
   const [quotedId, setQuotedId] = useState<string | null>(null);
   const [chipDecisions, setChipDecisions] = useState<Record<string, ChipDecision>>({});
   const [dismissedTakeover, setDismissedTakeover] = useState(false);
+  // §30.1/§43: browsers will not re-prompt for a denied microphone, so the
+  // recovery path is an explainer sheet rather than a retry that cannot work.
+  const [micHelpOpen, setMicHelpOpen] = useState(false);
   const lastTakeover = useRef(false);
 
   const isTakeover = takenOver(thread.messages);
@@ -210,6 +221,15 @@ export function AskScreen({
             onSend(text, quotedId ?? undefined);
             setQuotedId(null);
           }}
+          voice={voice?.state}
+          micDenied={voice?.micDenied}
+          onVoicePress={() => {
+            voice?.press();
+            setQuotedId(null);
+          }}
+          onVoiceRelease={voice?.release}
+          onVoiceStop={voice?.stop}
+          onOpenMicHelp={() => setMicHelpOpen(true)}
         />
 
         <TabBar active="ask" onSelect={onSelectTab} />
@@ -223,6 +243,20 @@ export function AskScreen({
         sourceState={openCitation?.source_state ?? "default"}
         detailLines={openCitation ? [...openCitation.trust.details] : []}
       />
+
+      {/* §30.1's recovery path. A browser will not re-prompt once the
+          microphone is denied, so a retry control would be theatre — the
+          honest affordance is an explainer, and the composer stays usable
+          behind it because text always works. */}
+      <Sheet
+        open={micHelpOpen}
+        onClose={() => setMicHelpOpen(false)}
+        titleKey="ui.voice.mic_help"
+      >
+        <p className="max-w-reading text-body text-ink-primary">
+          {t("ui.voice.mic_help_body")}
+        </p>
+      </Sheet>
     </div>
   );
 }

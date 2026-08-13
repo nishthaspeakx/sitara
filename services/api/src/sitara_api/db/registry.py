@@ -762,6 +762,91 @@ SPECS: tuple[CollectionSpec, ...] = (
         forbidden=("audio_asset_id", "audio_ref", "audio_url", "audio_blob", "recording_ref"),
     ),
     CollectionSpec(
+        name="voice_assets",
+        spec_ref="§33.1",
+        purpose=(
+            "The encrypted ORIGINAL of a voice note (§33.1), and Tara's synthesised "
+            "reply. §6.4's `messages.source_audio_asset_id` and `tts_audio_asset_id` "
+            "are ids of rows here — the table names the reference and never the "
+            "referent, which is why this collection is cited rather than listed. "
+            "§36.3 provisioned the `voice_audio` key class for exactly this and "
+            "nothing had used it since M4."
+        ),
+        # NOT a TTL. §36.2 permits a TTL index only where §6.4's table writes
+        # "TTL", and this collection is not in the table at all — but the
+        # deciding reason is §33.1's own words: the expiry job "hard-deletes
+        # assets + writes deleted_at tombstones", and MongoDB's reaper deletes
+        # the document. A TTL here would remove the tombstone that lets a bubble
+        # say "this recording has expired" instead of rendering a dead control.
+        retention=(
+            "30 days by default per note (§33.1), stamped on the row as expires_at; "
+            "hard-deleted by the expiry JOB, which leaves a deleted_at tombstone. "
+            "Never a TTL index (§36.2)."
+        ),
+        shard_key="hashed(user_id)",
+        fields={
+            "user_id": OID,
+            "conversation_id": OID,
+            "message_id": [OID, "null"],
+            "role": STR,
+            "audio": [BIN, "null"],
+            "codec": STR,
+            "sample_rate_hz": NUM,
+            "duration_ms": NUM,
+            "byte_length": NUM,
+            "playback_policy": STR,
+            "expires_at": DT,
+            # Set by the expiry job and by §33.1's per-note delete. The row
+            # OUTLIVES the audio: that is what a tombstone is.
+            "deleted_at": [DT, "null"],
+            # §33.1: "audio is excluded from all model training and cloning".
+            # Stamped rather than assumed, so an export or a future training-set
+            # selector reads the exclusion off the document.
+            "training_excluded": BOOL,
+        },
+        required=(
+            "user_id",
+            "conversation_id",
+            "role",
+            "codec",
+            "playback_policy",
+            "expires_at",
+            "training_excluded",
+        ),
+        indexes=(
+            IndexSpec(
+                _asc("message_id"),
+                unique=True,
+                cite=(
+                    "§6.4 — messages.source_audio_asset_id/tts_audio_asset_id are "
+                    "single-valued, so two assets for one message and role would make "
+                    "'the original' ambiguous, which is the one thing §25.4 cannot be"
+                ),
+                partial={"message_id": {"$type": "objectId"}},
+            ),
+            IndexSpec(
+                _asc("user_id", "created_at"),
+                cite="§33.1 — per-note delete and the privacy screen list a user's own notes",
+            ),
+            IndexSpec(
+                _asc("expires_at"),
+                cite=(
+                    "§33.1 — the 30-day expiry job scans by due date; without this it "
+                    "scans every note ever recorded, nightly"
+                ),
+            ),
+        ),
+        # §33.1's separate key class, and the reason it is separate: revoking
+        # the audio key must not silently revoke message content, or the other
+        # way round (§36.3).
+        encrypted=(EncryptedField("audio", key_class="voice_audio"),),
+        # §33.1/§13: live-call audio is NEVER stored. `voice_sessions` and
+        # `call_sessions` already reject audio fields; this is the same rule
+        # pointed the other way, so a call cannot reach the ONE collection that
+        # does hold audio by carrying its id in.
+        forbidden=("call_session_id", "call_id", "audio_url"),
+    ),
+    CollectionSpec(
         name="subscriptions",
         spec_ref="§6.4",
         purpose="Plan, region, provider, gift links.",

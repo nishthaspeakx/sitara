@@ -26,19 +26,24 @@
     "client_to_server": {
       "session.start": "ticket + conversation_id + locale; the ticket is minted by POST /v1/chat/session over the cookie-authenticated origin",
       "captions.final": "the user's finalised turn. In a call, STT finalises it; in text, the keyboard does. `quoted_message_id` carries §25.4's swipe-to-reply INTO the pipeline, not merely into the drawing.",
+      "vad.state": "M9 — brackets a held recording (§25.4's hold-to-record / tap-lock). `speech_start` opens the window binary frames are admissible in; `speech_end` closes it and asks for a transcript; `cancelled` is §28.3's cancel-slide and discards without transcribing or storing.",
       "session.end": "the user left the screen"
     },
     "server_to_client": {
       "session.ready": "resume token + window; the socket is live",
       "presence.state": "driven by the pipeline's real §9 stage transitions. Where the pipeline reports nothing, this reports nothing — a typing indicator that keeps animating through a stalled turn is the fake online-status §25.4 already refuses, one layer down.",
-      "captions.final": "the whole validated turn (ChatTurn). The ONLY member that ever carries Tara's words.",
+      "captions.partial": "M9 — an interim transcript of the USER's own speech, and only ever theirs (see $never_emitted_for_tara). Advisory: the bubble may show it while STT settles, and `captions.final` replaces it.",
+      "captions.final": "the whole validated turn (ChatTurn) in Tara's direction. In the user's direction M9 adds the finalised TRANSCRIPT of a voice note, carrying the stored asset id so the bubble can play the original. The ONLY member that ever carries Tara's words.",
+      "tts.start": "M9 — Tara's reply is a voice note (§25.4's voice-adoption engine). Carries the synthesised asset id, duration and format. It is emitted AFTER her `captions.final`, never before: the audio is rendered from validated text, so the text exists first by construction.",
+      "tts.chunk_meta": "M9 — metering only (§13: shapes, not content). Bytes and sequence for the client's buffer; carries no transcript, because the transcript already crossed on captions.final.",
+      "tts.end": "M9 — synthesis complete; total duration for the bubble's scrubber.",
       "error": "the §34.4 envelope, verbatim",
       "handoff.to_text": "the resume window closed; the thread continues over POST /v1/chat/turn with full context",
       "resume.offer": "reconnected inside the 5-minute window (§32.11)"
     },
-    "$never_emitted_for_tara": "captions.partial. A partial caption is pre-validation text, and §9 puts grounding, language-quality and safety-post AFTER generation. Streaming tokens would race past all three, so the socket is built to never hold them: it receives a finished TurnResult and has nothing else to send. That is the fabrication gate, and it is structural rather than remembered.",
+    "$never_emitted_for_tara": "captions.partial. A partial caption is pre-validation text, and §9 puts grounding, language-quality and safety-post AFTER generation. Streaming tokens would race past all three, so the socket is built to never hold them: it receives a finished TurnResult and has nothing else to send. That is the fabrication gate, and it is structural rather than remembered. M9 gives the member a payload for the FIRST time and does not weaken this: `PartialCaptionPayload.role` is the constant `user`, so an interim caption of the USER's own speech is expressible and one of Tara's is not. The rule stopped depending on nobody writing the frame.",
     "$heartbeat": "The transport's own ping/pong, every 10s — which is why the closed set has no heartbeat member. Reap at 30s of pong silence (§29.2).",
-    "$binary": "Not accepted on the chat socket at all until M9. A socket that silently tolerates PCM has opened a §33.1 storage question nobody asked."
+    "$binary": "M9 answered the §33.1 storage question, so binary is accepted on the chat socket — but only INSIDE a bracket. A frame is admissible between a `vad.state: speech_start` and its `speech_end`/`cancelled`, and nowhere else; outside one it is still SYS_VALIDATION. That is narrower than 'accepted' on purpose: the bracket is what binds a run of PCM to a client_message_id, a locale and a consent posture, and PCM arriving with none of those attached is audio nobody can account for. The 4-byte header seq is checked for monotonicity — a gap fails the note rather than silently concatenating across the hole, because a note missing its middle transcribes into a sentence the user never said."
   },
   "payload_shapes": {
     "SessionStartPayload": {
@@ -59,12 +64,57 @@
       ]
     },
     "UserTurnPayload": {
-      "$comment": "Client → server, on `captions.final`. Discriminated from the Tara direction by `role`.",
+      "$comment": "Client → server on `captions.final` when typed; server → client on the same member when the turn was SPOKEN and STT has finalised it. One shape for both because §34.6's whole premise is that a typed message and a transcribed one are the same event — the difference is which of the three §33.1 fields below are populated, not which member carries it. On a typed message they are `not_applicable` / `text_only` / null, which is exactly what the store already writes.",
       "fields": [
         { "name": "role", "type": "ChatRole" },
         { "name": "text", "type": "string" },
         { "name": "client_message_id", "type": "string" },
+        { "name": "quoted_message_id", "type": "string?" },
+        { "name": "transcript_status", "type": "TranscriptStatus" },
+        { "name": "playback_policy", "type": "PlaybackPolicy" },
+        { "name": "source_audio_asset_id", "type": "string?" },
+        { "name": "duration_ms", "type": "integer?" },
+        { "name": "source_audio_expires_at", "type": "string?" }
+      ]
+    },
+    "PartialCaptionPayload": {
+      "$comment": "Server → client, on `captions.partial`. `role` is the CONSTANT \"user\" and not a ChatRole, which is the whole point of the shape: §9 runs grounding, language-quality and safety-post after generation, so a partial caption of TARA's words would be pre-validation text racing three validators to the screen. Through M8 that was guaranteed by nobody writing the frame. Now the frame exists, for the user's own speech, and the guarantee is that there is no value of `role` here that could carry hers.",
+      "fields": [
+        { "name": "role", "type": "const:user" },
+        { "name": "text", "type": "string" },
+        { "name": "client_message_id", "type": "string" }
+      ]
+    },
+    "VadStatePayload": {
+      "$comment": "Client → server, on `vad.state`. Brackets a held recording. `client_message_id` is minted before the first PCM byte leaves, so every binary frame in the bracket already belongs to a bubble the thread is drawing — the transcript lands in a message that exists rather than appearing from nowhere when STT returns.",
+      "fields": [
+        { "name": "state", "type": "VadState" },
+        { "name": "client_message_id", "type": "string" },
         { "name": "quoted_message_id", "type": "string?" }
+      ]
+    },
+    "TtsStartPayload": {
+      "$comment": "Server → client, on `tts.start`. §25.4: 'Tara's replies arrive as voice-note bubbles rendered from her TTS with transcript toggle'. Emitted after her `captions.final`, so the transcript the toggle shows is on screen before any audio plays — and is the same validated text the audio was rendered from, not a second generation.",
+      "fields": [
+        { "name": "client_message_id", "type": "string" },
+        { "name": "tts_audio_asset_id", "type": "string" },
+        { "name": "sample_rate_hz", "type": "integer" },
+        { "name": "voice_id", "type": "string?" }
+      ]
+    },
+    "TtsChunkMetaPayload": {
+      "$comment": "Server → client, on `tts.chunk_meta`. §13 — shapes, never content. There is deliberately no text field: the words already crossed on `captions.final`, and a second copy travelling beside the audio is a second thing to keep in step with the validators.",
+      "fields": [
+        { "name": "client_message_id", "type": "string" },
+        { "name": "seq", "type": "integer" },
+        { "name": "byte_length", "type": "integer" }
+      ]
+    },
+    "TtsEndPayload": {
+      "$comment": "Server → client, on `tts.end`. Total duration for the bubble's scrubber, and the signal that no further chunk meta is coming.",
+      "fields": [
+        { "name": "client_message_id", "type": "string" },
+        { "name": "duration_ms", "type": "integer" }
       ]
     },
     "TaraTurnPayload": {
