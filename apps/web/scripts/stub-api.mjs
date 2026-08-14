@@ -114,6 +114,14 @@ try {
 /** Where `POST /v1/chat/session` points the browser. Set by the runner. */
 const REALTIME_WS_URL = process.env.STUB_REALTIME_WS_URL ?? "ws://127.0.0.1:3102/chat/session";
 
+/**
+ * Where `POST /v1/call/session` points the browser (§25.3, M10). A SEPARATE
+ * path from the chat one, because the real config has two — §6.1 scales and
+ * sticky-routes a minutes-long duplex call independently of bursts of text.
+ */
+const REALTIME_CALL_WS_URL =
+  process.env.STUB_REALTIME_CALL_WS_URL ?? "ws://127.0.0.1:3102/call/session";
+
 /** @type {Map<string, {state: object, scenario: string}>} */
 const clients = new Map();
 
@@ -408,6 +416,53 @@ const server = createServer(async (req, res) => {
       ticket: `ticket-${clientId}`,
       ws_url: `${REALTIME_WS_URL}?client=${encodeURIComponent(clientId)}`,
       resume_window_s: 300,
+    });
+  }
+
+  // ── §25.3 / §34.6 call (M10) ─────────────────────────────────────────────
+  if (path === "/v1/call/session" && req.method === "POST") {
+    // Every reason a call must not happen is evaluated HERE, exactly as the
+    // real API evaluates it — §33.5's flag, CC-010's locale ruling, §7.3's
+    // pool. A stub that granted every call would be a fake that accepts what
+    // the real system rejects, which is the root CLAUDE.md rule.
+    if (scenario === "calls_disabled") {
+      return send(
+        res,
+        503,
+        envelope("VOICE_PROVIDER_UNAVAILABLE", "errors.voice.calls_not_enabled", false),
+      );
+    }
+    const callBody = await readJson(req);
+    if (callBody.locale && callBody.locale !== "en") {
+      // CC-010: `hi`/`hi-Latn` streaming has no recogniser, and an English one
+      // fed Hindi audio produces fluent nonsense rather than failing.
+      return send(
+        res,
+        503,
+        envelope(
+          "VOICE_PROVIDER_UNAVAILABLE",
+          "errors.voice.call_language_unavailable",
+          false,
+        ),
+      );
+    }
+    if (scenario === "call_minutes_exhausted") {
+      return send(
+        res,
+        402,
+        envelope("VOICE_MINUTES_EXHAUSTED", "errors.voice.minutes_exhausted", false),
+      );
+    }
+    const callClientId = client.id ?? "default";
+    return send(res, 200, {
+      ticket: `call-ticket-${callClientId}`,
+      ws_url: `${REALTIME_CALL_WS_URL}?client=${encodeURIComponent(callClientId)}`,
+      resume_window_s: 300,
+      entitlement:
+        scenario === "call_unlimited"
+          ? { plan: "premium", unlimited: true, minutes_left: null, minutes_quota: null }
+          : { plan: "monthly", unlimited: false, minutes_left: 6, minutes_quota: 300 },
+      captions_default_on: scenario !== "call_returning",
     });
   }
 

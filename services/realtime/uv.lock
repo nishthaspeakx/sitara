@@ -349,6 +349,7 @@ dependencies = [
     { name = "pydantic-settings" },
     { name = "sitara-schemas" },
     { name = "uvicorn", extra = ["standard"] },
+    { name = "websockets" },
 ]
 
 [package.dev-dependencies]
@@ -367,6 +368,7 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.5" },
     { name = "sitara-schemas", editable = "../../packages/schemas/python" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.32" },
+    { name = "websockets", specifier = ">=13" },
 ]
 
 [package.metadata.requires-dev]

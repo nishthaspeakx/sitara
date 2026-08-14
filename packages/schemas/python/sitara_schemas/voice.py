@@ -10,6 +10,10 @@ renders them. They held different sets until M9 — see the source JSON.
 from enum import StrEnum
 
 __all__ = [
+    "BARGE_IN_REASONS",
+    "BargeInReason",
+    "ENTITLEMENT_WARNING_MINUTES",
+    "HOLDING_PHRASE_AFTER_MS",
     "MAX_NOTE_DURATION_MS",
     "PLAYBACK_POLICIES",
     "PlaybackPolicy",
@@ -70,8 +74,29 @@ VAD_STATES: tuple[VadState, ...] = (
 )
 
 
+class BargeInReason(StrEnum):
+    """§34.6's `barge_in` payload (M10). §25.3 gives exactly one way to interrupt Tara — 'barge-in = just speak' — so `user_speech` is the only member that describes a user's action, and it is deliberately not spelled `user_interrupt`: the user did not press anything, which is the whole feature. The other two members exist because the client's job is identical in all three cases (drop the buffer, expect no `tts.end`) while the reason it must SAY to the user is not: an utterance cut by a provider failure is §8's degrade ladder and an utterance cut by an exhausted minute pool is §32.9's, and a client that could not tell them apart would show 'she stopped speaking' for both."""
+
+    USER_SPEECH = "user_speech"
+    PROVIDER_FAILED = "provider_failed"
+    ENTITLEMENT_EXHAUSTED = "entitlement_exhausted"
+
+
+BARGE_IN_REASONS: tuple[BargeInReason, ...] = (
+    BargeInReason.USER_SPEECH,
+    BargeInReason.PROVIDER_FAILED,
+    BargeInReason.ENTITLEMENT_EXHAUSTED,
+)
+
+
 #: §33.1 — 'the original recording is stored encrypted for 30 days BY DEFAULT'. Default, so a user setting may shorten it; the expiry job reads the per-note `source_audio_expires_at` rather than this constant, which exists so both sides can render the same promise in the same words.
 SOURCE_AUDIO_RETENTION_DAYS = 30
 
 #: A cap, not a spec value. §34.6's frame is 16kHz mono s16le = 32 kB/s, so two minutes is ~3.8 MB — comfortably inside MongoDB's 16 MB document limit, which is where §33.1's CSFLE key class puts the bytes. The client stops recording here rather than letting a pocket-dial write a document that cannot be stored.
 MAX_NOTE_DURATION_MS = 120000
+
+#: §32.9 — 'warnings at 5 and 2 minutes (in-locale, in Tara's voice, once each)'. Descending, because that is the order they fire in and a reader should not have to work it out. Both sides need the same two numbers: the server decides when to send `entitlement.warning`, the client decides when the §25.3 plan chip stops saying 'unlimited' and starts counting, and a chip that appeared at a different number from the warning would be two implementations of one promise.
+ENTITLEMENT_WARNING_MINUTES = (5, 2)
+
+#: §25.3 — the thinking state is 'a brief shimmer on the waveform — max 1.8s before she speaks a holding phrase'. A ceiling on silence, not a delay to wait out: if §9 answers in 400ms she answers in 400ms. It lives here because the server decides to speak the phrase and the client decides how long to shimmer, and those two have to be the same 1.8 seconds or the shimmer either ends before she speaks or outlasts her.
+HOLDING_PHRASE_AFTER_MS = 1800

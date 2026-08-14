@@ -343,7 +343,6 @@ def test_a_failed_transcription_keeps_the_bubble_and_raises_no_error(
 def test_one_note_at_a_time(voice_api: StubVoiceApi) -> None:
     """Same rule the text socket has: a second note mid-flight is refused
     rather than interleaved into one thread."""
-    import asyncio
 
     with TestClient(app).websocket_connect("/chat/session") as ws:
         _start(ws)

@@ -65,6 +65,7 @@ export function AskScreen({
   onRetry,
   onSelectTab,
   onGetHelp,
+  onCall,
   onAcceptMemory,
   onDeclineMemory,
   voice,
@@ -82,6 +83,8 @@ export function AskScreen({
   onRetry: (id: string) => void;
   onSelectTab: (tab: string) => void;
   onGetHelp: () => void;
+  /** §29's 'call button in Ask header'. Gated by CALLS_ENABLED inside the header. */
+  onCall?: () => void;
   onAcceptMemory: (offer: MemoryChipOffer, summary: string) => void;
   onDeclineMemory: (offer: MemoryChipOffer) => void;
   /**
@@ -139,7 +142,7 @@ export function AskScreen({
       <Wallpaper night={night} />
 
       <div className="relative flex min-h-screen flex-col">
-        <ChatHeader presenceState={presenceState} />
+        <ChatHeader presenceState={presenceState} onCall={onCall} />
 
         {thread.handedOffToText ? (
           <p

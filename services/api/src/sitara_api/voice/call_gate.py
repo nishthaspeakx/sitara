@@ -223,7 +223,14 @@ def render(report: GateReport) -> str:
     for measure in measures():
         state = report.results[measure.id]
         value = report.values.get(measure.id)
-        shown = "—" if value is None else f"{value:g}"
+        # A BLOCKED measure prints no number even when one was handed in.
+        # `Measure`'s docstring already says it never reports one, for the
+        # reason that matters: §33.5's per-language measures cannot be BLOCKED
+        # in two locales and scored from the third, and a table showing "1.0"
+        # beside "blocked" invites exactly that reading.
+        shown = (
+            "—" if value is None or state is MeasureState.BLOCKED else f"{value:g}"
+        )
         arrow = "≤" if measure.direction is Direction.AT_MOST else "≥"
         lines.append(
             f"{measure.id:<26} {state.value:<11} {shown:>12}  "
@@ -237,6 +244,24 @@ def render(report: GateReport) -> str:
         lines.append(f"UNMEASURED: {', '.join(report.unmeasured)} — no data is not good news.")
     lines.append(f"gate: {'PASSES' if report.passes else 'DOES NOT PASS'}")
     return "\n".join(lines)
+
+
+async def evaluate_live(metrics: object) -> GateReport:
+    """Score §33.5 against what real calls have actually produced (M10).
+
+    The `observed` dict comes from `voice.call_metrics`, which is a separate
+    module for a reason worth restating at the seam: a gate that collected its
+    own evidence could be made to pass by changing how it counts. This function
+    is the only place the two meet, and all it does is hand one to the other.
+
+    Two of the six will still be absent, and that is correct rather than
+    incomplete: `cost_per_call_user` needs a contracted rate card and §30.3's
+    billing period, and `call_naturalness` is a human rating in beta. Both
+    therefore read UNMEASURED, and `passes` stays False — which is §33.5's own
+    logic, not a limitation of this harness.
+    """
+    observed = await metrics.observed()  # type: ignore[attr-defined]
+    return evaluate(observed)
 
 
 def main() -> int:  # pragma: no cover - operator entry point

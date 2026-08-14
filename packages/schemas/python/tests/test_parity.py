@@ -207,11 +207,17 @@ def test_a_payload_is_typed_by_the_milestone_that_emits_it() -> None:
     milestone that starts EMITTING it, never before — because typing an event
     nothing produces is a guess with a schema around it.
 
-    S18 typed the text-chat subset a milestone early on that rule. M9 types
-    `vad.state` and `tts.*` on the same rule, now that voice notes emit them.
-    `barge_in` and `entitlement.warning` stay untyped: they belong to live
-    calls (§25.3's ducking, §7.3's minute pool), which §33.5 gates behind a
-    conditional release and M10 owns.
+    S18 typed the text-chat subset a milestone early on that rule. M9 typed
+    `vad.state` and `tts.*` when voice notes began emitting them. **M10 types
+    the last two** — `barge_in` (§25.3's server-side VAD ducking) and
+    `entitlement.warning` (§7.3's minute pool, §32.9's 5- and 2-minute
+    notices) — because M10's live call is the milestone that sends them.
+
+    So the "not yet" half of this test is now empty, and the assertion that
+    remains is the one that outlives the milestone: every member of the closed
+    fifteen has a shape, and none of them may be dropped. The direction that
+    used to fail (a shape arriving before its emitter) can no longer occur
+    without also adding a sixteenth member, which is §31.3 change control.
     """
     import sitara_schemas.ws_events as ws_mod
 
@@ -220,16 +226,66 @@ def test_a_payload_is_typed_by_the_milestone_that_emits_it() -> None:
         declared = [f["name"] for f in shape["fields"]]
         assert list(getattr(ws_mod, name).model_fields) == declared, name
 
-    typed = " ".join(source["payload_shapes"]).lower().replace("_", "")
-    for member in ("barge_in", "entitlement.warning"):
-        stem = member.replace(".", "").replace("_", "").lower()
-        assert stem not in typed, (
-            f"{member} has a payload shape but nothing emits it yet — M10 owns that"
-        )
-    # And the converse, so this test fails if M9's shapes are ever dropped
-    # rather than only if M10's arrive early.
-    for member in ("VadStatePayload", "TtsStartPayload", "TtsEndPayload"):
-        assert member in source["payload_shapes"], f"{member} is emitted in M9 and must be typed"
+    # Every shape a milestone has landed must stay landed. S18's, M9's, M10's —
+    # listed by name rather than counted, so deleting one fails here instead of
+    # quietly reducing a total nobody reads.
+    for member in (
+        "SessionStartPayload",
+        "SessionReadyPayload",
+        "UserTurnPayload",
+        "PartialCaptionPayload",
+        "TaraTurnPayload",
+        "PresenceStatePayload",
+        "HandoffToTextPayload",
+        "ResumeOfferPayload",
+        "VadStatePayload",
+        "TtsStartPayload",
+        "TtsChunkMetaPayload",
+        "TtsEndPayload",
+        "BargeInPayload",
+        "EntitlementWarningPayload",
+    ):
+        assert member in source["payload_shapes"], f"{member} is emitted and must stay typed"
+
+
+def test_a_cut_utterance_ends_in_barge_in_and_never_in_tts_end() -> None:
+    """§25.3's barge-in, held in the shapes rather than in a convention.
+
+    `tts.end` carries `duration_ms` — the total, for the bubble's scrubber. An
+    utterance the user interrupted has no total that was ever true, so a
+    synthesis stream ends in exactly one of two members: `tts.end` when it
+    finished, `barge_in` when it did not. A client can therefore rely on
+    "audio stopped" always having a reason attached, which is what stops
+    §25.3's interruption from rendering as a glitch.
+
+    The check is structural: `BargeInPayload` must name the chunk it stopped
+    after, because a client buffering ahead of playback cannot otherwise tell
+    what the server had already put on the wire — and audio that keeps playing
+    after the interruption is precisely what barge-in exists to prevent.
+    """
+    from sitara_schemas import BargeInPayload, TtsEndPayload
+
+    assert "duration_ms" in TtsEndPayload.model_fields
+    assert "duration_ms" not in BargeInPayload.model_fields
+    assert "cancelled_after_chunk_seq" in BargeInPayload.model_fields
+    assert "reason" in BargeInPayload.model_fields
+
+
+def test_the_minute_warnings_are_declared_once_for_both_sides() -> None:
+    """§32.9's two thresholds, in the package both sides read.
+
+    The server decides when to send `entitlement.warning`; the client decides
+    when §25.3's plan chip stops saying "unlimited" and starts counting. Those
+    are the same two numbers or they are two implementations of one promise —
+    the drift this package exists to prevent, and the reason the constant is
+    here rather than in either service.
+    """
+    from sitara_schemas import ENTITLEMENT_WARNING_MINUTES
+
+    assert ENTITLEMENT_WARNING_MINUTES == (5, 2)
+    assert isinstance(ENTITLEMENT_WARNING_MINUTES, tuple), (
+        "a mutable shared constant is a shared constant anyone can change at runtime"
+    )
 
 
 def test_a_partial_caption_can_only_ever_be_the_users_own_speech() -> None:

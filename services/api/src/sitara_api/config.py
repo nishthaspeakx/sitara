@@ -70,6 +70,24 @@ class Settings(BaseSettings):
     # the pipeline for an arbitrary user id is an open door that looks shut.
     service_key: str | None = None
 
+    # --- §25.3 the live call (M10) ---------------------------------------
+    # Where the browser opens the CALL socket. A separate URL from the chat
+    # one and not a path appended to it: §6.1 scales and sticky-routes the two
+    # independently, and a call session is minutes of duplex audio while a chat
+    # session is bursts of text.
+    realtime_call_ws_url: str = "ws://localhost:8002/call/session"
+    # **§33.5's conditional release gate, as a switch.** Calls ship only if six
+    # measures pass and they do not (`uv run python -m sitara_api.voice.call_gate`
+    # prints the table). §33.5's own instruction for that state is that launch
+    # proceeds with text, voice notes and Tara audio replies while calls roll
+    # out behind a flag — so the default is OFF, and turning it on is a
+    # deliberate act by someone who has read the gate.
+    #
+    # It is a flag over BUILT code, not over a hole: everything behind it is
+    # implemented and tested. That distinction is `apps/web/src/lib/features.ts`'s
+    # rule and it applies here identically.
+    calls_enabled: bool = False
+
     # --- §5.2 Layer B panchang providers ---------------------------------
     # Keys live in .env / Secrets Manager, never here and never in git.
     # A blank key is not an error: the provider then behaves as "down" and the

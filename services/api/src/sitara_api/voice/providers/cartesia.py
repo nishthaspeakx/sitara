@@ -1,10 +1,22 @@
 """Cartesia — Sonic for TTS, Ink for STT (CC-009).
 
-**Status: VERIFIED against the live API on 13 Aug 2026** — both endpoints, both
-directions, with the shapes below. That word is used the way
-`panchang/providers` uses it: Prokerala is VERIFIED, DivineAPI is not, and the
-difference is whether anyone has seen the vendor answer. Re-record
-`tests/voice/fixtures/` if this file changes.
+**Status, per modality, because they differ:**
+
+- **BATCH (`POST /stt`, `POST /tts/bytes`) — VERIFIED** against the live API on
+  13 Aug 2026, both directions, with the shapes below and recorded fixtures in
+  `tests/voice/fixtures/`.
+- **STREAMING (`wss://…/stt/websocket`, `wss://…/tts/websocket`) — UNVERIFIED.**
+  Written in M10 from the vendor's documentation. **No live streaming call has
+  been made**, so the frame shapes below are read, not seen — the same standing
+  DivineAPI has beside Prokerala in `panchang/providers`, and stated for the
+  same reason: an unverified adapter that reads as verified is how a wrong
+  field name survives to production. `tests/voice/test_streaming_provenance.py`
+  is the skipping marker; `uv run python -m tests.voice.record_streaming` is how
+  it stops skipping. **Do not delete either.**
+
+That split is not pedantry here. §33.5's gate turns on p95 first-response audio
+and barge-in success, both of which are properties of the streaming path
+specifically, and neither of which the batch verification says anything about.
 
 What CC-009 does and does not claim
 -----------------------------------
@@ -34,14 +46,21 @@ Two limits found while verifying, which the bake-off will need to weigh:
 
 from __future__ import annotations
 
+import base64
+import contextlib
+import json
 import logging
+from collections.abc import AsyncIterator
 from typing import Any
+from urllib.parse import quote
 
 import httpx
+import websockets
 
 from sitara_api.voice.providers.base import (
     SynthesisRequest,
     SynthesisResult,
+    TranscriptEvent,
     Transcription,
     TranscriptionRequest,
     VoiceProviderName,
@@ -189,6 +208,253 @@ class CartesiaTtsProvider:
             model=self._model,
             voice_id=voice_id,
         )
+
+    def _headers(self) -> dict[str, str]:
+        return {
+            "Cartesia-Version": CARTESIA_VERSION,
+            "Authorization": f"Bearer {self._api_key}",
+        }
+
+
+# ---------------------------------------------------------------------------
+# Streaming (M10, §25.3) — UNVERIFIED. See the module docstring.
+# ---------------------------------------------------------------------------
+
+#: The vendor authenticates a websocket by query parameter in its own examples.
+#: We send a header instead. §13 keeps secrets out of logs, and a URL is the one
+#: string that reliably reaches an access log, a proxy trace, an exception
+#: message and a metrics label — four places a key has no business being. If a
+#: future vendor version refuses the header, that is a finding to record here,
+#: not a reason to put the key back in the URL.
+
+
+def _ws_url(base_url: str, path: str, params: dict[str, str]) -> str:
+    scheme = "wss" if base_url.startswith("https") else "ws"
+    host = base_url.split("://", 1)[-1].rstrip("/")
+    query = "&".join(f"{k}={quote(str(v))}" for k, v in params.items())
+    return f"{scheme}://{host}{path}?{query}"
+
+
+class CartesiaSttStream:
+    """One live Ink connection, for the length of one call.
+
+    Two tasks, not one loop: the caller pushes PCM from wherever its audio comes
+    from, and results arrive whenever the recogniser has them. A design that
+    read a transcript after each push would have made every 20 ms of microphone
+    wait for a network round trip, which is the latency §33.5 measures.
+
+    **There is no method here that returns audio, and that is deliberate**
+    (§13, §33.1: call audio is never stored). The bytes go in and transcripts
+    come out; nothing in this object holds a buffer of what was said aloud.
+    """
+
+    def __init__(self, connection: Any, *, model: str) -> None:
+        self._ws = connection
+        self._model = model
+        self._closed = False
+
+    async def push(self, pcm: bytes) -> None:
+        if self._closed:
+            raise VoiceProviderUnavailable("cartesia stt stream is closed")
+        try:
+            await self._ws.send(pcm)
+        except Exception as exc:  # noqa: BLE001 - vendor lib raises its own tree
+            self._closed = True
+            logger.warning("cartesia stt stream push failed: %s", type(exc).__name__)
+            raise VoiceProviderUnavailable("cartesia stt stream lost") from exc
+
+    def __aiter__(self) -> AsyncIterator[TranscriptEvent]:
+        return self._events()
+
+    async def _events(self) -> AsyncIterator[TranscriptEvent]:
+        try:
+            async for message in self._ws:
+                if isinstance(message, bytes):
+                    # Ink sends JSON. A binary frame here is a protocol change,
+                    # and guessing at it would be inventing a transcript.
+                    continue
+                try:
+                    frame = json.loads(message)
+                except json.JSONDecodeError:
+                    continue
+                kind = frame.get("type")
+                if kind == "error":
+                    # The vendor's message is NOT forwarded (§13, §2.4): it is
+                    # English prose from a third party and it would reach a
+                    # screen. The type name is enough to debug from.
+                    logger.warning("cartesia stt stream reported an error frame")
+                    raise VoiceProviderUnavailable("cartesia stt stream errored")
+                if kind == "done":
+                    return
+                if kind != "transcript":
+                    continue
+                text = frame.get("text")
+                if not isinstance(text, str) or not text.strip():
+                    # An empty final is silence, not a turn. Passing it on would
+                    # send §9 an empty question and get a real answer to it.
+                    continue
+                yield TranscriptEvent(text=text.strip(), is_final=bool(frame.get("is_final")))
+        except VoiceProviderUnavailable:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("cartesia stt stream ended: %s", type(exc).__name__)
+            raise VoiceProviderUnavailable("cartesia stt stream lost") from exc
+        finally:
+            self._closed = True
+
+    async def aclose(self) -> None:
+        self._closed = True
+        with contextlib.suppress(Exception):
+            await self._ws.close()
+
+
+class CartesiaStreamingSttProvider:
+    """Ink, over `wss://…/stt/websocket` (§25.3's live call).
+
+    English only, and that is the vendor's limit rather than ours — which is
+    why `routing.resolve(Modality.STREAMING, "hi")` returns no provider and this
+    class is never constructed for a Hindi call. It does not re-check the
+    locale: two places deciding the same thing is how one of them ends up
+    deciding it differently, and `routing` is the one that CC-010 names.
+    """
+
+    name = VoiceProviderName.CARTESIA
+    modality = "streaming"
+
+    def __init__(
+        self,
+        api_key: str,
+        *,
+        base_url: str = DEFAULT_BASE_URL,
+        model: str = DEFAULT_STT_MODEL,
+        sample_rate_hz: int = 16_000,
+    ) -> None:
+        if not api_key:
+            raise VoiceProviderUnavailable("CARTESIA_API_KEY is not configured")
+        self._api_key = api_key
+        self._base_url = base_url.rstrip("/")
+        self._model = model
+        self._sample_rate_hz = sample_rate_hz
+
+    async def open(self, request: TranscriptionRequest) -> CartesiaSttStream:
+        if request.audio:
+            # The bytes belong on `push`. Accepting them here would give the
+            # interface two ways to send audio and one of them would rot.
+            raise VoiceProviderUnavailable("a streaming request carries no audio up front")
+        language = stt_language_for(request.locale)
+        url = _ws_url(
+            self._base_url,
+            "/stt/websocket",
+            {
+                "model": self._model,
+                "language": language,
+                "encoding": "pcm_s16le",
+                "sample_rate": str(request.sample_rate_hz or self._sample_rate_hz),
+            },
+        )
+        try:
+            connection = await websockets.connect(url, additional_headers=self._headers())
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("cartesia stt websocket refused: %s", type(exc).__name__)
+            raise VoiceProviderUnavailable("cartesia stt stream unreachable") from exc
+        return CartesiaSttStream(connection, model=self._model)
+
+    def _headers(self) -> dict[str, str]:
+        return {
+            "Cartesia-Version": CARTESIA_VERSION,
+            "Authorization": f"Bearer {self._api_key}",
+        }
+
+
+class CartesiaStreamingTtsProvider:
+    """Sonic, over `wss://…/tts/websocket`.
+
+    §25.3 wants TTFB, not a file: the whole reason a call streams is that her
+    first syllable must land inside §33.5's 1.2s while the rest is still being
+    rendered. The iterator is also the cancellation handle — closing it on a
+    barge-in stops the vendor mid-utterance instead of paying for audio the user
+    has already talked over.
+    """
+
+    name = VoiceProviderName.CARTESIA
+    modality = "streaming"
+
+    def __init__(
+        self,
+        api_key: str,
+        *,
+        base_url: str = DEFAULT_BASE_URL,
+        model: str = DEFAULT_TTS_MODEL,
+        voice_id: str | None = None,
+        sample_rate_hz: int = 16_000,
+    ) -> None:
+        if not api_key:
+            raise VoiceProviderUnavailable("CARTESIA_API_KEY is not configured")
+        self._api_key = api_key
+        self._base_url = base_url.rstrip("/")
+        self._model = model
+        self._voice_id = voice_id
+        self._sample_rate_hz = sample_rate_hz
+
+    async def stream(self, request: SynthesisRequest) -> AsyncIterator[bytes]:
+        voice_id = request.voice_id or self._voice_id
+        if not voice_id:
+            # Same rule as the batch adapter: §3.2's anchor artist is a
+            # contracted clone, and a stock default would put a stranger's
+            # voice on Tara's name.
+            raise VoiceProviderUnavailable("no Tara voice id configured (§3.2)")
+
+        url = _ws_url(self._base_url, "/tts/websocket", {"cartesia_version": CARTESIA_VERSION})
+        body = {
+            "model_id": self._model,
+            "transcript": request.text,
+            "voice": {"mode": "id", "id": voice_id},
+            "language": tts_language_for(request.locale),
+            "output_format": {
+                "container": "raw",
+                "encoding": "pcm_s16le",
+                "sample_rate": self._sample_rate_hz,
+            },
+            "continue": False,
+        }
+
+        try:
+            connection = await websockets.connect(url, additional_headers=self._headers())
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("cartesia tts websocket refused: %s", type(exc).__name__)
+            raise VoiceProviderUnavailable("cartesia tts stream unreachable") from exc
+
+        try:
+            await connection.send(json.dumps(body))
+            async for message in connection:
+                if isinstance(message, bytes):
+                    yield message
+                    continue
+                try:
+                    frame = json.loads(message)
+                except json.JSONDecodeError:
+                    continue
+                kind = frame.get("type")
+                if kind == "chunk":
+                    data = frame.get("data")
+                    if isinstance(data, str) and data:
+                        yield base64.b64decode(data)
+                    continue
+                if kind == "done":
+                    return
+                if kind == "error":
+                    logger.warning("cartesia tts stream reported an error frame")
+                    raise VoiceProviderUnavailable("cartesia tts stream errored")
+        except VoiceProviderUnavailable:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("cartesia tts stream ended: %s", type(exc).__name__)
+            raise VoiceProviderUnavailable("cartesia tts stream lost") from exc
+        finally:
+            # Reached on a barge-in too: closing the generator runs this, which
+            # is what actually stops the vendor rendering.
+            with contextlib.suppress(Exception):
+                await connection.close()
 
     def _headers(self) -> dict[str, str]:
         return {

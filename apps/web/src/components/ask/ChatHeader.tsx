@@ -17,14 +17,31 @@
  *
  * The portrait state IS the served one at L2+: §29.5 puts state 11 in the chat
  * header and nowhere else.
+ *
+ * **The call button is §29's entry point** ("call button in Ask header") and is
+ * behind `CALLS_ENABLED`, which is off — §33.5 gates live calls on six measures
+ * and four of them are not passing. `features.ts` carries the reasoning. With
+ * the flag off the control does not render at all rather than rendering
+ * disabled: a greyed call button asserts that calling is a thing this account
+ * could do, and §30.1's parity rule wants the working alternative visible
+ * instead — which is the mic the composer already has.
  */
 
+import { Phone } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { PresenceState } from "@sitara/schemas";
 
-import { StoryRing } from "@/components/ui";
+import { IconButton, StoryRing } from "@/components/ui";
+import { ICON_STROKE } from "@/components/ui/_util";
+import { CALLS_ENABLED } from "@/lib/features";
 
-export function ChatHeader({ presenceState }: { presenceState: PresenceState }) {
+export interface ChatHeaderProps {
+  presenceState: PresenceState;
+  /** Opens §25.3's screen 17. Absent when the caller has no call route. */
+  onCall?: () => void;
+}
+
+export function ChatHeader({ presenceState, onCall }: ChatHeaderProps) {
   const t = useTranslations();
 
   return (
@@ -41,6 +58,14 @@ export function ChatHeader({ presenceState }: { presenceState: PresenceState }) 
       <span className="ms-auto shrink-0 text-caption text-ink-muted">
         {t("ui.ask.presence_line")}
       </span>
+      {CALLS_ENABLED && onCall ? (
+        <IconButton
+          variant="plain"
+          labelKey="ui.call.start"
+          onClick={onCall}
+          icon={<Phone strokeWidth={ICON_STROKE} />}
+        />
+      ) : null}
     </header>
   );
 }

@@ -53,7 +53,12 @@ export type Scenario =
   | "reading_no_panchang"
   | "reading_unavailable"
   | "today_unavailable"
-  | "chat_unavailable";
+  | "chat_unavailable"
+  /* §25.3's call (M10) — each is a reason a call is refused at the GRANT. */
+  | "calls_disabled"
+  | "call_minutes_exhausted"
+  | "call_unlimited"
+  | "call_returning";
 
 /**
  * §28.2's sixteen. The ids are the recorded fixtures' filenames, so a variant
@@ -117,6 +122,17 @@ export type ChatFixture = (typeof CHAT_FIXTURES)[number];
 
 /** How `scripts/stub-realtime.mjs` behaves for this client. */
 export type SocketBehaviour =
+  /* §25.3's call (M10) — see `runCall` in scripts/stub-realtime.mjs */
+  | "connecting"
+  | "thinking"
+  /** Mid-utterance and staying there, so `speaking` is observable. */
+  | "speaking"
+  /** Upgraded but never ready — the only way to observe `connecting`. */
+  | "hold_ready"
+  | "tts_kill"
+  | "turn_failed"
+  | "warning"
+  | "exhausted"
   | "reply"
   /** Presence, then nothing, socket still open — a turn genuinely in flight. */
   | "hold"
@@ -153,6 +169,8 @@ export async function setupSocket(
     pending?: string;
     code?: string;
     message_key?: string;
+    /** §32.9's threshold for the `warning` behaviour. Fires at 5 and at 2. */
+    warningMinutes?: number;
   } = {},
 ): Promise<void> {
   const response = await fetch(`${STUB_REALTIME}/__control/scenario`, {
@@ -169,6 +187,7 @@ export async function setupSocket(
       pending: options.pending,
       code: options.code,
       message_key: options.message_key,
+      warningMinutes: options.warningMinutes,
     }),
   });
   if (!response.ok) throw new Error(`stub-realtime scenario failed: ${response.status}`);

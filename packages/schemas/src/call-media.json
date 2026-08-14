@@ -1,0 +1,42 @@
+{
+  "$comment": "The internal media socket between `sitara-realtime` and `sitara-api` (M10, §25.3). It lands in this package for the reason the package's own rule states: **if both sides of the wire name a set, it belongs here before either side reads it.** The confidence states, the presence states, the memory types and the voice vocabulary all arrived here after the two languages had already disagreed about them; this one arrives before, which is the whole point of having learned it four times.\n\nWhy a SECOND socket exists at all. §34.6 is what the BROWSER speaks and it terminates in `sitara-realtime`. Behind it a live call needs two things realtime cannot have: a duplex connection to a speech vendor (no credentials, no provider registry — §3.2 puts those behind `sitara_api.voice.providers`) and the §9 pipeline (no model client, and a second copy of §9 would be a second set of validators to keep in step). A voice NOTE solved the same problem with `POST /v1/chat/ws/voice-note`, because a note is a complete recording and request/response fits it. A call is duplex for its whole length.\n\nWhy this is deliberately NOT §34.6. That set is closed at fifteen and is a user-facing protocol. Saying an internal transport in it would mean either widening a closed set under §31.3 change control, or pretending an internal frame was a user-facing event. The two sets are separate and neither borrows from the other.",
+  "$spec": "§25.3, §25.7, §6.1, §33.1",
+  "$binary": "16 kHz mono s16le PCM in BOTH directions — §34.6's format exactly, so nothing in the path transcodes. Upward it is the microphone; downward it is Tara's synthesised reply. Neither is ever written to disk (§13, §33.1: call audio is never stored), and no participant holds a buffer of either beyond the frame in flight. There is no 8-byte header here: §34.6's sequence number exists so a voice NOTE can fail on a gap rather than splice across one, and a live call has no note to fail — a lost packet is a lost moment, not a fabricated sentence.",
+  "$typed_directions": "The two type sets are DISJOINT, so a frame can never be ambiguous about who sent it. That is worth more than it looks on a socket where one side runs the pipeline on behalf of a user id the other side named.",
+  "enums": {
+    "up_frame": {
+      "$comment": "`sitara-realtime` → `sitara-api`. Realtime owns the §34.6 protocol, the server-side VAD and the session clock; everything it sends here is one of those three speaking.",
+      "enum_name": "CallUpFrame",
+      "const_name": "CALL_UP_FRAMES",
+      "members": [
+        { "id": "utterance", "note": "a finalised user turn. The API commits the transcript BEFORE running §9 — call audio is never stored, so the transcript is the only record there will ever be, and a provider outage between 'she heard you' and 'she answered' would otherwise erase what somebody said out loud" },
+        { "id": "cancel_speech", "note": "§25.3's barge-in. Sent by realtime because realtime is where the microphone's PCM is and §25.3 makes the detection server-side" },
+        { "id": "tick", "note": "§32.9's metering heartbeat, carrying seconds elapsed. Realtime holds the CLOCK and the API holds the QUOTA, so the arithmetic happens once, on the side that owns the pool" },
+        { "id": "metric", "note": "§33.5 evidence realtime observed (§43.5). Realtime has no database" },
+        { "id": "end", "note": "the call is over; meter it into `voice_sessions` (§25.7)" }
+      ]
+    },
+    "down_frame": {
+      "$comment": "`sitara-api` → `sitara-realtime`. Vendors, validators and the quota all live on this side.",
+      "enum_name": "CallDownFrame",
+      "const_name": "CALL_DOWN_FRAMES",
+      "members": [
+        { "id": "caption", "note": "an STT result. `is_final` is the only branch: an interim becomes §34.6's `captions.partial` (whose role is the constant `user`), a final becomes the turn" },
+        { "id": "stage", "note": "a §9 stage NAME and nothing else. No draft, no partial text, no token — the same guarantee `/v1/chat/ws/turn` gives, and the structural reason `captions.partial` can never carry Tara's words even by accident" },
+        { "id": "turn", "note": "the whole validated ChatTurn. Always sent BEFORE any audio rendered from it, so a synthesis that dies leaves her words already on screen" },
+        { "id": "tts_start", "note": "synthesis beginning; binary frames follow" },
+        { "id": "tts_end", "note": "synthesis finished normally" },
+        { "id": "tts_cancelled", "note": "synthesis stopped early, with the reason — so realtime can send §34.6's `barge_in` carrying a true reason rather than guessing which of the three it was" },
+        { "id": "entitlement_warning", "note": "§32.9's 5- or 2-minute notice, decided here because the quota is here" },
+        { "id": "exhausted", "note": "§32.9 — the pool hit zero. Never a hard drop: the caller hands off to text" },
+        { "id": "error", "note": "a §34.4 envelope, forwarded whole" }
+      ]
+    }
+  },
+  "constants": {
+    "CALL_TICK_INTERVAL_S": {
+      "$comment": "How often realtime reports elapsed seconds for metering. Ten seconds, matching §34.6's heartbeat, so a call carries one periodic obligation rather than two drifting ones. It bounds how late a §32.9 warning can be — never how EARLY the pool can run out, because `exhausted` is evaluated on the same tick.",
+      "value": 10
+    }
+  }
+}

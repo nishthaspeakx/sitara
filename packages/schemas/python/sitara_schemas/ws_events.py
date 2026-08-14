@@ -7,7 +7,12 @@ from pydantic import BaseModel, ConfigDict
 
 from sitara_schemas.chat import ChatRole, ChatTurn
 from sitara_schemas.presence import PresenceState
-from sitara_schemas.voice import PlaybackPolicy, TranscriptStatus, VadState
+from sitara_schemas.voice import (
+    BargeInReason,
+    PlaybackPolicy,
+    TranscriptStatus,
+    VadState,
+)
 
 
 class ControlEventType(StrEnum):
@@ -43,17 +48,20 @@ class ControlEvent(BaseModel):
 
 
 # --------------------------------------------------------------------
-# Payload shapes — the text chat (S18) and the voice notes (M9).
+# Payload shapes — the text chat (S18), the voice notes (M9), the live
+# call (M10). All fifteen members are now typed.
 #
-# §34.6 says payloads are 'typed per event in M9'. S18 typed the text-chat
-# members a milestone early because it sent them; M9 types vad.state and
-# tts.* for the same reason, now that voice notes emit them.
+# §34.6 says payloads are 'typed per event in M9'. The rule that actually
+# held is narrower: a payload is typed by the milestone that starts
+# EMITTING it, because typing an event nobody produces is a guess with a
+# schema around it. S18 typed the text-chat members, M9 typed vad.state
+# and tts.*, and M10 types the last two — `barge_in` (§25.3's server-side
+# VAD ducking) and `entitlement.warning` (§7.3's minute pool) — because
+# M10 is the milestone that sends them.
 #
-# `barge_in` and `entitlement.warning` stay UNTYPED. They belong to live
-# calls (§25.3's server-side VAD ducking, §7.3's minute pool), which §33.5
-# gates behind a conditional release and M10 owns. The rule has not moved:
-# a payload is typed by the milestone that emits it, because typing an
-# event nobody produces is a guess with a schema around it.
+# The set of MEMBERS has not moved and must not: fifteen, closed, §31.3
+# change control. A live call speaking the same fifteen as a typed chat
+# is what §34.6 claimed and what M10 is the test of.
 # --------------------------------------------------------------------
 
 class SessionStartPayload(BaseModel):
@@ -114,12 +122,14 @@ class VadStatePayload(BaseModel):
 
 
 class TtsStartPayload(BaseModel):
-    """Server → client, on `tts.start`. §25.4: 'Tara's replies arrive as voice-note bubbles rendered from her TTS with transcript toggle'. Emitted after her `captions.final`, so the transcript the toggle shows is on screen before any audio plays — and is the same validated text the audio was rendered from, not a second generation."""
+    """Server → client, on `tts.start`. §25.4: 'Tara's replies arrive as voice-note bubbles rendered from her TTS with transcript toggle'. Emitted after her `captions.final`, so the transcript the toggle shows is on screen before any audio plays — and is the same validated text the audio was rendered from, not a second generation.
+
+`tts_audio_asset_id` became OPTIONAL in M10, and the null is load-bearing rather than lax. A voice NOTE is synthesised whole and stored, so it has an asset and a bubble that can replay it. A live CALL is streamed and its audio is never stored at all (§13, §33.1) — so there is no asset, and there is nothing to replay. Null is the type saying exactly that. Carrying an invented id would have promised a playback control over audio that does not exist anywhere."""
 
     model_config = ConfigDict(frozen=True)
 
     client_message_id: str
-    tts_audio_asset_id: str
+    tts_audio_asset_id: str | None = None
     sample_rate_hz: int
     voice_id: str | None = None
 
@@ -141,6 +151,35 @@ class TtsEndPayload(BaseModel):
 
     client_message_id: str
     duration_ms: int
+
+
+class BargeInPayload(BaseModel):
+    """Server → client (§25.3, §7.3). Typed in M10 because M10 is the first milestone that emits it — the rule this package keeps, and the reason it stayed untyped through M9.
+
+**It replaces `tts.end`, it does not precede it.** `tts.end` carries the total duration for the bubble's scrubber; an utterance that was cut has no total duration that was ever true, and sending one would put a scrubber on audio the user interrupted. So a synthesis stream ends in exactly one of two members and a client can rely on that.
+
+`cancelled_after_chunk_seq` is the last `tts.chunk_meta.seq` the server sent before it stopped. The client needs it because it is buffering ahead of playback: without it, dropping 'the rest' is a guess about what the server had already put on the wire, and audio kept playing after the interruption is exactly the thing §25.3's barge-in exists to prevent."""
+
+    model_config = ConfigDict(frozen=True)
+
+    cancelled_client_message_id: str
+    cancelled_after_chunk_seq: int | None = None
+    reason: BargeInReason
+
+
+class EntitlementWarningPayload(BaseModel):
+    """Server → client (§7.3, §32.9). §32.9: warnings at 5 and 2 minutes, in-locale, in Tara's voice, ONCE EACH — the once-each is enforced by the session, not by the client ignoring repeats.
+
+`minutes_left` is the threshold that fired, not a live countdown: a per-second remaining-minutes feed would be §29.2's countdown, which this product does not build. `minutes_quota` is null for the unlimited fair-use tiers, which is also what makes the §25.3 plan chip render '⏳ unlimited' rather than a number.
+
+`message_key` and not a sentence: §2.4 puts every user-facing string in the catalogs, and a sentence on the wire is a sentence no §14 reviewer saw."""
+
+    model_config = ConfigDict(frozen=True)
+
+    minutes_left: int
+    minutes_quota: int | None = None
+    plan: str
+    message_key: str
 
 
 class TaraTurnPayload(BaseModel):

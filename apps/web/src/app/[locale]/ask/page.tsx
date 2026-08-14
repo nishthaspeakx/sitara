@@ -170,6 +170,7 @@ export default function AskPage() {
       onRetry={retry}
       onSelectTab={(tab) => router.push(`/${tab}`)}
       onGetHelp={() => router.push("/you/help")}
+      onCall={() => router.push("/ask/call")}
       onAcceptMemory={acceptMemory}
       onDeclineMemory={() => {}}
       voice={voice}

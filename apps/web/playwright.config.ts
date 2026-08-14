@@ -119,6 +119,10 @@ export default defineConfig({
             // rebuild. That is the same reason NEXT_PUBLIC_REALTIME_WS_URL was
             // removed.
             STUB_REALTIME_WS_URL: `ws://127.0.0.1:${STUB_REALTIME_PORT}/chat/session`,
+            // §25.3's call socket is a separate path, as it is in the real
+            // config: §6.1 scales and sticky-routes a minutes-long duplex
+            // call independently of bursts of text.
+            STUB_REALTIME_CALL_WS_URL: `ws://127.0.0.1:${STUB_REALTIME_PORT}/call/session`,
           },
         },
         {
@@ -153,7 +157,7 @@ export default defineConfig({
     {
       name: "library",
       testMatch:
-        /library\.spec\.ts|tara-disclosure\.spec\.ts|dist-dirs\.spec\.ts|api-routing\.spec\.ts|today-variant\.spec\.ts|today-fixtures\.spec\.ts|chat-thread\.spec\.ts|voice-note\.spec\.ts/,
+        /library\.spec\.ts|tara-disclosure\.spec\.ts|dist-dirs\.spec\.ts|api-routing\.spec\.ts|today-variant\.spec\.ts|today-fixtures\.spec\.ts|chat-thread\.spec\.ts|voice-note\.spec\.ts|call-state\.spec\.ts/,
     },
     {
       name: "components",
@@ -172,7 +176,7 @@ export default defineConfig({
       // loose `today-.*` would run them twice and make the cheap command
       // wait on a `next start`.
       testMatch:
-        /screens\.spec\.ts|onboarding-.*\.spec\.ts|ceremony-degradation\.spec\.ts|today-(empty|degraded|screens|routes)\.spec\.ts|ask-.*\.spec\.ts/,
+        /screens\.spec\.ts|onboarding-.*\.spec\.ts|ceremony-degradation\.spec\.ts|today-(empty|degraded|screens|routes)\.spec\.ts|ask-.*\.spec\.ts|call\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
         viewport: { width: 390, height: 844 },

@@ -12,6 +12,8 @@ from sitara_api import __version__
 from sitara_api.astrology import AstroChartAdapter, AstrologyFacade
 from sitara_api.auth.firebase import FirebaseAdminVerifier
 from sitara_api.auth.router import router as auth_router
+from sitara_api.calls.router import router as call_router
+from sitara_api.calls.service import CallTurnService
 from sitara_api.chat_orchestration import ChatSettings, build_pipeline
 from sitara_api.chat_orchestration.router import router as chat_router
 from sitara_api.chat_orchestration.types import LAUNCH_LOCALES
@@ -33,8 +35,10 @@ from sitara_api.panchang.places import default_resolver
 from sitara_api.panchang.registry import build_registry
 from sitara_api.panchang.router import router as panchang_router
 from sitara_api.panchang.service import PanchangService
+from sitara_api.voice.call_metrics import CallMetrics, RedisMetricStore
 from sitara_api.voice.config import VoiceSettings
-from sitara_api.voice.providers.registry import build_voice_service
+from sitara_api.voice.entitlements import MinuteLedger
+from sitara_api.voice.providers.registry import build_streaming_tts, build_voice_service
 from sitara_api.voice.router import router as voice_router
 
 
@@ -111,6 +115,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             crypto=app.state.field_crypto,
             pipeline=app.state.chat_pipeline,
         )
+        # §25.3's live call (M10). Built after the pipeline for the same
+        # reason voice notes are: a call RUNS §9 rather than reimplementing it.
+        # It is reachable only behind `settings.calls_enabled` (§33.5) and only
+        # in a locale `routing` admits (CC-010) — both checked at the door in
+        # `calls/router.py`, so this being wired is not the same as this being
+        # available.
+        app.state.call_turns = CallTurnService(
+            pipeline=app.state.chat_pipeline,
+            store=(
+                app.state.chat_pipeline.message_store if app.state.chat_pipeline else None
+            ),
+            tts=build_streaming_tts(app.state.voice_settings),
+            voice_id=app.state.voice_settings.tara_voice_id,
+            environment=settings.environment,
+        )
+        app.state.minute_ledger = MinuteLedger(db)
+        # §33.5's evidence, from the first call (§43.5). Redis and not Mongo
+        # because these are counters and a reservoir, and no TTL because a
+        # launch gate whose evidence expired would quietly reset the decision.
+        app.state.call_metrics = CallMetrics(RedisMetricStore(app.state.redis))
         # §7.1's pipeline, for the on-open path `GET /v1/today` needs (§28.2).
         # Built ONCE here rather than per request: it provisions a CSFLE codec
         # holding a key-vault connection, and Today is the app's busiest screen.
@@ -133,6 +157,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.chat_pipeline = None
     app.state.voice_notes = None
     app.state.memory_service = None
+    app.state.call_turns = None
+    app.state.call_metrics = None
+    app.state.minute_ledger = None
     # §2.4: the service renders §9's safety and decline strings itself. A
     # missing catalog must surface here, not when an L4 turn needs the crisis
     # line.
@@ -155,6 +182,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(numerology_router)
     app.include_router(panchang_router)
     app.include_router(chat_router)
+    app.include_router(call_router)
     app.include_router(voice_router)
     app.include_router(memory_router)
     app.include_router(onboarding_router)

@@ -30,3 +30,26 @@
  * against the real socket stub rather than asserting an absence.
  */
 export const VOICE_NOTES_ENABLED = true;
+
+/**
+ * §25.3's live calls — BUILT, and off (M10).
+ *
+ * This is the clearest case the file's own rule has had. Everything behind the
+ * flag exists and is tested: the §34.6 call socket, server-side VAD and
+ * barge-in, the streaming adapters, §7.3's minute pool, §32.9's warnings and
+ * the whole §25.3 degrade ladder. The flag is not covering a hole.
+ *
+ * It is off because **§33.5 says so**. Live calls are a conditional release
+ * gate — they ship "ONLY if" six measures pass, and today two of them are
+ * BLOCKED (CC-010 leaves `hi`/`hi-Latn` with no streaming recogniser, so there
+ * is no Hindi call in which to verify safety interception or rate naturalness)
+ * and two are UNMEASURED. §33.5's own instruction for that state is the one
+ * this flag implements: "launch proceeds with text + voice notes + Tara audio
+ * replies, and calls roll out behind a flag when the gate passes."
+ *
+ * Run `uv run python -m sitara_api.voice.call_gate` to see the table. Turning
+ * this on is a decision made against that output, not against this comment —
+ * and the SERVER has the authoritative switch (`Settings.calls_enabled`), so
+ * flipping this alone changes what the app OFFERS and not what it permits.
+ */
+export const CALLS_ENABLED = false;

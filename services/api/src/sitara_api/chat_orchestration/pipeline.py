@@ -134,6 +134,17 @@ class ChatPipeline:
         self._capture_content = capture_content
         self._budget = ContextBudget(settings, llm)
 
+    @property
+    def message_store(self) -> MessageStore:
+        """The same store this pipeline persists turns into.
+
+        Exposed for M10's call service, which must commit a spoken utterance
+        BEFORE §9 runs (see `TurnRequest.user_message_id`). It reads this rather
+        than being handed a second store, because two stores pointed at one
+        conversation is how a turn ends up written twice or written nowhere.
+        """
+        return self._store
+
     async def run(
         self, request: TurnRequest, *, on_stage: Callable[[Stage], None] | None = None
     ) -> TurnResult:
@@ -705,16 +716,21 @@ class ChatPipeline:
         trace_id: str,
         intent: Intent,
     ) -> str:
-        await self._store.save_message(
-            build_message(
-                conversation_id=request.conversation_id,
-                role="user",
-                content=request.text,
-                locale=locale,
-                safety=safety,
-                now=request.now,
+        if request.user_message_id is None:
+            await self._store.save_message(
+                build_message(
+                    conversation_id=request.conversation_id,
+                    role="user",
+                    content=request.text,
+                    locale=locale,
+                    safety=safety,
+                    now=request.now,
+                )
             )
-        )
+        # else: M10's call already committed the transcript the moment STT
+        # finalised it, precisely so a failure between here and there could not
+        # erase what somebody said out loud (§25.3, and `TurnRequest`'s own
+        # comment). Writing it again would double the user's turn in the thread.
         message_id = await self._store.save_message(
             build_message(
                 conversation_id=request.conversation_id,
