@@ -610,8 +610,6 @@
       },
       "house": "House {house}",
       "lagna": "Lagna",
-      "pending": "The diagram arrives in the next release. Your placements are listed below, exactly as computed from your chart.",
-      "pending_label": "Kundli diagram, coming in the next release",
       "rashi": {
         "1": "Aries",
         "2": "Taurus",
@@ -636,7 +634,20 @@
         "saturn": "Saturn",
         "rahu": "Rahu",
         "ketu": "Ketu"
-      }
+      },
+      "graha_short": {
+        "sun": "Su",
+        "moon": "Mo",
+        "mars": "Ma",
+        "mercury": "Me",
+        "jupiter": "Ju",
+        "venus": "Ve",
+        "saturn": "Sa",
+        "rahu": "Ra",
+        "ketu": "Ke"
+      },
+      "diagram_north": "Your birth chart, drawn in the North Indian style: twelve houses around a diamond, with the grahas placed in each.",
+      "diagram_south": "Your birth chart, drawn in the South Indian style: twelve rashis in a fixed square, with the grahas placed in each."
     }
   },
   "launch": {

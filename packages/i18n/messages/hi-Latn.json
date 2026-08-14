@@ -610,8 +610,6 @@
       },
       "house": "Bhav {house}",
       "lagna": "Lagna",
-      "pending": "Diagram agli release mein aayega. Aapki graha-sthitiyan neeche di hain, theek waisi jaisi aapki kundli se nikleen.",
-      "pending_label": "Kundli diagram, agli release mein",
       "rashi": {
         "1": "Mesh",
         "2": "Vrishabh",
@@ -636,7 +634,20 @@
         "saturn": "Shani",
         "rahu": "Rahu",
         "ketu": "Ketu"
-      }
+      },
+      "graha_short": {
+        "sun": "Su",
+        "moon": "Cha",
+        "mars": "Ma",
+        "mercury": "Bu",
+        "jupiter": "Gu",
+        "venus": "Shu",
+        "saturn": "Sha",
+        "rahu": "Ra",
+        "ketu": "Ke"
+      },
+      "diagram_north": "Aapki janm kundli, North Indian shaili mein: heere ke aakaar mein baarah bhaav, har ek mein grah rakhe hue.",
+      "diagram_south": "Aapki janm kundli, South Indian shaili mein: ek sthir varg mein baarah rashiyan, har ek mein grah rakhe hue."
     }
   },
   "launch": {

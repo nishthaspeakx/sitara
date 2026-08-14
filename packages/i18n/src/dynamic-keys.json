@@ -156,6 +156,20 @@
         "ketu"
       ]
     },
+    "ui.kundli.graha_short.${g}": {
+      "$spec": "§24.3/CC-007 — the glyph abbreviations inside the diagram's boxes",
+      "values": [
+        "sun",
+        "moon",
+        "mars",
+        "mercury",
+        "jupiter",
+        "venus",
+        "saturn",
+        "rahu",
+        "ketu"
+      ]
+    },
     "start.language.name.${code}": {
       "$spec": "§10-3 — the eight language cards, each labelled in its own script",
       "values": [

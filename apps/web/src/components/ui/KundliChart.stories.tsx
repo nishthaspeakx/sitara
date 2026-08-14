@@ -31,7 +31,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Added by CC-007, taking the §24.3 library to 49. **The diagram itself lands in M10** — this is the full prop contract plus an honest unbuilt state, so the component count is true rather than counting something that does not exist. It shows the house data it would draw and never a wrong chart. North Indian diamond is the default; South Indian square is the user-switchable variant. Placements arrive as M2 engine facts; §5.3 forbids computing them here, and §5.4's confidence states carry the case where the birth time is a window.",
+          "Added by CC-007, taking the §24.3 library to 49; **the diagram itself landed in M10**, changing the render and not the interface. North Indian diamond is the default and South Indian square the user-switchable variant, and they are not alternate skins: north fixes the HOUSES on the page and moves the rashis, south fixes the RASHIS and moves the houses, so each places by a different key (`kundli-geometry.ts`). Placements arrive as M2 engine facts already resolved by the caller — §5.3 forbids computing them here — and §5.4's confidence renders ON the artefact, because a diamond drawn from a guessed ascendant is a confident-looking lie. The glyphs in the boxes are script-aware abbreviations, as on paper; the full names are in the list beneath.",
       },
     },
   },
