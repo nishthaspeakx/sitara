@@ -191,9 +191,48 @@ class MemoryService:
             user_id=user_id, memory_id=memory_id, content=content, embedding=embedding
         )
 
-    async def forget(self, *, user_id: ObjectId, memory_id: ObjectId) -> bool:
-        """Hard delete + embedding removed (diagram 8)."""
-        return await self._store.delete(user_id=user_id, memory_id=memory_id)
+    async def forget(
+        self, *, user_id: ObjectId, memory_id: ObjectId, now: dt.datetime | None = None
+    ) -> bool:
+        """Hard delete + embedding removed (diagram 8), and a withdrawal the
+        user can point at afterwards (CC-011 §44.5).
+
+        **The delete comes first and the ledger second, deliberately.** The
+        §22.4 age gate writes its audit BEFORE the decision, because there the
+        audit is what makes the decision admissible. Here the ordering is the
+        other way round for the opposite reason: a ledger row written first and
+        a delete that then failed would tell the user her memory was gone while
+        Tara still knew it — a false assurance about her own data, which is
+        worse than the loss of evidence in the other direction, where at least
+        the deletion she asked for actually happened.
+
+        A failed ledger write is therefore logged loudly and does NOT fail the
+        call: the memory is already gone, and reporting an error would say the
+        deletion did not happen when it did.
+        """
+        memory = await self._store.get(user_id, memory_id)
+        if memory is None:
+            # Nothing was withdrawn, so the permanent ledger says nothing.
+            return False
+
+        deleted = await self._store.delete(user_id=user_id, memory_id=memory_id)
+        if deleted:
+            await self._record_withdrawal(memory, now=now)
+        return deleted
+
+    async def _record_withdrawal(self, memory: Memory, *, now: dt.datetime | None = None) -> None:
+        try:
+            await self._store.record_withdrawal(
+                user_id=memory.user_id,
+                memory_type=memory.type,
+                granted_at=memory.consent.granted_at,
+                now=now,
+            )
+        except Exception:  # pragma: no cover - defensive; the delete already happened
+            logger.exception(
+                "consent-ledger withdrawal write failed after a successful memory "
+                "delete (§13 ledger is now short one row; the memory IS gone)"
+            )
 
     async def mute(self, *, user_id: ObjectId, memory_id: ObjectId, muted: bool) -> Memory | None:
         return await self._store.set_muted(user_id=user_id, memory_id=memory_id, muted=muted)
@@ -201,15 +240,33 @@ class MemoryService:
     # -- §30.5 scoped deletion --------------------------------------------
 
     async def on_journal_entry_deleted(
-        self, *, user_id: ObjectId, message_ids: Sequence[ObjectId], delete_memories: bool
+        self,
+        *,
+        user_id: ObjectId,
+        message_ids: Sequence[ObjectId],
+        delete_memories: bool,
+        now: dt.datetime | None = None,
     ) -> int:
         """"memories sourced from it survive unless also deleted — offered as
-        a checkbox" (§30.5). `delete_memories` IS the checkbox."""
-        if delete_memories:
-            return await self._store.delete_sourced_from_messages(
-                user_id=user_id, message_ids=message_ids
-            )
-        return 0
+        a checkbox" (§30.5). `delete_memories` IS the checkbox.
+
+        Unticked is the default and the default is inert — it does not even
+        mark the source removed, because the source turn still exists. That is
+        the conversation deletion's job and this is not it.
+        """
+        if not delete_memories:
+            return 0
+
+        # Read before deleting: after the delete there is no type left to record.
+        doomed = await self._store.sourced_from_messages(
+            user_id=user_id, message_ids=message_ids
+        )
+        deleted = await self._store.delete_sourced_from_messages(
+            user_id=user_id, message_ids=message_ids
+        )
+        for memory in doomed:
+            await self._record_withdrawal(memory, now=now)
+        return deleted
 
     async def on_conversation_deleted(
         self, *, user_id: ObjectId, message_ids: Sequence[ObjectId]

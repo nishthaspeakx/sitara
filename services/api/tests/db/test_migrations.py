@@ -54,23 +54,33 @@ class _DeletingExpand(_Recorder):
         await db.users.delete_many({})
 
 
+#: Derived from `ALL` rather than transcribed, so adding a migration does not
+#: mean editing this file. The runner's contract is "every declared migration,
+#: in declaration order" — pinning the list here would make these tests assert
+#: which migrations exist, which is `migrations/__init__.py`'s job.
+ALL_IDS = [m.id for m in ALL]
+
+
 class TestBaseline:
     async def test_expand_builds_the_whole_registry(self, raw_db) -> None:
         report = await run_phase(raw_db, ALL, "expand")
-        assert report.applied == ["0001_baseline"]
+        assert report.applied == ALL_IDS
         assert "users" in await raw_db.list_collection_names()
+        # CC-011's collection is part of "the whole registry" now.
+        assert "journal_saves" in await raw_db.list_collection_names()
 
     async def test_rerunning_expand_is_a_no_op(self, raw_db) -> None:
         await run_phase(raw_db, ALL, "expand")
         report = await run_phase(raw_db, ALL, "expand")
         assert report.applied == []
-        assert report.skipped == ["0001_baseline"]
+        assert report.skipped == ALL_IDS
 
     async def test_the_full_sequence_records_all_three_phases(self, raw_db) -> None:
         for phase in ("expand", "migrate", "contract"):
             await run_phase(raw_db, ALL, phase)
-        for phase in ("expand", "migrate", "contract"):
-            assert await is_recorded(raw_db, "0001_baseline", phase)
+        for migration_id in ALL_IDS:
+            for phase in ("expand", "migrate", "contract"):
+                assert await is_recorded(raw_db, migration_id, phase)
 
 
 class TestExpandIsAdditiveOnly:
