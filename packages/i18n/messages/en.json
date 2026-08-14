@@ -83,6 +83,10 @@
       "reconfirm_wording": "Before I keep this, may I check the wording with you? I'd rather remember it the way you'd say it.",
       "medical_declined": "I don't keep notes about symptoms or diagnoses — that's for you and a doctor. I can remember how you're looking after yourself, if you'd like.",
       "not_found": "I can't find that memory — it may already be deleted."
+    },
+    "journal": {
+      "not_saveable": "That one can't be saved on its own — it's a moment I keep for you rather than a note you can hold.",
+      "save_not_found": "I can't find that saved item — it may already be removed from your journal."
     }
   },
   "numerology": {

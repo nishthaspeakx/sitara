@@ -24,6 +24,10 @@ from sitara_api.daily_guidance.wiring import build_service as build_daily_guidan
 from sitara_api.db import ensure_indexes, make_mongo, make_redis
 from sitara_api.db.csfle import build_crypto
 from sitara_api.errors import install_error_handlers
+from sitara_api.journal.router import router as journal_router
+from sitara_api.journal.search import ExactTextSearch
+from sitara_api.journal.service import JournalService
+from sitara_api.journal.store import JournalStore
 from sitara_api.localisation import verify_catalogs
 from sitara_api.memory import MemorySettings, build_memory_service
 from sitara_api.memory.router import router as memory_router
@@ -90,6 +94,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             db=db,
             settings=app.state.memory_settings,
             environment=settings.environment,
+        )
+        # §30.5's Journal (M10). Built after memory because §30.5's
+        # journal-entry deletion offers a checkbox that reaches `memories` —
+        # a checkbox offered and silently ineffective is worse than one not
+        # offered, so the service takes the memory service rather than
+        # discovering it later.
+        app.state.journal_service = JournalService(
+            store=JournalStore(db),
+            search=ExactTextSearch(db),
+            memory_service=app.state.memory_service,
         )
         # §9 chat-orchestration. Built here because the transcript store, the
         # Trust-Sheet log and the safety queue all need the database.
@@ -158,6 +172,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.chat_pipeline = None
     app.state.voice_notes = None
     app.state.memory_service = None
+    app.state.journal_service = None
     app.state.call_turns = None
     app.state.call_metrics = None
     app.state.minute_ledger = None
@@ -199,6 +214,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(call_router)
     app.include_router(voice_router)
     app.include_router(memory_router)
+    app.include_router(journal_router)
     app.include_router(onboarding_router)
     app.include_router(today_router)
     # §28.2's variant switcher runs the REAL service over fact fixtures, and

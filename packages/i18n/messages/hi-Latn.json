@@ -83,6 +83,10 @@
       "reconfirm_wording": "Ise rakhne se pehle, kya main shabd aapse ek baar check kar loon? Jaisa aap kahengi, waisa hi yaad rakhna chahti hoon.",
       "medical_declined": "Symptoms ya diagnosis se judi baatein main nahin rakhti — woh aapke aur doctor ke beech hai. Aap apna dhyan kaise rakhti hain, woh yaad rakh sakti hoon.",
       "not_found": "Woh yaad mujhe nahin mil rahi — shayad pehle hi delete ho chuki hai."
+    },
+    "journal": {
+      "not_saveable": "Use alag se save nahin kiya ja sakta — woh ek lamha hai jo main aapke liye rakhti hoon, koi note nahin.",
+      "save_not_found": "Woh saved cheez mujhe nahin mil rahi — shayad aapke journal se pehle hi hata di gayi hai."
     }
   },
   "numerology": {
