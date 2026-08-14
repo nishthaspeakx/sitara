@@ -1,0 +1,281 @@
+{
+  "_recording": {
+    "status": "recorded",
+    "recorded_at": "2026-08-14T19:19:18Z",
+    "cartesia_version": "2026-03-01",
+    "stt_model": "ink-whisper",
+    "tts_model": "sonic-3.5",
+    "note": "Raw frames from both streaming websockets, payloads redacted to lengths (§13). Synthetic round trip: Sonic's output fed to Ink, so any accuracy read off this is a FLOOR, not an estimate. What it verifies is the frame SHAPES the adapter branches on."
+  },
+  "prompt": "What does my chart say about starting a new job on Monday?",
+  "tts_first_audio_seconds": 0.236,
+  "tts_frames": [
+    {
+      "type": "chunk",
+      "context_id": "c956bae1030946f087334a3db39ccd8f",
+      "status_code": 206,
+      "done": false,
+      "step_time": 51.04452,
+      "flush_id": 0,
+      "data_length": 6280
+    },
+    {
+      "type": "chunk",
+      "context_id": "c956bae1030946f087334a3db39ccd8f",
+      "status_code": 206,
+      "done": false,
+      "step_time": 69.819595,
+      "flush_id": 0,
+      "data_length": 8536
+    },
+    {
+      "type": "chunk",
+      "context_id": "c956bae1030946f087334a3db39ccd8f",
+      "status_code": 206,
+      "done": false,
+      "step_time": 0,
+      "flush_id": 0,
+      "data_length": 8536
+    },
+    {
+      "type": "chunk",
+      "context_id": "c956bae1030946f087334a3db39ccd8f",
+      "status_code": 206,
+      "done": false,
+      "step_time": 0,
+      "flush_id": 0,
+      "data_length": 8536
+    },
+    {
+      "type": "chunk",
+      "context_id": "c956bae1030946f087334a3db39ccd8f",
+      "status_code": 206,
+      "done": false,
+      "step_time": 0,
+      "flush_id": 0,
+      "data_length": 1784
+    },
+    {
+      "type": "chunk",
+      "context_id": "c956bae1030946f087334a3db39ccd8f",
+      "status_code": 206,
+      "done": false,
+      "step_time": 88.36657,
+      "flush_id": 0,
+      "data_length": 8536
+    },
+    {
+      "type": "chunk",
+      "context_id": "c956bae1030946f087334a3db39ccd8f",
+      "status_code": 206,
+      "done": false,
+      "step_time": 0,
+      "flush_id": 0,
+      "data_length": 8536
+    },
+    {
+      "type": "chunk",
+      "context_id": "c956bae1030946f087334a3db39ccd8f",
+      "status_code": 206,
+      "done": false,
+      "step_time": 0,
+      "flush_id": 0,
+      "data_length": 8536
+    },
+    {
+      "type": "chunk",
+      "context_id": "c956bae1030946f087334a3db39ccd8f",
+      "status_code": 206,
+      "done": false,
+      "step_time": 0,
+      "flush_id": 0,
+      "data_length": 8520
+    },
+    {
+      "type": "chunk",
+      "context_id": "c956bae1030946f087334a3db39ccd8f",
+      "status_code": 206,
+      "done": false,
+      "step_time": 87.69589,
+      "flush_id": 0,
+      "data_length": 8536
+    },
+    {
+      "type": "chunk",
+      "context_id": "c956bae1030946f087334a3db39ccd8f",
+      "status_code": 206,
+      "done": false,
+      "step_time": 0,
+      "flush_id": 0,
+      "data_length": 8536
+    },
+    {
+      "type": "chunk",
+      "context_id": "c956bae1030946f087334a3db39ccd8f",
+      "status_code": 206,
+      "done": false,
+      "step_time": 0,
+      "flush_id": 0,
+      "data_length": 8536
+    },
+    {
+      "type": "chunk",
+      "context_id": "c956bae1030946f087334a3db39ccd8f",
+      "status_code": 206,
+      "done": false,
+      "step_time": 0,
+      "flush_id": 0,
+      "data_length": 8520
+    },
+    {
+      "type": "chunk",
+      "context_id": "c956bae1030946f087334a3db39ccd8f",
+      "status_code": 206,
+      "done": false,
+      "step_time": 75.331856,
+      "flush_id": 0,
+      "data_length": 8536
+    },
+    {
+      "type": "chunk",
+      "context_id": "c956bae1030946f087334a3db39ccd8f",
+      "status_code": 206,
+      "done": false,
+      "step_time": 0,
+      "flush_id": 0,
+      "data_length": 8536
+    },
+    {
+      "type": "chunk",
+      "context_id": "c956bae1030946f087334a3db39ccd8f",
+      "status_code": 206,
+      "done": false,
+      "step_time": 0,
+      "flush_id": 0,
+      "data_length": 8536
+    },
+    {
+      "type": "chunk",
+      "context_id": "c956bae1030946f087334a3db39ccd8f",
+      "status_code": 206,
+      "done": false,
+      "step_time": 0,
+      "flush_id": 0,
+      "data_length": 8520
+    },
+    {
+      "type": "chunk",
+      "context_id": "c956bae1030946f087334a3db39ccd8f",
+      "status_code": 206,
+      "done": false,
+      "step_time": 56.13478,
+      "flush_id": 0,
+      "data_length": 8536
+    },
+    {
+      "type": "chunk",
+      "context_id": "c956bae1030946f087334a3db39ccd8f",
+      "status_code": 206,
+      "done": false,
+      "step_time": 0,
+      "flush_id": 0,
+      "data_length": 8536
+    },
+    {
+      "type": "chunk",
+      "context_id": "c956bae1030946f087334a3db39ccd8f",
+      "status_code": 206,
+      "done": false,
+      "step_time": 0,
+      "flush_id": 0,
+      "data_length": 3928
+    },
+    {
+      "type": "done",
+      "context_id": "c956bae1030946f087334a3db39ccd8f",
+      "status_code": 200,
+      "done": true
+    }
+  ],
+  "stt_frames": [
+    {
+      "type": "transcript",
+      "duration": 2.6,
+      "language": "en",
+      "is_final": true,
+      "words": [
+        {
+          "word": " Saturn",
+          "start": 0.128,
+          "end": 0.488
+        },
+        {
+          "word": " is",
+          "start": 0.488,
+          "end": 0.648
+        },
+        {
+          "word": " moving",
+          "start": 0.648,
+          "end": 0.888
+        },
+        {
+          "word": " through",
+          "start": 0.888,
+          "end": 1.088
+        },
+        {
+          "word": " your",
+          "start": 1.088,
+          "end": 1.288
+        },
+        {
+          "word": " tenth",
+          "start": 1.288,
+          "end": 1.468
+        },
+        {
+          "word": " house",
+          "start": 1.468,
+          "end": 1.788
+        },
+        {
+          "word": " today.",
+          "start": 1.788,
+          "end": 2.6
+        }
+      ],
+      "request_id": "12e0bc25-192e-4fb3-886c-39bd3c8bd31c",
+      "text": " Saturn is moving through your tenth house today."
+    },
+    {
+      "type": "transcript",
+      "duration": 1.08,
+      "language": "en",
+      "is_final": true,
+      "words": [
+        {
+          "word": " Go",
+          "start": 2.792,
+          "end": 2.892
+        },
+        {
+          "word": " slowly.",
+          "start": 2.892,
+          "end": 3.68
+        }
+      ],
+      "request_id": "12e0bc25-192e-4fb3-886c-39bd3c8bd31c",
+      "text": " Go slowly."
+    },
+    {
+      "type": "flush_done",
+      "is_final": false,
+      "request_id": "12e0bc25-192e-4fb3-886c-39bd3c8bd31c"
+    }
+  ],
+  "stt_transcripts": [
+    " Saturn is moving through your tenth house today.",
+    " Go slowly."
+  ]
+}

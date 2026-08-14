@@ -5,18 +5,31 @@
 - **BATCH (`POST /stt`, `POST /tts/bytes`) — VERIFIED** against the live API on
   13 Aug 2026, both directions, with the shapes below and recorded fixtures in
   `tests/voice/fixtures/`.
-- **STREAMING (`wss://…/stt/websocket`, `wss://…/tts/websocket`) — UNVERIFIED.**
-  Written in M9-P10b from the vendor's documentation. **No live streaming call has
-  been made**, so the frame shapes below are read, not seen — the same standing
-  DivineAPI has beside Prokerala in `panchang/providers`, and stated for the
-  same reason: an unverified adapter that reads as verified is how a wrong
-  field name survives to production. `tests/voice/test_streaming_provenance.py`
-  is the skipping marker; `uv run python -m tests.voice.record_streaming` is how
-  it stops skipping. **Do not delete either.**
+- **STREAMING (`wss://…/stt/websocket`, `wss://…/tts/websocket`) — VERIFIED
+  against the live API on 15 Aug 2026**, both sockets, with the fixture in
+  `tests/voice/fixtures/streaming_en.json`. It was written from documentation
+  and shipped UNVERIFIED; the first live call is what corrected it.
 
-That split is not pedantry here. §33.5's gate turns on p95 first-response audio
-and barge-in success, both of which are properties of the streaming path
-specifically, and neither of which the batch verification says anything about.
+**What the live run corrected, and what only a vendor could have told us:**
+
+- **`context_id` is REQUIRED on the TTS websocket.** Without it Sonic answers
+  every single utterance with `{"type":"error","title":"context_id is
+  invalid"}` — so a call reached her validated words and then fell silent,
+  every time. 1,457 tests were green: none of them reaches a vendor, and the
+  vendor was the only thing that knew. `tts_stream_body` now carries it.
+- **Ink emits a final transcript PER PHRASE, not per utterance.** The recorded
+  fixture shows one spoken sentence returning two `is_final` frames ("Saturn is
+  moving through your tenth house today." then "Go slowly."). `CallSttStream`
+  currently treats each as a complete turn, so a speaker who pauses mid-thought
+  has their sentence cut in two and answered twice. **Known, not yet handled** —
+  it needs a debounce whose length is a product decision, not a reflex.
+- **First audio was 6.8s end to end on a cold call**, against §33.5's 1.2s
+  ceiling. §7.3 asks for "connection pooling per provider" and none is built;
+  that is the first thing to try.
+
+The batch/streaming split was never pedantry: §33.5's gate turns on p95
+first-response audio and barge-in success, both properties of the streaming
+path alone, and the batch verification said nothing about either.
 
 What CC-009 does and does not claim
 -----------------------------------
@@ -53,6 +66,7 @@ import logging
 from collections.abc import AsyncIterator
 from typing import Any
 from urllib.parse import quote
+from uuid import uuid4
 
 import httpx
 import websockets
@@ -405,18 +419,13 @@ class CartesiaStreamingTtsProvider:
             raise VoiceProviderUnavailable("no Tara voice id configured (§3.2)")
 
         url = _ws_url(self._base_url, "/tts/websocket", {"cartesia_version": CARTESIA_VERSION})
-        body = {
-            "model_id": self._model,
-            "transcript": request.text,
-            "voice": {"mode": "id", "id": voice_id},
-            "language": tts_language_for(request.locale),
-            "output_format": {
-                "container": "raw",
-                "encoding": "pcm_s16le",
-                "sample_rate": self._sample_rate_hz,
-            },
-            "continue": False,
-        }
+        body = tts_stream_body(
+            text=request.text,
+            voice_id=voice_id,
+            locale=request.locale,
+            model=self._model,
+            sample_rate_hz=self._sample_rate_hz,
+        )
 
         try:
             connection = await websockets.connect(url, additional_headers=self._headers())
@@ -461,6 +470,51 @@ class CartesiaStreamingTtsProvider:
             "Cartesia-Version": CARTESIA_VERSION,
             "Authorization": f"Bearer {self._api_key}",
         }
+
+
+def tts_stream_body(
+    *,
+    text: str,
+    voice_id: str,
+    locale: str,
+    model: str = DEFAULT_TTS_MODEL,
+    sample_rate_hz: int = 16_000,
+) -> dict[str, Any]:
+    """The Sonic websocket request, in ONE place.
+
+    `record_streaming.py` used to rebuild this, with a comment claiming it was
+    "the adapter's own body". It was not, and the divergence cost a live
+    verification cycle: the adapter was fixed, the recorder still sent the old
+    shape, and the vendor returned the identical error — which read as "the fix
+    did not work" rather than "the recorder is testing something else".
+
+    So the recorder now calls this. A fixture recorded from a request the
+    adapter does not send is a fixture that proves nothing about the adapter.
+    """
+    return {
+        "model_id": model,
+        "transcript": text,
+        "voice": {"mode": "id", "id": voice_id},
+        "language": tts_language_for(locale),
+        # `raw` + pcm_s16le at 16 kHz is §34.6's binary frame exactly, so her
+        # reply and the user's note are one format on the wire and in storage.
+        "output_format": {
+            "container": "raw",
+            "encoding": "pcm_s16le",
+            "sample_rate": sample_rate_hz,
+        },
+        # **REQUIRED — found live, 15 Aug 2026.** Without it Sonic answers every
+        # utterance with `{"type":"error","title":"context_id is invalid"}`, so a
+        # call reached her validated words and then fell silent, every time. The
+        # whole suite was green: no test reaches a vendor, and the vendor was the
+        # only thing that knew.
+        #
+        # `uuid4().hex` because the vendor constrains the charset to
+        # alphanumerics, underscores and hyphens — a §34.6 `client_message_id`
+        # would eventually carry something outside it.
+        "context_id": uuid4().hex,
+        "continue": False,
+    }
 
 
 def _transcription_from(payload: dict[str, Any], *, model: str) -> Transcription:

@@ -70,6 +70,20 @@ class Settings(BaseSettings):
     # the pipeline for an arbitrary user id is an open door that looks shut.
     service_key: str | None = None
 
+    # --- local development sign-in ----------------------------------------
+    # A browser needs NEXT_PUBLIC_FIREBASE_* to reach Firebase, and a local
+    # checkout has none — so sign-in fails before an OTP is even sent and
+    # nobody can reach the app on their own machine. `auth/dev_verifier.py`
+    # replaces the Firebase round trip with a preset code for the SEEDED
+    # SYNTHETIC personas only.
+    #
+    # OFF by default, and `DevPhoneVerifier` additionally refuses to construct
+    # unless `environment == "dev"` — so setting this alone in staging or
+    # production raises at boot rather than opening a door. There is
+    # deliberately no "fall back to this when Firebase is unconfigured":
+    # a production build with a missing key must fail loudly at sign-in.
+    auth_dev_bypass: bool = False
+
     # --- §25.3 the live call (M9-P10b) ---------------------------------------
     # Where the browser opens the CALL socket. A separate URL from the chat
     # one and not a path appended to it: §6.1 scales and sticky-routes the two

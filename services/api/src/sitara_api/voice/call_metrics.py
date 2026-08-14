@@ -128,6 +128,12 @@ class InMemoryMetricStore:
         return tuple(self._samples.get(name, ()))
 
 
+#: The observations stored as a RESERVOIR (a Redis list) rather than a counter.
+#: Reading one with GET raises WRONGTYPE, which is exactly what happened the
+#: first time a real call recorded a latency sample — see `counters`.
+_RESERVOIRS = frozenset({CallObservation.FIRST_AUDIO_SECONDS})
+
+
 class RedisMetricStore:
     """Counters and a capped reservoir in Redis.
 
@@ -148,13 +154,39 @@ class RedisMetricStore:
         await self._redis.ltrim(key, -LATENCY_RESERVOIR, -1)
 
     async def counters(self) -> dict[str, float]:
+        """Every counter key, including the per-locale ones.
+
+        **Two defects lived in the previous four lines, and one live call found
+        both.** It iterated `CallObservation` and issued a GET for each:
+
+        1. `first_audio_seconds` is a LIST (a reservoir), and GET on a list
+           raises `WRONGTYPE` — so the whole §33.5 read crashed the moment a
+           real call recorded its first latency sample. Every test passed:
+           `InMemoryMetricStore` keeps counters and samples in separate dicts,
+           so it has no way to make this mistake. A fake that cannot fail the
+           way the real store fails is a fake that hides the failure.
+        2. §33.5's safety measure is stored per LOCALE
+           (`safety_triggered:en`), and an enum-name lookup never sees a
+           suffixed key — so the one per-language measure the spec is most
+           insistent about could never have produced a number.
+
+        Scanning the namespace and skipping non-counters fixes both, and keeps
+        working when a locale is added.
+        """
         out: dict[str, float] = {}
-        for observation in CallObservation:
-            raw = await self._redis.get(_KEY.format(name=observation.value))
+        reservoirs = {o.value for o in _RESERVOIRS}
+        async for key in self._redis.scan_iter(match=_KEY.format(name="*")):
+            name = (key.decode() if isinstance(key, bytes) else str(key)).split(
+                _KEY.format(name=""), 1
+            )[-1]
+            # `safety_triggered:en` → the reservoir check is on the STEM.
+            if name.split(":", 1)[0] in reservoirs:
+                continue
+            raw = await self._redis.get(key)
             if raw is None:
                 continue
             try:
-                out[observation.value] = float(raw)
+                out[name] = float(raw)
             except (TypeError, ValueError):
                 continue
         return out

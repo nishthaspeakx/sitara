@@ -59,6 +59,7 @@ from sitara_api.voice.providers.cartesia import (
     DEFAULT_STT_MODEL,
     DEFAULT_TTS_MODEL,
     _ws_url,
+    tts_stream_body,
 )
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -91,14 +92,11 @@ async def record_tts(api_key: str) -> tuple[list[dict[str, Any]], bytes, float]:
     url = _ws_url(
         "https://api.cartesia.ai", "/tts/websocket", {"cartesia_version": CARTESIA_VERSION}
     )
-    body = {
-        "model_id": DEFAULT_TTS_MODEL,
-        "transcript": "Saturn is moving through your tenth house today. Go slowly.",
-        "voice": {"mode": "id", "id": BAKEOFF_VOICE_ID},
-        "language": "en",
-        "output_format": {"container": "raw", "encoding": "pcm_s16le", "sample_rate": 16_000},
-        "continue": False,
-    }
+    body = tts_stream_body(
+        text="Saturn is moving through your tenth house today. Go slowly.",
+        voice_id=BAKEOFF_VOICE_ID,
+        locale="en",
+    )
     started = time.monotonic()
     first_audio: float | None = None
     async with websockets.connect(

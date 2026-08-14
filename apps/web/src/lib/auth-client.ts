@@ -89,7 +89,16 @@ const fakeClient: AuthClient = {
           // exercises S04's real error rendering rather than a bespoke one.
           throw new FirebaseError("auth/invalid-verification-code", "wrong code");
         }
-        return "fake-id-token";
+        // Carries the PHONE, so the server can resolve which seeded persona
+        // this is. `fake-id-token` alone identified nobody, which was fine
+        // against `stub-api.mjs` (it invents a user) and useless against the
+        // real API, where a session has to belong to an actual row.
+        //
+        // The shape is deliberately unlike a JWT: nothing reaching the real
+        // Firebase verifier can be mistaken for this, and vice versa. The
+        // server half is `auth/dev_verifier.py`, which refuses to exist
+        // outside `environment=dev` and accepts only seeded synthetic numbers.
+        return `dev:${phone}`;
       },
     };
   },

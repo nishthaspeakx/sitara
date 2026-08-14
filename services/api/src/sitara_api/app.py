@@ -3,6 +3,7 @@
 Modules: auth, numerology, panchang, chat-orchestration.
 """
 
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -164,10 +165,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # missing catalog must surface here, not when an L4 turn needs the crisis
     # line.
     verify_catalogs(LAUNCH_LOCALES)
-    app.state.firebase_verifier = FirebaseAdminVerifier(
-        project_id=settings.firebase_project_id,
-        credentials_path=settings.google_application_credentials,
-    )
+    # §6.3's adapter rule, and `firebase.py`'s own "fakeable boundary". The
+    # dev verifier RAISES unless environment == "dev", so a mis-set env var in
+    # any other environment fails at boot — loudly, and before it can issue a
+    # single session.
+    if settings.auth_dev_bypass:
+        from sitara_api.auth.dev_verifier import DevPhoneVerifier, seeded_phone_book
+
+        app.state.firebase_verifier = DevPhoneVerifier(environment=settings.environment)
+        book = ", ".join(f"{phone} ({handle})" for phone, handle in seeded_phone_book())
+        logging.getLogger(__name__).warning(
+            "AUTH_DEV_BYPASS is ON — Firebase is not consulted. Seeded personas: %s", book
+        )
+    else:
+        app.state.firebase_verifier = FirebaseAdminVerifier(
+            project_id=settings.firebase_project_id,
+            credentials_path=settings.google_application_credentials,
+        )
     app.state.numerology_adapter = AstroNumerologyAdapter(
         settings.astro_base_url, settings.astro_timeout_seconds
     )
