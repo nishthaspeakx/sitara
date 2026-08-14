@@ -127,6 +127,12 @@
     },
     "budget": {
       "daily_soft_cap": "We've talked a lot today — I'll keep going, just a little more briefly."
+    },
+    "delete": {
+      "title": "Delete this conversation?",
+      "deletes": "The messages in this conversation are removed.",
+      "keeps": "Tara still remembers what you asked her to — those notes stay, marked that their conversation is gone.",
+      "confirm": "Delete conversation"
     }
   },
   "terms": {
@@ -902,6 +908,32 @@
     "why": {
       "back": "Back to today",
       "missing": "That card isn't on today's brief."
+    }
+  },
+  "vault": {
+    "delete": {
+      "title": "Forget this?",
+      "deletes": "Tara stops knowing this, and the note is deleted along with what she learned from it.",
+      "keeps": "Anything already written in your journal stays exactly as it is — this doesn't rewrite your past.",
+      "confirm": "Forget this"
+    }
+  },
+  "journal": {
+    "delete": {
+      "title": "Delete this entry?",
+      "deletes": "This entry is removed from your journal.",
+      "keeps": "Anything Tara remembers from it stays, unless you also tick the box below.",
+      "also_memories": "Also make Tara forget what she learned here",
+      "confirm": "Delete entry"
+    }
+  },
+  "family": {
+    "delete": {
+      "title": "Remove {name}?",
+      "deletes": "Their birth details and chart are deleted for good.",
+      "keeps": "Your journal stays as written, and the notes Tara keeps about them stay unless you tick them below.",
+      "also_memories": "Also forget these notes about them",
+      "confirm": "Remove"
     }
   }
 }

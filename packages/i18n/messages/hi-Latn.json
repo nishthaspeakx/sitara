@@ -127,6 +127,12 @@
     },
     "budget": {
       "daily_soft_cap": "Aaj humne kaafi baat kar li — main jaari rakhungi, bas thoda sankshep mein."
+    },
+    "delete": {
+      "title": "Yeh baat-cheet delete karein?",
+      "deletes": "Is baat-cheet ke messages hata diye jaayenge.",
+      "keeps": "Jo aapne Tara ko yaad rakhne ko kaha tha, woh usse ab bhi remember hai — woh notes rahenge, is nishaani ke saath ki unki baat-cheet ab nahin hai.",
+      "confirm": "Baat-cheet delete karein"
     }
   },
   "terms": {
@@ -902,6 +908,32 @@
     "why": {
       "back": "Aaj par wapas",
       "missing": "Ye card aaj ke brief mein nahin hai."
+    }
+  },
+  "vault": {
+    "delete": {
+      "title": "Ise bhool jaayein?",
+      "deletes": "Tara ise jaanna band kar degi, aur yeh note bhi mit jaayega.",
+      "keeps": "Aapki journal mein jo pehle likha ja chuka hai, woh waisa hi rahega — yeh aapka beeta hua badalta nahin.",
+      "confirm": "Bhool jaayein"
+    }
+  },
+  "journal": {
+    "delete": {
+      "title": "Yeh entry delete karein?",
+      "deletes": "Yeh entry aapki journal se hata di jaayegi.",
+      "keeps": "Ismein se Tara ne jo yaad rakha hai woh bana rahega, jab tak aap neeche wala box tick na karein.",
+      "also_memories": "Yahaan se Tara ne jo seekha, woh bhi bhula dein",
+      "confirm": "Entry delete karein"
+    }
+  },
+  "family": {
+    "delete": {
+      "title": "{name} ko hatayein?",
+      "deletes": "Unki janm-vivaran aur kundli hamesha ke liye mit jaayengi.",
+      "keeps": "Aapki journal jaisi likhi hai waisi hi rahegi, aur unke baare mein Tara ke notes tab tak rahenge jab tak aap unhein neeche tick na karein.",
+      "also_memories": "Unke baare mein yeh notes bhi bhula dein",
+      "confirm": "Hatayein"
     }
   }
 }
