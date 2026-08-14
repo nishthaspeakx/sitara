@@ -87,6 +87,13 @@
     "journal": {
       "not_saveable": "That one can't be saved on its own — it's a moment I keep for you rather than a note you can hold.",
       "save_not_found": "I can't find that saved item — it may already be removed from your journal."
+    },
+    "family": {
+      "not_found": "I can't find that person in your family list — they may already be removed."
+    },
+    "reflection": {
+      "bad_date": "I couldn't place that date. Let's try tonight's reflection again.",
+      "too_long": "That's a long thought — could you shorten it a little so I keep it well?"
     }
   },
   "numerology": {

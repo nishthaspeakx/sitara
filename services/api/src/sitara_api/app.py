@@ -11,6 +11,7 @@ from fastapi import FastAPI
 
 from sitara_api import __version__
 from sitara_api.astrology import AstroChartAdapter, AstrologyFacade
+from sitara_api.astrology.router import router as chart_router
 from sitara_api.auth.firebase import FirebaseAdminVerifier
 from sitara_api.auth.router import router as auth_router
 from sitara_api.calls.router import router as call_router
@@ -24,6 +25,9 @@ from sitara_api.daily_guidance.wiring import build_service as build_daily_guidan
 from sitara_api.db import ensure_indexes, make_mongo, make_redis
 from sitara_api.db.csfle import build_crypto
 from sitara_api.errors import install_error_handlers
+from sitara_api.family.router import router as family_router
+from sitara_api.family.service import FamilyService
+from sitara_api.family.store import FamilyStore
 from sitara_api.journal.router import router as journal_router
 from sitara_api.journal.search import ExactTextSearch
 from sitara_api.journal.service import JournalService
@@ -40,6 +44,8 @@ from sitara_api.panchang.places import default_resolver
 from sitara_api.panchang.registry import build_registry
 from sitara_api.panchang.router import router as panchang_router
 from sitara_api.panchang.service import PanchangService
+from sitara_api.reflection.router import router as reflection_router
+from sitara_api.reflection.service import ReflectionService
 from sitara_api.voice.call_metrics import CallMetrics, RedisMetricStore
 from sitara_api.voice.config import VoiceSettings
 from sitara_api.voice.entitlements import MinuteLedger
@@ -105,6 +111,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             search=ExactTextSearch(db),
             memory_service=app.state.memory_service,
         )
+        # §29.1's S27/S28. After memory because §32.15's deletion offers a
+        # checkbox that reaches `memories` — the same reason the Journal takes
+        # it, and the same failure if it does not: a checkbox offered and
+        # silently ineffective.
+        app.state.family_service = FamilyService(
+            store=FamilyStore(db), memory_service=app.state.memory_service
+        )
+        # §24.4's S19. No dependencies beyond the database: §10-17's "no
+        # streaks, no guilt" means there is nothing to aggregate and nobody to
+        # compare her to.
+        app.state.reflection_service = ReflectionService(db)
         # §9 chat-orchestration. Built here because the transcript store, the
         # Trust-Sheet log and the safety queue all need the database.
         app.state.chat_pipeline = build_pipeline(
@@ -173,6 +190,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.voice_notes = None
     app.state.memory_service = None
     app.state.journal_service = None
+    app.state.family_service = None
+    app.state.reflection_service = None
     app.state.call_turns = None
     app.state.call_metrics = None
     app.state.minute_ledger = None
@@ -215,6 +234,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(voice_router)
     app.include_router(memory_router)
     app.include_router(journal_router)
+    app.include_router(family_router)
+    app.include_router(reflection_router)
+    app.include_router(chart_router)
     app.include_router(onboarding_router)
     app.include_router(today_router)
     # §28.2's variant switcher runs the REAL service over fact fixtures, and

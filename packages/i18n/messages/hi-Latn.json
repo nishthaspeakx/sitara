@@ -87,6 +87,13 @@
     "journal": {
       "not_saveable": "Use alag se save nahin kiya ja sakta — woh ek lamha hai jo main aapke liye rakhti hoon, koi note nahin.",
       "save_not_found": "Woh saved cheez mujhe nahin mil rahi — shayad aapke journal se pehle hi hata di gayi hai."
+    },
+    "family": {
+      "not_found": "Woh vyakti aapki family list mein nahin mil rahe — shayad pehle hi hata diye gaye hain."
+    },
+    "reflection": {
+      "bad_date": "Woh tareekh main samajh nahin paayi. Chaliye aaj raat ka reflection phir se shuru karte hain.",
+      "too_long": "Yeh kaafi lambi baat hai — thoda chhota kar dengi, taaki main ise theek se rakh sakoon?"
     }
   },
   "numerology": {
