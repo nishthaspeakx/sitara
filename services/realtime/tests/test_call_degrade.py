@@ -1,4 +1,4 @@
-"""The §25.3 degrade ladder — written before the ladder was (M10).
+"""The §25.3 degrade ladder — written before the ladder was (M9-P10b).
 
 **The invariant under test is one sentence: a dropped call must never lose what
 was said.** Everything below is a different way of dropping it.
@@ -255,7 +255,7 @@ def test_a_dropped_socket_returns_the_answer_rather_than_the_question(
 
 
 def test_a_call_invents_no_control_event(media: FakeMedia) -> None:
-    """§34.6's set is closed at fifteen and M10 added none of it.
+    """§34.6's set is closed at fifteen and M9-P10b added none of it.
 
     The milestone that would most plausibly have needed a sixteenth member is
     this one — it is the first to stream audio, meter minutes and duck a

@@ -1,4 +1,4 @@
-"""Fixtures shared by the call-socket suites (M10).
+"""Fixtures shared by the call-socket suites (M9-P10b).
 
 `media` lives here rather than in either test file because both drive the same
 socket and neither owns the other's setup. The harness it builds on is

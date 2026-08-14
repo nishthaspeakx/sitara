@@ -1,4 +1,4 @@
-"""The ordering that makes a call's words survivable (M10, §25.3, §33.1).
+"""The ordering that makes a call's words survivable (M9-P10b, §25.3, §33.1).
 
 `voice/service.py` and `calls/service.py` are the same rule applied to two
 different irreplaceable things:
@@ -13,7 +13,7 @@ transcript, because call audio is never stored at all — §13, §33.1, and §6.
 validators on `voice_sessions` and `call_sessions` reject an audio field
 structurally.
 
-The failure this file exists to prevent is specific and was reachable until M10.
+The failure this file exists to prevent is specific and was reachable until M9-P10b.
 §9's `_persist` writes the user's message and the reply TOGETHER, at the end of
 the turn. Under that ordering, an LLM outage between "she heard you" and "she
 answered" erases what somebody said out loud — permanently, with no audio to

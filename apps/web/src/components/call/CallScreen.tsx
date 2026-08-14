@@ -125,33 +125,28 @@ export function CallScreen({
           className="h-full w-full"
         />
       </div>
-      {/* ── The scrims, and an honest note about §25.3's "dimmed 25%" ─────
-          §25.3 asks for the portrait "dimmed 25% behind controls". **The token
-          layer cannot express a translucent overlay today**: every colour is a
-          `var(--color-…)` holding a hex string, and Tailwind v3 emits NO RULE
-          AT ALL for an opacity modifier on one — `bg-brand-navy-deep/25`
-          compiles to nothing. The first baseline is what showed it: the dim was
-          in the source, absent from the CSS, and the mandatory CC-008
-          disclosure was unreadable over a lamp-lit frame.
+      {/* §25.3's 25% dim, a scrim OVER the image and never a filter on her
+          (§29.4: no filtering beyond the graded masters).
 
-          (The same defect is live in `Modal` and `Sheet`, whose
-          `bg-brand-navy-deep/60` scrims have never rendered either. That is a
-          token-layer fix — a scrim token, or channel-triplet colours with
-          `<alpha-value>` — and it belongs in its own reviewed change, not here.)
-
-          So the dim is expressed with what DOES compile: gradient bands from
-          the solid token colour to transparent, at the top and bottom where
-          the text is. It is a deviation from a flat 25% and it is stronger
-          exactly where §25.3 says the dim is for ("behind controls"), while
-          leaving her face untouched — §29.4 forbids filtering the portrait, so
-          a scrim over it was always the only permitted mechanism. */}
+          This is a literal 25% again. It could not be until the token layer
+          learned to emit `<alpha-value>` colours — `bg-brand-navy-deep/25`
+          previously compiled to no CSS rule at all, so the dim was in the
+          source and absent from the screen. `packages/tokens/build.mjs`'s
+          `rgbTriplet` carries that story. */}
+      <div aria-hidden="true" className="absolute inset-0 bg-brand-navy-deep/25" />
+      {/* Two gradient bands ON TOP of the 25%, at the top and bottom where the
+          TEXT is. §25.3 sizes its dim for the CONTROLS, and 25% over a
+          photograph is not enough to carry a caption — the night baselines
+          showed the disclosure and the captions legible only by accident of
+          which frame happened to be behind them. The bands are where the
+          reading happens; her face keeps the 25% §25.3 asks for. */}
       <div
         aria-hidden="true"
-        className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-brand-navy-deep to-transparent"
+        className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-brand-navy-deep/90 to-transparent"
       />
       <div
         aria-hidden="true"
-        className="absolute inset-x-0 bottom-0 h-80 bg-gradient-to-t from-brand-navy-deep to-transparent"
+        className="absolute inset-x-0 bottom-0 h-80 bg-gradient-to-t from-brand-navy-deep/95 to-transparent"
       />
 
       <div className="relative flex h-full flex-col justify-between p-4">
@@ -214,7 +209,7 @@ export function CallScreen({
             <div
               data-testid="call-captions"
               aria-live="polite"
-              className="max-h-40 w-full max-w-prose overflow-y-auto rounded-sheet bg-brand-navy-deep p-3"
+              className="max-h-40 w-full max-w-prose overflow-y-auto rounded-sheet bg-brand-navy-deep/85 p-3"
             >
               {model.captions.slice(-4).map((line) => (
                 <p

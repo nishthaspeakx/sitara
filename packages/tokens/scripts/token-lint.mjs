@@ -9,6 +9,8 @@
  *   3. CONTRAST    — every declared pair in src/contrast-matrix.json is verified
  *                    numerically against the BUILT css, in both themes, plus the
  *                    §24.2 hue-shift audit for night-derived tokens.
+ *   4. ALPHA       — every opacity-modified colour class in app source names a
+ *                    token the preset can actually apply an opacity to.
  *
  * Usage: node scripts/token-lint.mjs [--source-only | --contrast-only]
  */
@@ -94,6 +96,75 @@ if (runSource) {
           );
         }
       });
+    }
+  }
+}
+
+// -------------------------------------------------------------------- gate 4
+//
+// **The gate that would have caught a defect nobody saw for three milestones.**
+//
+// Tailwind v3 emits NO CSS RULE AT ALL for an opacity modifier on a colour whose
+// value is a bare `var(--x)`. Not a wrong colour — nothing. The class silently
+// does not exist, and the only symptom is a pixel that never changed.
+//
+// `Modal` and `Sheet` asked for `bg-brand-navy-deep/60` from M7, so every
+// modal, sheet, paywall, TrustSheet and memory-consent prompt in the product
+// rendered with no backdrop; `BannerStack`'s payment-grace tint was the same.
+// Nothing failed: not a typecheck, not a lint, not a behavioural test, not the
+// component screenshots (the baselines simply recorded the missing scrim as
+// correct). It surfaced only when §25.3's call screen asked for a dim over a
+// photograph and a NEW baseline was compared against a human's expectation.
+//
+// The fix is in `build.mjs` (`rgbTriplet`): colours are emitted as
+// `rgb(var(--x-rgb) / <alpha-value>)`. This gate is what stops that fix being
+// quietly reverted — it re-derives the question from the preset every run
+// rather than trusting that the build still does the right thing.
+const ALPHA_UTIL =
+  /(?<![\w-])(bg|text|border|from|via|to|ring|fill|stroke|divide|outline|accent|caret|decoration|placeholder|shadow)-([a-z0-9-]+)\/(\d{1,3})(?![\w-])/g;
+
+if (runSource) {
+  const presetPath = path.join(pkgRoot, "dist/tailwind.preset.cjs");
+  if (!existsSync(presetPath)) {
+    notes.push("alpha gate skipped — dist/tailwind.preset.cjs is not built");
+  } else {
+    // Read the built preset rather than importing it: this file is a CJS module
+    // and the check only needs to know which colour names carry `<alpha-value>`.
+    const preset = readFileSync(presetPath, "utf-8");
+    const alphaCapable = new Set(
+      [...preset.matchAll(/"([a-z0-9-]+)":\s*"rgb\(var\(--color-[a-z0-9-]+-rgb\)\s*\/\s*<alpha-value>\)"/g)].map(
+        (m) => m[1],
+      ),
+    );
+    const known = new Set(
+      [...preset.matchAll(/"([a-z0-9-]+)":\s*"(?:rgb\(var|var)\(/g)].map((m) => m[1]),
+    );
+
+    for (const root of SCAN_ROOTS) {
+      if (!existsSync(root)) continue;
+      for (const file of walk(root)) {
+        if (!file.includes(`${path.sep}src${path.sep}`)) continue;
+        const rel = path.relative(repoRoot, file);
+        readFileSync(file, "utf-8")
+          .split("\n")
+          .forEach((rawLine, i) => {
+            if (rawLine.includes("token-lint-disable-line")) return;
+            if (/^\s*(\/\/|\/\*|\*|\{\/\*)/.test(rawLine)) return;
+            for (const m of rawLine.matchAll(ALPHA_UTIL)) {
+              const [, util, name, pct] = m;
+              // Tailwind's own keywords and arbitrary values are not tokens.
+              if (["transparent", "current", "inherit", "black", "white"].includes(name)) continue;
+              if (!known.has(name)) continue; // not one of ours — nothing to assert
+              if (!alphaCapable.has(name)) {
+                violations.push(
+                  `${rel}:${i + 1}  ${util}-${name}/${pct} — "${name}" is emitted as a bare ` +
+                    `var() and Tailwind will produce NO RULE for the opacity modifier. ` +
+                    `The class will silently do nothing. See packages/tokens/build.mjs rgbTriplet.`,
+                );
+              }
+            }
+          });
+      }
     }
   }
 }

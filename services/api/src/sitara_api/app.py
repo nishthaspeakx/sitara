@@ -115,7 +115,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             crypto=app.state.field_crypto,
             pipeline=app.state.chat_pipeline,
         )
-        # §25.3's live call (M10). Built after the pipeline for the same
+        # §25.3's live call (M9-P10b). Built after the pipeline for the same
         # reason voice notes are: a call RUNS §9 rather than reimplementing it.
         # It is reachable only behind `settings.calls_enabled` (§33.5) and only
         # in a locale `routing` admits (CC-010) — both checked at the door in

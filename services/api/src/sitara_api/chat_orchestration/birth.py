@@ -1,6 +1,6 @@
 """What the pipeline is allowed to know about the subject (§5.3 step 2, §13).
 
-Extracted from `chat_orchestration/router.py` in M10 so the live call reaches
+Extracted from `chat_orchestration/router.py` in M9-P10b so the live call reaches
 the SAME narrowing the typed and spoken paths reach. This is not tidying: the
 bug this function was written to fix — every turn running with an all-False
 `BirthProfile()`, so the chat could not answer a single chart question against a

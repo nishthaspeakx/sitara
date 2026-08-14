@@ -230,11 +230,11 @@ export type TranscriptStatus = (typeof TRANSCRIPT_STATUSES)[number];
 export const PLAYBACK_POLICIES = ["text_only", "original_audio", "transcript_only", "synthesised"] as const;
 export type PlaybackPolicy = (typeof PLAYBACK_POLICIES)[number];
 
-/** §34.6's `vad.state` payload. In M9 this brackets a HELD recording rather than reporting server-side voice activity detection — §25.4's grammar is hold-to-record or tap-lock, so the client knows when speech starts and stops because the user's finger says so. M10's live calls add the server-VAD sense of the same member (§25.3's barge-in ducking); the members below are chosen so that addition is a widening, not a rename. */
+/** §34.6's `vad.state` payload. In M9 this brackets a HELD recording rather than reporting server-side voice activity detection — §25.4's grammar is hold-to-record or tap-lock, so the client knows when speech starts and stops because the user's finger says so. M9-P10b's live calls add the server-VAD sense of the same member (§25.3's barge-in ducking); the members below are chosen so that addition is a widening, not a rename. */
 export const VAD_STATES = ["speech_start", "speech_end", "cancelled"] as const;
 export type VadState = (typeof VAD_STATES)[number];
 
-/** §34.6's `barge_in` payload (M10). §25.3 gives exactly one way to interrupt Tara — 'barge-in = just speak' — so `user_speech` is the only member that describes a user's action, and it is deliberately not spelled `user_interrupt`: the user did not press anything, which is the whole feature. The other two members exist because the client's job is identical in all three cases (drop the buffer, expect no `tts.end`) while the reason it must SAY to the user is not: an utterance cut by a provider failure is §8's degrade ladder and an utterance cut by an exhausted minute pool is §32.9's, and a client that could not tell them apart would show 'she stopped speaking' for both. */
+/** §34.6's `barge_in` payload (M9-P10b). §25.3 gives exactly one way to interrupt Tara — 'barge-in = just speak' — so `user_speech` is the only member that describes a user's action, and it is deliberately not spelled `user_interrupt`: the user did not press anything, which is the whole feature. The other two members exist because the client's job is identical in all three cases (drop the buffer, expect no `tts.end`) while the reason it must SAY to the user is not: an utterance cut by a provider failure is §8's degrade ladder and an utterance cut by an exhausted minute pool is §32.9's, and a client that could not tell them apart would show 'she stopped speaking' for both. */
 export const BARGE_IN_REASONS = ["user_speech", "provider_failed", "entitlement_exhausted"] as const;
 export type BargeInReason = (typeof BARGE_IN_REASONS)[number];
 
@@ -252,7 +252,7 @@ export const HOLDING_PHRASE_AFTER_MS = 1800 as const;
 
 // ---------------------------------------------------------------------------
 // SPEC §34.6 — control-event payloads: the text chat (S18), voice notes
-// (M9) and the live call (M10). All fifteen members are typed now; the
+// (M9) and the live call (M9-P10b). All fifteen members are typed now; the
 // member SET is unchanged and stays closed at fifteen (§31.3).
 // ---------------------------------------------------------------------------
 /** Client → server. The ticket is single-use and 60-second; §34.5's session cookies are httpOnly and first-party, and a WebSocket handshake to another origin does not carry them. */
@@ -299,7 +299,7 @@ export interface VadStatePayload {
 
 /** Server → client, on `tts.start`. §25.4: 'Tara's replies arrive as voice-note bubbles rendered from her TTS with transcript toggle'. Emitted after her `captions.final`, so the transcript the toggle shows is on screen before any audio plays — and is the same validated text the audio was rendered from, not a second generation.
 
-`tts_audio_asset_id` became OPTIONAL in M10, and the null is load-bearing rather than lax. A voice NOTE is synthesised whole and stored, so it has an asset and a bubble that can replay it. A live CALL is streamed and its audio is never stored at all (§13, §33.1) — so there is no asset, and there is nothing to replay. Null is the type saying exactly that. Carrying an invented id would have promised a playback control over audio that does not exist anywhere. */
+`tts_audio_asset_id` became OPTIONAL in M9-P10b, and the null is load-bearing rather than lax. A voice NOTE is synthesised whole and stored, so it has an asset and a bubble that can replay it. A live CALL is streamed and its audio is never stored at all (§13, §33.1) — so there is no asset, and there is nothing to replay. Null is the type saying exactly that. Carrying an invented id would have promised a playback control over audio that does not exist anywhere. */
 export interface TtsStartPayload {
   client_message_id: string;
   tts_audio_asset_id: string | null;
@@ -320,7 +320,7 @@ export interface TtsEndPayload {
   duration_ms: number;
 }
 
-/** Server → client (§25.3, §7.3). Typed in M10 because M10 is the first milestone that emits it — the rule this package keeps, and the reason it stayed untyped through M9.
+/** Server → client (§25.3, §7.3). Typed in M9-P10b because M9-P10b is the first milestone that emits it — the rule this package keeps, and the reason it stayed untyped through M9.
 
 **It replaces `tts.end`, it does not precede it.** `tts.end` carries the total duration for the bubble's scrubber; an utterance that was cut has no total duration that was ever true, and sending one would put a scrubber on audio the user interrupted. So a synthesis stream ends in exactly one of two members and a client can rely on that.
 

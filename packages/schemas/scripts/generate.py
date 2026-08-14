@@ -447,19 +447,19 @@ def gen_python(
         "",
         "# --------------------------------------------------------------------",
         "# Payload shapes — the text chat (S18), the voice notes (M9), the live",
-        "# call (M10). All fifteen members are now typed.",
+        "# call (M9-P10b). All fifteen members are now typed.",
         "#",
         "# §34.6 says payloads are 'typed per event in M9'. The rule that actually",
         "# held is narrower: a payload is typed by the milestone that starts",
         "# EMITTING it, because typing an event nobody produces is a guess with a",
         "# schema around it. S18 typed the text-chat members, M9 typed vad.state",
-        "# and tts.*, and M10 types the last two — `barge_in` (§25.3's server-side",
+        "# and tts.*, and M9-P10b types the last two — `barge_in` (§25.3's server-side",
         "# VAD ducking) and `entitlement.warning` (§7.3's minute pool) — because",
-        "# M10 is the milestone that sends them.",
+        "# M9-P10b is the milestone that sends them.",
         "#",
         "# The set of MEMBERS has not moved and must not: fifteen, closed, §31.3",
         "# change control. A live call speaking the same fifteen as a typed chat",
-        "# is what §34.6 claimed and what M10 is the test of.",
+        "# is what §34.6 claimed and what M9-P10b is the test of.",
         "# --------------------------------------------------------------------",
     ]
     for name, shape in ws["payload_shapes"].items():
@@ -890,7 +890,7 @@ def gen_typescript(
     lines += [
         "// ---------------------------------------------------------------------------",
         "// SPEC §34.6 — control-event payloads: the text chat (S18), voice notes",
-        "// (M9) and the live call (M10). All fifteen members are typed now; the",
+        "// (M9) and the live call (M9-P10b). All fifteen members are typed now; the",
         "// member SET is unchanged and stays closed at fifteen (§31.3).",
         "// ---------------------------------------------------------------------------",
     ]

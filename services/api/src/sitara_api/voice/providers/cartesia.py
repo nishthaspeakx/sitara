@@ -6,7 +6,7 @@
   13 Aug 2026, both directions, with the shapes below and recorded fixtures in
   `tests/voice/fixtures/`.
 - **STREAMING (`wss://…/stt/websocket`, `wss://…/tts/websocket`) — UNVERIFIED.**
-  Written in M10 from the vendor's documentation. **No live streaming call has
+  Written in M9-P10b from the vendor's documentation. **No live streaming call has
   been made**, so the frame shapes below are read, not seen — the same standing
   DivineAPI has beside Prokerala in `panchang/providers`, and stated for the
   same reason: an unverified adapter that reads as verified is how a wrong
@@ -34,7 +34,7 @@ Two limits found while verifying, which the bake-off will need to weigh:
   documents `language`: "currently only `en` supported"). Voice notes are
   unaffected — a note is a complete recording and §28.3 wants the transcript
   "<2s post-release", so the BATCH endpoint is the right fit and it carries 49
-  languages including hi/ta/te/mr/pa/gu/bn. Live calls (§25.3, M10) are a
+  languages including hi/ta/te/mr/pa/gu/bn. Live calls (§25.3, M9-P10b) are a
   different question and this is where it will be asked.
 - **Ink documents no code-mix MODE.** It takes one `language` and, in the live
   check, preserved the English span under either value — see
@@ -217,7 +217,7 @@ class CartesiaTtsProvider:
 
 
 # ---------------------------------------------------------------------------
-# Streaming (M10, §25.3) — UNVERIFIED. See the module docstring.
+# Streaming (M9-P10b, §25.3) — UNVERIFIED. See the module docstring.
 # ---------------------------------------------------------------------------
 
 #: The vendor authenticates a websocket by query parameter in its own examples.

@@ -124,7 +124,7 @@ def _tickets(request: Request) -> WsTicketService:
 
 async def _birth_profile(request: Request, user_id: str) -> BirthProfile:
     """§5.3 step 2, over the app state. The narrowing itself lives in
-    `chat_orchestration/birth.py` since M10, so the live call reaches the same
+    `chat_orchestration/birth.py` since M9-P10b, so the live call reaches the same
     one — see that module for why a second copy is the defect worth avoiding."""
     return await birth_profile_for(request.app.state, user_id)
 
@@ -487,7 +487,7 @@ def _tts_frames(payload: WsVoiceNotePayload, result: Any) -> dict[str, Any]:
     """§34.6's `tts.start`/`tts.end` payloads.
 
     No `tts.chunk_meta`: a note is synthesised whole and stored, so there are
-    no chunks to meter. M10's streamed call audio is what that member is for,
+    no chunks to meter. M9-P10b's streamed call audio is what that member is for,
     and emitting a fabricated one here would make the metering look live.
     """
     return {

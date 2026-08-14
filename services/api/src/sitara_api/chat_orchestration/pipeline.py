@@ -138,7 +138,7 @@ class ChatPipeline:
     def message_store(self) -> MessageStore:
         """The same store this pipeline persists turns into.
 
-        Exposed for M10's call service, which must commit a spoken utterance
+        Exposed for M9-P10b's call service, which must commit a spoken utterance
         BEFORE §9 runs (see `TurnRequest.user_message_id`). It reads this rather
         than being handed a second store, because two stores pointed at one
         conversation is how a turn ends up written twice or written nowhere.
@@ -727,7 +727,7 @@ class ChatPipeline:
                     now=request.now,
                 )
             )
-        # else: M10's call already committed the transcript the moment STT
+        # else: M9-P10b's call already committed the transcript the moment STT
         # finalised it, precisely so a failure between here and there could not
         # erase what somebody said out loud (§25.3, and `TurnRequest`'s own
         # comment). Writing it again would double the user's turn in the thread.

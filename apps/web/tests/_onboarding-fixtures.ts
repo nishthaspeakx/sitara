@@ -54,7 +54,7 @@ export type Scenario =
   | "reading_unavailable"
   | "today_unavailable"
   | "chat_unavailable"
-  /* §25.3's call (M10) — each is a reason a call is refused at the GRANT. */
+  /* §25.3's call (M9-P10b) — each is a reason a call is refused at the GRANT. */
   | "calls_disabled"
   | "call_minutes_exhausted"
   | "call_unlimited"
@@ -122,7 +122,7 @@ export type ChatFixture = (typeof CHAT_FIXTURES)[number];
 
 /** How `scripts/stub-realtime.mjs` behaves for this client. */
 export type SocketBehaviour =
-  /* §25.3's call (M10) — see `runCall` in scripts/stub-realtime.mjs */
+  /* §25.3's call (M9-P10b) — see `runCall` in scripts/stub-realtime.mjs */
   | "connecting"
   | "thinking"
   /** Mid-utterance and staying there, so `speaking` is observable. */

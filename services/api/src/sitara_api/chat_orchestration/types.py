@@ -362,7 +362,7 @@ class TurnRequest:
     #: Rolling summary of everything older than `history` (§9 token budget).
     summary: str | None = None
     tokens_used_today: int = 0
-    #: M10 (§25.3). Set when the user's turn is ALREADY on the record — the
+    #: M9-P10b (§25.3). Set when the user's turn is ALREADY on the record — the
     #: pipeline then answers it and does not write it a second time.
     #:
     #: This exists because a call cannot be re-asked. `_persist` writes both

@@ -126,7 +126,7 @@ def build_message(
     """One `messages` document, §6.4-shaped and §34.2-complete.
 
     The two §33.1 fields are parameters, defaulting to the typed-message pair,
-    because M10's live call is the first caller for which the defaults are
+    because M9-P10b's live call is the first caller for which the defaults are
     WRONG in a way no validator would catch. A call turn was spoken, so
     `not_applicable` ("this was never spoken") is false; and its audio was never
     stored — §13/§33.1 forbid storing call audio at all — so `text_only`

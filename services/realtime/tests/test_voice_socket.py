@@ -208,7 +208,7 @@ def test_tts_events_follow_her_words_never_precede_them(voice_api: StubVoiceApi)
     assert types.index(ControlEventType.TTS_START) > tara_caption
     assert types.index(ControlEventType.TTS_END) > types.index(ControlEventType.TTS_START)
     # No fabricated chunk metering: a note is synthesised whole, so there are
-    # no chunks. M10's streamed call audio is what that member is for.
+    # no chunks. M9-P10b's streamed call audio is what that member is for.
     assert ControlEventType.TTS_CHUNK_META not in types
 
 

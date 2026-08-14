@@ -208,10 +208,10 @@ def test_a_payload_is_typed_by_the_milestone_that_emits_it() -> None:
     nothing produces is a guess with a schema around it.
 
     S18 typed the text-chat subset a milestone early on that rule. M9 typed
-    `vad.state` and `tts.*` when voice notes began emitting them. **M10 types
+    `vad.state` and `tts.*` when voice notes began emitting them. **M9-P10b types
     the last two** — `barge_in` (§25.3's server-side VAD ducking) and
     `entitlement.warning` (§7.3's minute pool, §32.9's 5- and 2-minute
-    notices) — because M10's live call is the milestone that sends them.
+    notices) — because M9-P10b's live call is the milestone that sends them.
 
     So the "not yet" half of this test is now empty, and the assertion that
     remains is the one that outlives the milestone: every member of the closed
@@ -226,7 +226,7 @@ def test_a_payload_is_typed_by_the_milestone_that_emits_it() -> None:
         declared = [f["name"] for f in shape["fields"]]
         assert list(getattr(ws_mod, name).model_fields) == declared, name
 
-    # Every shape a milestone has landed must stay landed. S18's, M9's, M10's —
+    # Every shape a milestone has landed must stay landed. S18's, M9's, M9-P10b's —
     # listed by name rather than counted, so deleting one fails here instead of
     # quietly reducing a total nobody reads.
     for member in (

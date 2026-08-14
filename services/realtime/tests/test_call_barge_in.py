@@ -178,7 +178,7 @@ def test_the_mic_going_live_is_announced_to_the_screen(media: FakeMedia) -> None
     """§25.3's listening state: "listening loop + mic-live indicator".
 
     The bracket is opened by the SERVER here, not by a finger — that is the
-    M10 sense `vad.state` was widened for, and the id it carries is minted here
+    M9-P10b sense `vad.state` was widened for, and the id it carries is minted here
     because server-side VAD is what noticed.
     """
     with TestClient(app).websocket_connect("/call/session") as ws:

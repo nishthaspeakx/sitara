@@ -247,7 +247,7 @@ def render(report: GateReport) -> str:
 
 
 async def evaluate_live(metrics: object) -> GateReport:
-    """Score §33.5 against what real calls have actually produced (M10).
+    """Score §33.5 against what real calls have actually produced (M9-P10b).
 
     The `observed` dict comes from `voice.call_metrics`, which is a separate
     module for a reason worth restating at the seam: a gate that collected its

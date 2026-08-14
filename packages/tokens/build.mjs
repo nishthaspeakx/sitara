@@ -23,6 +23,32 @@ function varName(token) {
   return `--${p.join("-")}`;
 }
 
+/**
+ * `#23263A` → `"35 38 58"` — the channel triplet an `<alpha-value>` colour needs.
+ *
+ * **Why this exists.** Every colour token is emitted as `--color-x: #RRGGBB`,
+ * and the Tailwind preset used to map each utility to a bare `var(--color-x)`.
+ * Tailwind v3 cannot apply an opacity modifier to that: `bg-brand-navy-deep/60`
+ * produced NO CSS RULE AT ALL — not a wrong colour, not a fallback, nothing.
+ * The class silently did not exist.
+ *
+ * That is not a theoretical gap. `Modal` and `Sheet` have both asked for a 60%
+ * navy scrim since M7, and every modal, sheet, paywall, TrustSheet and
+ * memory-consent prompt in the product has therefore rendered with **no
+ * backdrop at all** — content behind them undimmed, the overlay reading as a
+ * floating card. `BannerStack`'s payment-grace tint was the same story. It was
+ * found in M9-P10b when §25.3's call screen asked for a 25% dim over a
+ * photograph and the first screenshot baseline showed the dim missing.
+ *
+ * The hex var stays exactly as it was, so anything reading `var(--color-x)`
+ * directly is untouched; the triplet is additive.
+ */
+function rgbTriplet(hex) {
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex.trim());
+  if (!m) return null;
+  return [m[1], m[2], m[3]].map((h) => parseInt(h, 16)).join(" ");
+}
+
 StyleDictionary.registerFormat({
   name: "sitara/css-themed",
   format: ({ dictionary }) => {
@@ -36,7 +62,16 @@ StyleDictionary.registerFormat({
         t.path[0] === "font" && t.path[1] === "size"
           ? `calc(${t.value} * var(--font-script-size-factor, 1))`
           : t.value;
-      const line = `  ${varName(t)}: ${value};`;
+      const lines = [`  ${varName(t)}: ${value};`];
+      // Every colour also gets its channels, so the preset can hand Tailwind a
+      // colour that accepts an opacity modifier. Themed vars are re-bound per
+      // theme, so the triplet has to be re-bound in the same block or a night
+      // scrim would use the light theme's channels.
+      if (t.path[0] === "color") {
+        const triplet = rgbTriplet(String(value));
+        if (triplet) lines.push(`  ${varName(t)}-rgb: ${triplet};`);
+      }
+      const line = lines.join("\n");
       if (t.path[0] === "color" && t.path[1] === "night") night.push(line);
       else if (t.path[0] === "color" && t.path[1] === "light") light.push(line);
       else common.push(line);
@@ -120,7 +155,14 @@ StyleDictionary.registerFormat({
     const transitionTimingFunction = {};
     const transitionProperty = {};
     for (const t of dictionary.allTokens) {
-      const ref = `var(${varName(t)})`;
+      // A colour is referenced through its CHANNELS plus `<alpha-value>`, which
+      // is what makes `bg-x/60` compile at all (see `rgbTriplet`). Tailwind
+      // substitutes `1` when no modifier is present, so an unmodified `bg-x` is
+      // byte-for-byte the same colour it always was.
+      const ref =
+        t.path[0] === "color" && rgbTriplet(String(t.value))
+          ? `rgb(var(${varName(t)}-rgb) / <alpha-value>)`
+          : `var(${varName(t)})`;
       const [cat, ...rest] = t.path;
       if (cat === "color" && t.path[1] === "light") {
         colors[rest.slice(1).join("-")] = ref;

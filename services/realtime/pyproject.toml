@@ -10,7 +10,7 @@ dependencies = [
     "pydantic-settings>=2.5",
     # This service reaches the §9 pipeline over HTTP rather than holding one.
     "httpx>=0.27",
-    # M10. `httpx` does not speak WebSocket, and §25.3's call needs a DUPLEX
+    # M9-P10b. `httpx` does not speak WebSocket, and §25.3's call needs a DUPLEX
     # channel to `sitara-api` for its whole length — a voice note fitted
     # request/response and a call does not. Declared rather than inherited from
     # uvicorn[standard]: a dependency that arrives by accident leaves by

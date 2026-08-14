@@ -32,7 +32,7 @@
 export const VOICE_NOTES_ENABLED = true;
 
 /**
- * §25.3's live calls — BUILT, and off (M10).
+ * §25.3's live calls — BUILT, and off (M9-P10b).
  *
  * This is the clearest case the file's own rule has had. Everything behind the
  * flag exists and is tested: the §34.6 call socket, server-side VAD and

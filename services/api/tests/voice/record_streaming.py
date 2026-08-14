@@ -1,4 +1,4 @@
-"""Record what Cartesia's STREAMING endpoints actually send (M10, §25.3).
+"""Record what Cartesia's STREAMING endpoints actually send (M9-P10b, §25.3).
 
     CARTESIA_API_KEY=... uv run python -m tests.voice.record_streaming
 

@@ -1,4 +1,4 @@
-"""The media socket between `sitara-realtime` and `sitara-api` (M10, §25.3).
+"""The media socket between `sitara-realtime` and `sitara-api` (M9-P10b, §25.3).
 
 The FRAME SET itself is not here. It lives in
 `packages/schemas/src/call-media.json` → `sitara_schemas.call_media`, because

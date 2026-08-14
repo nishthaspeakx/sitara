@@ -70,7 +70,7 @@ class Settings(BaseSettings):
     # the pipeline for an arbitrary user id is an open door that looks shut.
     service_key: str | None = None
 
-    # --- §25.3 the live call (M10) ---------------------------------------
+    # --- §25.3 the live call (M9-P10b) ---------------------------------------
     # Where the browser opens the CALL socket. A separate URL from the chat
     # one and not a path appended to it: §6.1 scales and sticky-routes the two
     # independently, and a call session is minutes of duplex audio while a chat

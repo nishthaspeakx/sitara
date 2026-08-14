@@ -273,6 +273,28 @@ test.describe("what the baselines are there to hold", () => {
     expect(Number(filters.opacity)).toBe(1);
   });
 
+  test("§25.3's 25% dim is really applied, at 25%", async ({ page }) => {
+    // **A pixel diff cannot hold this one, and that is the finding.**
+    // `maxDiffPixelRatio` is 0.001 — very tight on HOW MANY pixels may move —
+    // but Playwright's per-pixel `threshold` is its default 0.2 in YIQ space.
+    // A uniform 25% navy overlay shifts every pixel by less than that, so the
+    // whole dim can vanish and all 14 live-call baselines still pass. Verified
+    // by cranking it to 95%, which does move them, and back.
+    //
+    // So the screenshots would NOT have caught the missing scrim either — a
+    // human looking at the image did. This assertion is the mechanical guard:
+    // it reads the computed colour, where 25% is exactly 25% and an absent
+    // rule is `rgba(0, 0, 0, 0)`.
+    const client = await setupApi(page);
+    await setupSocket(client, { behaviour: "speaking" });
+    await open(page, "en", "light");
+
+    const scrim = page.locator('main > div[aria-hidden="true"].inset-0').first();
+    const background = await scrim.evaluate((el) => getComputedStyle(el).backgroundColor);
+    // rgba(15, 19, 48, 0.25) — brand-navy-deep at §25.3's dim.
+    expect(background).toMatch(/^rgba\(15,\s*19,\s*48,\s*0?\.25\)$/);
+  });
+
   test("the disclosure is on the call screen wherever the call screen is", async ({ page }) => {
     // CC-008 / §25.2 — permanent wherever her name or face appears, and the
     // full-bleed portrait is the largest place her face appears anywhere.

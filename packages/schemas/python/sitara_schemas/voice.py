@@ -60,7 +60,7 @@ PLAYBACK_POLICIES: tuple[PlaybackPolicy, ...] = (
 
 
 class VadState(StrEnum):
-    """§34.6's `vad.state` payload. In M9 this brackets a HELD recording rather than reporting server-side voice activity detection — §25.4's grammar is hold-to-record or tap-lock, so the client knows when speech starts and stops because the user's finger says so. M10's live calls add the server-VAD sense of the same member (§25.3's barge-in ducking); the members below are chosen so that addition is a widening, not a rename."""
+    """§34.6's `vad.state` payload. In M9 this brackets a HELD recording rather than reporting server-side voice activity detection — §25.4's grammar is hold-to-record or tap-lock, so the client knows when speech starts and stops because the user's finger says so. M9-P10b's live calls add the server-VAD sense of the same member (§25.3's barge-in ducking); the members below are chosen so that addition is a widening, not a rename."""
 
     SPEECH_START = "speech_start"
     SPEECH_END = "speech_end"
@@ -75,7 +75,7 @@ VAD_STATES: tuple[VadState, ...] = (
 
 
 class BargeInReason(StrEnum):
-    """§34.6's `barge_in` payload (M10). §25.3 gives exactly one way to interrupt Tara — 'barge-in = just speak' — so `user_speech` is the only member that describes a user's action, and it is deliberately not spelled `user_interrupt`: the user did not press anything, which is the whole feature. The other two members exist because the client's job is identical in all three cases (drop the buffer, expect no `tts.end`) while the reason it must SAY to the user is not: an utterance cut by a provider failure is §8's degrade ladder and an utterance cut by an exhausted minute pool is §32.9's, and a client that could not tell them apart would show 'she stopped speaking' for both."""
+    """§34.6's `barge_in` payload (M9-P10b). §25.3 gives exactly one way to interrupt Tara — 'barge-in = just speak' — so `user_speech` is the only member that describes a user's action, and it is deliberately not spelled `user_interrupt`: the user did not press anything, which is the whole feature. The other two members exist because the client's job is identical in all three cases (drop the buffer, expect no `tts.end`) while the reason it must SAY to the user is not: an utterance cut by a provider failure is §8's degrade ladder and an utterance cut by an exhausted minute pool is §32.9's, and a client that could not tell them apart would show 'she stopped speaking' for both."""
 
     USER_SPEECH = "user_speech"
     PROVIDER_FAILED = "provider_failed"

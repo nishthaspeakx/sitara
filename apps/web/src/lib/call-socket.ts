@@ -1,5 +1,5 @@
 /**
- * The §34.6 call client (M10, §25.3).
+ * The §34.6 call client (M9-P10b, §25.3).
  *
  * A sibling of `chat-socket.ts` rather than a mode of it. The two share a
  * protocol and almost nothing else: a chat sends bursts of text and a call

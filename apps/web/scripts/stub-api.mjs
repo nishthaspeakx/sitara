@@ -115,7 +115,7 @@ try {
 const REALTIME_WS_URL = process.env.STUB_REALTIME_WS_URL ?? "ws://127.0.0.1:3102/chat/session";
 
 /**
- * Where `POST /v1/call/session` points the browser (§25.3, M10). A SEPARATE
+ * Where `POST /v1/call/session` points the browser (§25.3, M9-P10b). A SEPARATE
  * path from the chat one, because the real config has two — §6.1 scales and
  * sticky-routes a minutes-long duplex call independently of bursts of text.
  */
@@ -419,7 +419,7 @@ const server = createServer(async (req, res) => {
     });
   }
 
-  // ── §25.3 / §34.6 call (M10) ─────────────────────────────────────────────
+  // ── §25.3 / §34.6 call (M9-P10b) ─────────────────────────────────────────────
   if (path === "/v1/call/session" && req.method === "POST") {
     // Every reason a call must not happen is evaluated HERE, exactly as the
     // real API evaluates it — §33.5's flag, CC-010's locale ruling, §7.3's

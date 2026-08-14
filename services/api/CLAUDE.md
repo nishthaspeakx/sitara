@@ -58,7 +58,7 @@ Bounded-context modules in one process (auth, users/profiles, localisation, astr
 - **`assert_storable` is shared by the real store and the in-memory fake.** §25.4's promise breaks as a wiring mistake — a user bubble whose source-audio id points at the synthesised asset — which would look right in every test that checks "audio plays". A fake that accepted it would be a defect in the fake (the root rule, and the one M5 broke).
 - **The locale→language map is declared data, not a prefix rule.** `hi-Latn` → `en` for STT (Latin script) and → `hi` for TTS. Verified live: Ink returns Devanagari for the Indic span under `language=hi`. Getting this wrong is invisible to every accuracy metric — the words are right and only the script is wrong (CC-009 §42.2).
 - **A sequence gap FAILS the note** (`voice/audio.py`, and again in the socket). A note missing its middle still transcribes, into a fluent sentence the user never said, which reaches §9 as their question. §9 gates what TARA says; this fabrication is on the user's side of the turn.
-- **Cartesia's status differs BY MODALITY.** Batch (`POST /stt`, `POST /tts/bytes`) is VERIFIED — live API, 13 Aug 2026, recorded fixtures. **Streaming (the two websockets) is UNVERIFIED**: written in M10 from documentation, no live streaming call made. That split matters because §33.5's gate turns on first-audio latency and barge-in success, both properties of the streaming path and neither said anything about by the batch verification. `tests/voice/test_streaming_provenance.py` is the skipping marker — do not delete it. Sarvam remains UNVERIFIED in both.
+- **Cartesia's status differs BY MODALITY.** Batch (`POST /stt`, `POST /tts/bytes`) is VERIFIED — live API, 13 Aug 2026, recorded fixtures. **Streaming (the two websockets) is UNVERIFIED**: written in M9-P10b from documentation, no live streaming call made. That split matters because §33.5's gate turns on first-audio latency and barge-in success, both properties of the streaming path and neither said anything about by the batch verification. `tests/voice/test_streaming_provenance.py` is the skipping marker — do not delete it. Sarvam remains UNVERIFIED in both.
 - **§3.2's acceptance gate is FINAL and NOT MET.** The adapter existing is not the gate passing. Ink's streaming endpoint is English-only today (batch carries 49 languages, which is what voice notes use) and Ink documents no code-mix mode — the Hinglish claim is Sonic's, on the TTS side.
 
 ## Commands (M9)
@@ -73,7 +73,7 @@ Bounded-context modules in one process (auth, users/profiles, localisation, astr
 - **The `call.indic_streaming_stt` gate reads the matrix too**, for the same reason: an amber-forever gate is how a real blocker gets tuned out.
 - **§3.4 respellings reach the SYNTHESISER and nothing else.** One call site, on the way into `SynthesisRequest`, after the turn is stored and after it has crossed the wire. A leak would put "raahoo kaal" in the user's own thread and make §25.4's transcript toggle disagree with itself. Every row is `draft`; production serves only reviewed rows.
 
-## calls module (M10, §25.3/§25.7) — invariants that must not regress
+## calls module (M9-P10b, §25.3/§25.7) — invariants that must not regress
 - **`calls/service.py`'s order is `voice/service.py`'s rule applied to a different irreplaceable thing.** A note stores the AUDIO first (§28.3); a call commits the TRANSCRIPT first, because call audio is never stored at all and the transcript is the only record there will ever be. §9's `_persist` writes both messages at the END of a turn, so an LLM outage between "she heard you" and "she answered" used to erase what somebody said out loud — permanently, with no audio to fall back on and no composer to resend from. `commit_utterance` is what stops it and `TurnRequest.user_message_id` is what keeps the pipeline from then writing the turn twice.
 - **A call's user message is `transcript_only`, never `text_only`.** `text_only` means "a typed message; there is no audio and no control", which would render a call in the thread as though the user had used the keyboard. No validator catches that and the transcript screen renders it without complaint.
 - **The GRANT is where every refusal happens** (`POST /v1/call/session`): §33.5's flag, CC-010's locale ruling, §7.3's exhausted pool. A refusal on an open socket has to be drawn as a call that failed; a refusal on the grant is drawn as an affordance that was never offered.
@@ -84,7 +84,7 @@ Bounded-context modules in one process (auth, users/profiles, localisation, astr
 - **§7.3's unlimited tier has NO invented ceiling.** §7.3 names no number for its soft limit, so `quota_minutes` is None, no warning fires and no call is cut on it.
 - **`chat_orchestration/birth.py` exists so the call reaches the SAME §5.3 narrowing.** The bug it was extracted from — every turn running with an all-False `BirthProfile()` — was invisible to every test because every test passed a profile in explicitly, and was found by the first live conversation. A second narrowing would be found the same way.
 
-## Commands (M10)
+## Commands (M9-P10b)
 - §33.5's gate, against real observations: `evaluate_live(app.state.call_metrics)`
 
 ## Commands (P10b)

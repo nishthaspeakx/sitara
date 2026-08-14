@@ -464,7 +464,7 @@ server.on("upgrade", (req, socket) => {
 });
 
 /**
- * §25.3's call, scripted (M10).
+ * §25.3's call, scripted (M9-P10b).
  *
  * The whole exchange is driven from `session.start` because a call is a
  * SEQUENCE — a screen that renders `speaking` correctly and never renders the

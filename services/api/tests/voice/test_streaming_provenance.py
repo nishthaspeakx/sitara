@@ -1,4 +1,4 @@
-"""The honest marker for the streaming adapters (§25.3, CC-009, M10).
+"""The honest marker for the streaming adapters (§25.3, CC-009, M9-P10b).
 
 Same instrument as `tests/panchang/fixtures/README.md`'s
 `test_all_fixtures_recorded_from_live_api`, and here for the same reason: this
@@ -7,7 +7,7 @@ shapes somebody has actually SEEN.
 
 The batch pair (`POST /stt`, `POST /tts/bytes`) was verified live on
 13 Aug 2026 and has recorded fixtures. The streaming pair was written from
-documentation in M10 and **no live streaming call has been made**. That is the
+documentation in M9-P10b and **no live streaming call has been made**. That is the
 DivineAPI standing, not the Prokerala one.
 
 Why it matters more here than it looks. §33.5's release gate turns on two

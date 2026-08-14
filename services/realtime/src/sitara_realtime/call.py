@@ -7,7 +7,7 @@ What this service owns, and what it deliberately does not
 and ducking for barge-in, per-session minute metering, and the degrade ladder.
 Everything else is `sitara-api`'s, reached over the media socket
 (`sitara_schemas.call_media`), because this service holds no database, no model
-client and no vendor credentials — an invariant M10 does not weaken. So:
+client and no vendor credentials — an invariant M9-P10b does not weaken. So:
 
     here                                  there
     ────                                  ─────

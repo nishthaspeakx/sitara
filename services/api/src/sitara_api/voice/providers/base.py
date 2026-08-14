@@ -118,7 +118,7 @@ class TtsProvider(Protocol):
 
 
 # ---------------------------------------------------------------------------
-# Streaming (M10, §25.3, §7.3) — a SECOND pair of interfaces, deliberately
+# Streaming (M9-P10b, §25.3, §7.3) — a SECOND pair of interfaces, deliberately
 # ---------------------------------------------------------------------------
 #
 # The batch pair above is not a special case of the streaming pair and must not

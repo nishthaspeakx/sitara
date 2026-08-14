@@ -151,6 +151,16 @@ test.describe("§32.1 — the worst-case stack", () => {
 
         // Two banners and one pill — the ceiling, rendered.
         await expect(page.getByTestId("banner-grace")).toBeVisible();
+        // §22.13's grace banner is TINTED, and the tint is `bg-feedback-caution/10`
+        // — an opacity modifier, which emitted no CSS at all until M9-P10b fixed
+        // the token layer (`packages/tokens/build.mjs`, `rgbTriplet`). A 10%
+        // wash is far under Playwright's per-pixel threshold, so the baseline
+        // beside this assertion cannot see whether it is there: it passed
+        // identically with the banner untinted. The computed colour can.
+        const tint = await page
+          .getByTestId("banner-grace")
+          .evaluate((el) => getComputedStyle(el).backgroundColor);
+        expect(tint).not.toBe("rgba(0, 0, 0, 0)");
         await expect(page.getByTestId("banner-travel")).toBeVisible();
         await expect(page.getByTestId("banner-festival")).toHaveCount(0);
         // The festival did not vanish; it moved to the core card.

@@ -1,4 +1,4 @@
-"""The shared call-socket harness (M10).
+"""The shared call-socket harness (M9-P10b).
 
 Two test files drive `WS /call/session` — the degrade ladder and the barge-in —
 and they need the same three things: a real browser-facing socket, a stubbed

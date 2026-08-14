@@ -7,13 +7,13 @@ set over the actual §9 pipeline, reached through `sitara-api`. See `chat.py`
 for the mapping of a text conversation onto fifteen voice-shaped members, and
 for why `captions.partial` is never emitted for Tara.
 
-`WS /call/session` is M10's, and it is real: §25.3's live call, said in the same
+`WS /call/session` is M9-P10b's, and it is real: §25.3's live call, said in the same
 fifteen members. See `call.py` for the division of labour with `sitara-api` and
 for why every branch of the degrade ladder ends in `handoff.to_text`.
 
 Freezing the event set in M0 and building the text chat on it first paid for
 itself here — the transport, the heartbeat, the resume window and the handoff
-were all already exercised, so M10 was not discovering them for the first time
+were all already exercised, so M9-P10b was not discovering them for the first time
 under a live microphone.
 
 **This service holds no database, no model client and no pipeline.** Every turn
@@ -50,7 +50,7 @@ async def chat_session(ws: WebSocket) -> None:
 
 @app.websocket("/call/session")
 async def call_session(ws: WebSocket) -> None:
-    """M10's socket — §25.3's live call, in the same fifteen members.
+    """M9-P10b's socket — §25.3's live call, in the same fifteen members.
 
     No longer the M0 stub. §33.5 still gates whether calls SHIP, and the gate is
     evaluated where a call is granted rather than here: `POST /v1/call/session`

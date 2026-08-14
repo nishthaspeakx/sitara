@@ -49,19 +49,19 @@ class ControlEvent(BaseModel):
 
 # --------------------------------------------------------------------
 # Payload shapes — the text chat (S18), the voice notes (M9), the live
-# call (M10). All fifteen members are now typed.
+# call (M9-P10b). All fifteen members are now typed.
 #
 # §34.6 says payloads are 'typed per event in M9'. The rule that actually
 # held is narrower: a payload is typed by the milestone that starts
 # EMITTING it, because typing an event nobody produces is a guess with a
 # schema around it. S18 typed the text-chat members, M9 typed vad.state
-# and tts.*, and M10 types the last two — `barge_in` (§25.3's server-side
+# and tts.*, and M9-P10b types the last two — `barge_in` (§25.3's server-side
 # VAD ducking) and `entitlement.warning` (§7.3's minute pool) — because
-# M10 is the milestone that sends them.
+# M9-P10b is the milestone that sends them.
 #
 # The set of MEMBERS has not moved and must not: fifteen, closed, §31.3
 # change control. A live call speaking the same fifteen as a typed chat
-# is what §34.6 claimed and what M10 is the test of.
+# is what §34.6 claimed and what M9-P10b is the test of.
 # --------------------------------------------------------------------
 
 class SessionStartPayload(BaseModel):
@@ -124,7 +124,7 @@ class VadStatePayload(BaseModel):
 class TtsStartPayload(BaseModel):
     """Server → client, on `tts.start`. §25.4: 'Tara's replies arrive as voice-note bubbles rendered from her TTS with transcript toggle'. Emitted after her `captions.final`, so the transcript the toggle shows is on screen before any audio plays — and is the same validated text the audio was rendered from, not a second generation.
 
-`tts_audio_asset_id` became OPTIONAL in M10, and the null is load-bearing rather than lax. A voice NOTE is synthesised whole and stored, so it has an asset and a bubble that can replay it. A live CALL is streamed and its audio is never stored at all (§13, §33.1) — so there is no asset, and there is nothing to replay. Null is the type saying exactly that. Carrying an invented id would have promised a playback control over audio that does not exist anywhere."""
+`tts_audio_asset_id` became OPTIONAL in M9-P10b, and the null is load-bearing rather than lax. A voice NOTE is synthesised whole and stored, so it has an asset and a bubble that can replay it. A live CALL is streamed and its audio is never stored at all (§13, §33.1) — so there is no asset, and there is nothing to replay. Null is the type saying exactly that. Carrying an invented id would have promised a playback control over audio that does not exist anywhere."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -154,7 +154,7 @@ class TtsEndPayload(BaseModel):
 
 
 class BargeInPayload(BaseModel):
-    """Server → client (§25.3, §7.3). Typed in M10 because M10 is the first milestone that emits it — the rule this package keeps, and the reason it stayed untyped through M9.
+    """Server → client (§25.3, §7.3). Typed in M9-P10b because M9-P10b is the first milestone that emits it — the rule this package keeps, and the reason it stayed untyped through M9.
 
 **It replaces `tts.end`, it does not precede it.** `tts.end` carries the total duration for the bubble's scrubber; an utterance that was cut has no total duration that was ever true, and sending one would put a scrubber on audio the user interrupted. So a synthesis stream ends in exactly one of two members and a client can rely on that.
 

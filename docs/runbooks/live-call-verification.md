@@ -1,4 +1,4 @@
-# Live-call verification — the run the suites cannot do (M10, §25.3, §33.5)
+# Live-call verification — the run the suites cannot do (M9-P10b, §25.3, §33.5)
 
 **Purpose: make one real call, against real Cartesia, and find out whether the
 streaming adapters are right.**
