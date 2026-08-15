@@ -82,7 +82,7 @@ export default function JournalDayPage({
   }, [refresh]);
 
   return (
-    <div data-testid="journal-day" data-date={date} className="flex min-h-screen flex-col bg-bg-canvas">
+    <div data-testid="journal-day" data-date={date} className="flex min-h-app flex-col bg-bg-canvas">
       {/* The title is user-facing DATA — a formatted date — so it goes through
           `title`, not `titleKey`. Same convention `FamilyCard` uses for a name. */}
       <Header variant="titled" title={formatLongDate(date, locale)} onBack={() => router.back()} />

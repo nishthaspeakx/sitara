@@ -71,7 +71,7 @@ export function Header({
     <header
       className={cn(
         // standalone-PWA safe area (§24.5)
-        "flex items-center gap-3 border-b border-border-subtle bg-surface px-4 py-2 pt-[env(safe-area-inset-top)]",
+        "flex items-center gap-3 border-b border-border-subtle bg-surface px-4 py-2 pt-safe",
         className,
       )}
     >

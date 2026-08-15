@@ -97,7 +97,7 @@ export default function JournalSearchPage() {
   }, [query, filter, run]);
 
   return (
-    <div data-testid="journal-search" className="flex min-h-screen flex-col bg-bg-canvas">
+    <div data-testid="journal-search" className="flex min-h-app flex-col bg-bg-canvas">
       <Header variant="titled" titleKey="journal.search.title" onBack={() => router.back()} />
 
       <main className="flex flex-1 flex-col gap-4 px-5 pb-10 pt-4">

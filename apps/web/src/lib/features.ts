@@ -53,3 +53,37 @@ export const VOICE_NOTES_ENABLED = true;
  * flipping this alone changes what the app OFFERS and not what it permits.
  */
 export const CALLS_ENABLED = false;
+
+/**
+ * §25.3's calls, as the prototype demo may reach them (CC-014).
+ *
+ * `CALLS_ENABLED` above is the SHIPPED answer and stays false — §33.5 is
+ * unmoved and `voice.call_gate` still does not pass. This is the separate
+ * question of whether a local demo may open one, and it mirrors
+ * `prototype.calls_enabled` on the server.
+ *
+ * **The server is the authority and this is a mirror, which is a cost worth
+ * naming.** Every refusal is made at `POST /v1/call/session` — §33.5's flag,
+ * CC-010's locale ruling and §7.3's pool are all evaluated there, and a client
+ * that believed otherwise would simply be told no. This flag exists only so an
+ * ENTRY POINT can decide whether to render before the user taps it, which is a
+ * question no grant can answer in advance. If the two disagree, the grant wins
+ * and the screen renders the refusal it already knows how to draw.
+ *
+ * In prototype mode `hi`/`hi-Latn` calls are reachable through CC-014's
+ * browser-speech bridge, which labels itself on the call screen for the whole
+ * call. So the entry points do NOT render a locale-disabled state during a
+ * demo — there is nothing to disable.
+ */
+export const PROTOTYPE_CALLS = process.env.NEXT_PUBLIC_PROTOTYPE_CALLS === "1";
+
+/** Whether a call entry point should render at all, for this locale. */
+export function callEntryState(locale: string): "enabled" | "unsupported_locale" | "hidden" {
+  if (PROTOTYPE_CALLS) return "enabled"; // CC-014's bridge covers all three.
+  if (!CALLS_ENABLED) return "hidden";   // §33.5 — nothing to offer anyone.
+  // Calls are live but this locale has no recogniser (CC-010). The control
+  // renders DISABLED with its reason rather than vanishing: unlike the case
+  // above, calling is a thing this product does — just not in this language
+  // yet — and that is worth saying.
+  return locale === "en" ? "enabled" : "unsupported_locale";
+}

@@ -136,13 +136,13 @@ export function AskScreen({
     <div
       data-testid="ask"
       data-connected={thread.connected}
-      className="relative flex min-h-screen flex-col bg-bg-canvas"
+      className="relative flex min-h-app flex-col bg-bg-canvas"
     >
       {/* §25.4's chat wallpaper. Decorative, and no text sits on it. */}
       <Wallpaper night={night} />
 
-      <div className="relative flex min-h-screen flex-col">
-        <ChatHeader presenceState={presenceState} onCall={onCall} />
+      <div className="relative flex min-h-app flex-col">
+        <ChatHeader presenceState={presenceState} locale={locale} onCall={onCall} />
 
         {thread.handedOffToText ? (
           <p

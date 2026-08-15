@@ -2,6 +2,7 @@ import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 
+import { DeviceFrame } from "@/components/dev/DeviceFrame";
 import { routing } from "@/i18n/routing";
 import "@sitara/tokens/css";
 import "../globals.css";
@@ -37,8 +38,13 @@ export default async function LocaleLayout({
     // whatever font the device happens to have — which renders, and renders
     // wrong: the tuning exists precisely because untuned Devanagari sets badly.
     <html lang={locale} data-script={LOCALE_SCRIPT[locale]}>
-      <body className="bg-bg-canvas text-ink-primary min-h-screen font-script">
-        <NextIntlClientProvider>{children}</NextIntlClientProvider>
+      <body className="bg-bg-canvas text-ink-primary min-h-app font-script">
+        <NextIntlClientProvider>
+          {/* DEV ONLY, and a no-op everywhere else — see the component. It
+              wraps INSIDE the provider so the app's own tree is unchanged and
+              every string still resolves the same way. */}
+          <DeviceFrame>{children}</DeviceFrame>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

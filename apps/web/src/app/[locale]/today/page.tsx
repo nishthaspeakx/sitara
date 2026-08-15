@@ -69,7 +69,7 @@ export default function TodayPage() {
     // §28.2: "loading = skeleton mirroring anatomy". Not a spinner — the shape
     // of what is coming is what makes a wait feel short.
     return (
-      <div data-testid="today" data-variant="loading" className="flex min-h-screen flex-col gap-5 bg-bg-canvas p-5">
+      <div data-testid="today" data-variant="loading" className="flex min-h-app flex-col gap-5 bg-bg-canvas p-5">
         <Skeleton variant="brief" />
       </div>
     );
@@ -77,7 +77,7 @@ export default function TodayPage() {
 
   if (state.kind === "error") {
     return (
-      <div data-testid="today" data-variant="error" className="flex min-h-screen items-center justify-center bg-bg-canvas p-5">
+      <div data-testid="today" data-variant="error" className="flex min-h-app items-center justify-center bg-bg-canvas p-5">
         <ErrorState error={state.error} onRetry={() => router.refresh()} />
       </div>
     );
@@ -96,6 +96,10 @@ export default function TodayPage() {
       chrome={chrome}
       cachedAt={state.cachedAt}
       onSelectTab={(tab) => router.push(`/${tab}`)}
+      // B2. No conversation id here: Today is not a thread, so the call opens
+      // on the account's shared session conversation exactly as a direct visit
+      // to /ask/call does. B1's header entry is the one that CARRIES a thread.
+      onCallTara={() => router.push("/ask/call")}
     />
   );
 }

@@ -171,7 +171,12 @@ export default function AskPage() {
       onSelectTab={(tab) => router.push(`/${tab}`)}
       // S39, which exists. `/you/help` never did — see SafetyTakeover.
       onGetHelp={() => router.push("/support/now")}
-      onCall={() => router.push("/ask/call")}
+      // B1 — the conversation travels with the tap, so the call opens on the
+      // SAME thread rather than cold. §28.3 gives an account one history and a
+      // call that minted its own would be a second one.
+      onCall={() =>
+        router.push(`/ask/call?conversation=${encodeURIComponent(conversation)}`)
+      }
       onAcceptMemory={acceptMemory}
       onDeclineMemory={() => {}}
       voice={voice}

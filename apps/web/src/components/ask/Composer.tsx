@@ -67,7 +67,7 @@ export function Composer({
     <form
       onSubmit={submit}
       data-testid="composer"
-      className="flex flex-col gap-2 border-t border-border-subtle bg-surface px-4 py-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]"
+      className="flex flex-col gap-2 border-t border-border-subtle bg-surface px-4 py-3 pb-safe-min"
     >
       {quoting ? (
         <div

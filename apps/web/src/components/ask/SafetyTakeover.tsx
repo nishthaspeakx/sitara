@@ -37,7 +37,7 @@ export function SafetyTakeover({ onBackToTara, onGetHelp }: SafetyTakeoverProps)
       data-testid="safety-takeover"
       role="region"
       aria-label={t("ui.safety.title")}
-      className="flex min-h-screen flex-col justify-center gap-5 bg-bg-canvas p-5"
+      className="flex min-h-app flex-col justify-center gap-5 bg-bg-canvas p-5"
     >
       <h1 className="max-w-reading text-title text-ink-primary">{t("ui.safety.title")}</h1>
       <p className="max-w-reading text-body text-ink-primary">{t("ui.safety.body")}</p>

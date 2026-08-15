@@ -79,7 +79,7 @@ export default function GiftRedeemPage({
   return (
     <main
       data-testid="gift-redeem"
-      className="mx-auto flex min-h-screen max-w-md flex-col gap-6 px-6 py-10"
+      className="mx-auto flex min-h-app max-w-md flex-col gap-6 px-6 py-10"
     >
       <div className="flex justify-center">
         <TaraPresence size="lg" state="welcome" still showAiLabel />

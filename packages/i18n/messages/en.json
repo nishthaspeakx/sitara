@@ -503,7 +503,9 @@
       "summary_save": "Save this call to your journal?",
       "start": "Call Tara",
       "thinking_still": "Still thinking",
-      "browser_stt_demo": "Demo bridge — your speech is being transcribed by Chrome, not by Sitara. Hindi calls are not available yet."
+      "browser_stt_demo": "Demo bridge — your speech is being transcribed by Chrome, not by Sitara. Hindi calls are not available yet.",
+      "start_unavailable": "Calling Tara isn't available in this language yet",
+      "home_entry": "Talk to Tara"
     },
     "panchang": {
       "label": "Today's panchang",

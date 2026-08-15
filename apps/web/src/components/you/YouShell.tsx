@@ -54,7 +54,7 @@ export function YouShell({
 }: YouShellProps) {
   const router = useRouter();
   return (
-    <div data-testid={testId} className="flex min-h-screen flex-col bg-bg-canvas">
+    <div data-testid={testId} className="flex min-h-app flex-col bg-bg-canvas">
       <Header
         variant="titled"
         titleKey={titleKey}

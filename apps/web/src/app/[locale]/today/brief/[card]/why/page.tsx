@@ -75,7 +75,7 @@ export default function WhyThisPage() {
   const back = () => router.push("/today");
 
   return (
-    <div data-testid="why" data-card={card ?? "unknown"} className="flex min-h-screen flex-col bg-bg-canvas">
+    <div data-testid="why" data-card={card ?? "unknown"} className="flex min-h-app flex-col bg-bg-canvas">
       <Header variant="titled" titleKey="ui.trust.title" onBack={back} />
 
       <main className="flex flex-1 flex-col gap-5 px-5 pb-10 pt-4">

@@ -67,7 +67,7 @@ export default function JournalPage() {
   }, [refresh]);
 
   return (
-    <div data-testid="journal" className="flex min-h-screen flex-col bg-bg-canvas">
+    <div data-testid="journal" className="flex min-h-app flex-col bg-bg-canvas">
       <Header
         variant="titled"
         titleKey="journal.title"

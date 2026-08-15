@@ -35,6 +35,20 @@ import { IDLE_CALL, callReducer } from "@/lib/call-state";
  * expandable transcript"), so a call and the chat before it are one
  * conversation or the promise of continuity is not one.
  */
+/**
+ * `?conversation=` wins when the user arrived from the chat header (B1), so
+ * the call continues the thread they were already in. The session-key fallback
+ * keeps a direct visit to `/ask/call` working — the two screens have always
+ * shared that key, which is why a direct visit lands on the same thread.
+ */
+function conversationFromQuery(): string | null {
+  if (typeof window === "undefined") return null;
+  const passed = new URLSearchParams(window.location.search).get("conversation");
+  // §6.4 types `messages.conversation_id` as an objectId; anything else is
+  // somebody editing the URL, and minting a fresh id is safer than sending it.
+  return passed && /^[0-9a-f]{24}$/.test(passed) ? passed : null;
+}
+
 function conversationId(): string {
   const key = "sitara.conversation_id";
   const existing = window.sessionStorage.getItem(key);
@@ -52,7 +66,7 @@ export default function CallPage() {
   const [model, dispatch] = useReducer(callReducer, IDLE_CALL);
   const socket = useRef<CallSocket | null>(null);
   const conversation = useMemo(
-    () => (typeof window === "undefined" ? "" : conversationId()),
+    () => (typeof window === "undefined" ? "" : (conversationFromQuery() ?? conversationId())),
     [],
   );
 

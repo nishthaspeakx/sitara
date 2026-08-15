@@ -28,10 +28,14 @@
  */
 
 import type { MorningModule, TodayModule, TodayPayload } from "@sitara/schemas";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 
+import { Phone } from "lucide-react";
+
 import { BriefCard, Button, Card, ConfidenceChip, TabBar } from "@/components/ui";
+import { ICON_STROKE } from "@/components/ui/_util";
+import { callEntryState } from "@/lib/features";
 import { VISIBLE_CONTEXTUAL, type TodayChrome } from "@/lib/today-variant";
 
 import { BannerStack } from "./BannerStack";
@@ -74,6 +78,8 @@ export interface TodayScreenProps {
   payload: TodayPayload;
   chrome: TodayChrome;
   onSelectTab?: (tab: string) => void;
+  /** B2 — §28.1's talk-to-Tara entry. Absent when the caller has no call route. */
+  onCallTara?: () => void;
   onEditBriefTime?: () => void;
   /** §28.2's Free variant CTA → /you/subscription. */
   onOpenPlans?: () => void;
@@ -93,15 +99,19 @@ export function TodayScreen({
   payload,
   chrome,
   onSelectTab,
+  onCallTara,
   onEditBriefTime,
   onOpenPlans,
   cachedAt,
   defaultExpanded = false,
 }: TodayScreenProps) {
   const t = useTranslations();
+  const locale = useLocale();
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [trustFor, setTrustFor] = useState<TodayModule | null>(null);
   const [briefTimeOpen, setBriefTimeOpen] = useState(false);
+  // CC-010 / §33.5, resolved once for the screen. See `features.callEntryState`.
+  const callEntry = callEntryState(locale);
 
   const byId = new Map(payload.modules.map((m) => [m.module, m]));
   const core = CORE_PREFERENCE.map((id) => byId.get(id)).find(Boolean) ?? null;
@@ -124,7 +134,7 @@ export function TodayScreen({
       data-variant={chrome.variant}
       data-band={chrome.band}
       data-density={payload.density}
-      className="flex min-h-screen flex-col bg-bg-canvas"
+      className="flex min-h-app flex-col bg-bg-canvas"
     >
       <SkyHeader payload={payload} chrome={chrome} />
       <BannerStack payload={payload} chrome={chrome} cachedAt={cachedAt} />
@@ -266,6 +276,29 @@ export function TodayScreen({
         value={payload.state.brief_time}
         onClose={() => setBriefTimeOpen(false)}
       />
+      {/* B2 — §28.1's "talk to Tara" entry.
+
+          Placement: after the whole brief, before the tab bar. §28.2 gives the
+          screen exactly ONE dominant element (the core card), so this sits at
+          `secondary` emphasis below everything — it reads as "and if you want
+          to talk" rather than as the screen's purpose. In the header beside the
+          date it would have competed with the core card for the eye, which the
+          dominance rule forbids by construction. */}
+      {callEntry !== "hidden" ? (
+        <div className="px-5 pb-4">
+          <Button
+            variant="secondary"
+            fullWidth
+            disabled={callEntry !== "enabled"}
+            icon={<Phone strokeWidth={ICON_STROKE} />}
+            data-testid="today-call-entry"
+            onClick={callEntry === "enabled" ? onCallTara : undefined}
+          >
+            {t(callEntry === "enabled" ? "ui.call.home_entry" : "ui.call.start_unavailable")}
+          </Button>
+        </div>
+      ) : null}
+
       <TabBar active="today" onSelect={(tab) => onSelectTab?.(tab)} />
     </div>
   );

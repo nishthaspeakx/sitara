@@ -113,7 +113,7 @@ export default function ReflectionPage() {
     // the theme's, applied by `data-theme` on the document — not a filter and
     // not a per-screen palette, for the reasons `today/sky.ts` records about
     // text on a fixed dark surface.
-    <div data-testid="reflection" className="flex min-h-screen flex-col bg-bg-canvas">
+    <div data-testid="reflection" className="flex min-h-app flex-col bg-bg-canvas">
       <Header
         variant="presence"
         titleKey="reflection.title"

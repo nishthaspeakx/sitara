@@ -56,7 +56,7 @@ export function CallControls({
     <div
       className={cn(
         // safe-area padding for the iOS home bar (§29.3)
-        "flex flex-col items-center gap-3 pb-[env(safe-area-inset-bottom)]",
+        "flex flex-col items-center gap-3 pb-safe",
         className,
       )}
     >

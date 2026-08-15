@@ -183,7 +183,7 @@ export default defineConfig({
       // command wait on a `next start` — the trap `today-variant` already
       // documents.
       testMatch:
-        /screens\.spec\.ts|onboarding-.*\.spec\.ts|ceremony-degradation\.spec\.ts|today-(empty|degraded|screens|routes)\.spec\.ts|ask-.*\.spec\.ts|call\.spec\.ts|deletion-confirm\.spec\.ts|journal-(screens|routes)\.spec\.ts|you-screens\.spec\.ts|subscription-screens\.spec\.ts|reflection\.spec\.ts/,
+        /screens\.spec\.ts|onboarding-.*\.spec\.ts|ceremony-degradation\.spec\.ts|today-(empty|degraded|screens|routes)\.spec\.ts|ask-.*\.spec\.ts|call\.spec\.ts|deletion-confirm\.spec\.ts|journal-(screens|routes)\.spec\.ts|you-screens\.spec\.ts|subscription-screens\.spec\.ts|reflection\.spec\.ts|device-frame\.spec\.ts|call-entry\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
         viewport: { width: 390, height: 844 },

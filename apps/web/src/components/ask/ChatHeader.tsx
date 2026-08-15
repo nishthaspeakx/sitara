@@ -33,21 +33,24 @@ import type { PresenceState } from "@sitara/schemas";
 
 import { IconButton, StoryRing } from "@/components/ui";
 import { ICON_STROKE } from "@/components/ui/_util";
-import { CALLS_ENABLED } from "@/lib/features";
+import { callEntryState } from "@/lib/features";
 
 export interface ChatHeaderProps {
   presenceState: PresenceState;
+  /** §2.4's account locale — decides CC-010's entry state. */
+  locale?: string;
   /** Opens §25.3's screen 17. Absent when the caller has no call route. */
   onCall?: () => void;
 }
 
-export function ChatHeader({ presenceState, onCall }: ChatHeaderProps) {
+export function ChatHeader({ presenceState, locale = "en", onCall }: ChatHeaderProps) {
   const t = useTranslations();
+  const entry = callEntryState(locale);
 
   return (
     <header
       data-testid="ask-header"
-      className="flex items-center gap-3 border-b border-border-subtle bg-surface px-4 py-2 pt-[env(safe-area-inset-top)]"
+      className="flex items-center gap-3 border-b border-border-subtle bg-surface px-4 py-2 pt-safe"
     >
       <StoryRing size="sm" taraState={presenceState} />
       <div className="flex min-w-0 flex-col">
@@ -58,11 +61,12 @@ export function ChatHeader({ presenceState, onCall }: ChatHeaderProps) {
       <span className="ms-auto shrink-0 text-caption text-ink-muted">
         {t("ui.ask.presence_line")}
       </span>
-      {CALLS_ENABLED && onCall ? (
+      {entry !== "hidden" && onCall ? (
         <IconButton
           variant="plain"
-          labelKey="ui.call.start"
-          onClick={onCall}
+          labelKey={entry === "enabled" ? "ui.call.start" : "ui.call.start_unavailable"}
+          onClick={entry === "enabled" ? onCall : undefined}
+          disabled={entry !== "enabled"}
           icon={<Phone strokeWidth={ICON_STROKE} />}
         />
       ) : null}

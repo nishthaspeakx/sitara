@@ -503,7 +503,9 @@
       "summary_save": "Yeh call apni journal mein save karein?",
       "start": "Tara ko call karein",
       "thinking_still": "Abhi bhi soch rahi hoon",
-      "browser_stt_demo": "Demo bridge — aapki aawaaz Chrome likh raha hai, Sitara nahin. Hindi mein call abhi uplabdh nahin hai."
+      "browser_stt_demo": "Demo bridge — aapki aawaaz Chrome likh raha hai, Sitara nahin. Hindi mein call abhi uplabdh nahin hai.",
+      "start_unavailable": "Is bhasha mein Tara se call abhi uplabdh nahin hai",
+      "home_entry": "Tara se baat kijiye"
     },
     "panchang": {
       "label": "Aaj ka panchang",

@@ -66,7 +66,7 @@ export default function LaunchPage() {
   }, [sequenceDone, router]);
 
   return (
-    <main className="min-h-screen bg-brand-navy-deep">
+    <main className="min-h-app bg-brand-navy-deep">
       <LaunchSequence onFinished={onFinished} />
     </main>
   );

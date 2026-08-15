@@ -39,7 +39,7 @@ export function TabBar({ active, onSelect, badges, className }: TabBarProps) {
       aria-label={t("ui.tabs.label")}
       className={cn(
         // safe-area inset for the iOS home bar (§24.5)
-        "flex w-full items-stretch border-t border-border-subtle bg-surface pb-[env(safe-area-inset-bottom)]",
+        "flex w-full items-stretch border-t border-border-subtle bg-surface pb-safe",
         className,
       )}
     >

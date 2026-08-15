@@ -45,7 +45,7 @@ export function SkyHeader({ payload, chrome, onOpenSettings, onOpenStories }: Sk
   return (
     <header
       data-testid="today-sky-header"
-      className="relative flex flex-col pt-[env(safe-area-inset-top)]"
+      className="relative flex flex-col pt-safe"
     >
       {/* The gradient carries NO text — see `sky.ts` for the six contrast
           failures that established the rule. */}

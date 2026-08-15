@@ -3,3 +3,62 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ---------------------------------------------------------------------------
+ * The app's own viewport (§24.5, dev device frame)
+ * ---------------------------------------------------------------------------
+ *
+ * `100vh`/`100dvh` resolve against the BROWSER viewport, always. Inside the
+ * dev device frame that is the 1440px desktop window, not the 402x874 phone —
+ * so `min-h-screen` on a screen root makes the app taller than the phone it is
+ * supposed to be inside, and the frame cannot contain it.
+ *
+ * So every screen root measures itself against `--app-vh` instead, which the
+ * frame overrides and which falls back to `100dvh` when there is no frame.
+ * `dvh` rather than `vh` deliberately: on real iOS Safari `vh` includes the
+ * collapsing URL bar, so a `100vh` screen is permanently ~60px too tall and
+ * the tab bar sits under the browser chrome.
+ *
+ * The safe-area pair is the same problem one layer down. `env(safe-area-inset-*)`
+ * is set by the USER AGENT and cannot be assigned in CSS, so a framed app would
+ * read the laptop's insets (zero) rather than the phone's. These custom props
+ * default to `env()` — the correct value on hardware — and the frame overrides
+ * them with the iPhone 17's real insets.
+ */
+:root {
+  /* `100vh`, NOT `100dvh` — this is the value `min-h-screen` compiled to
+     before the frame existed, and the fallback's job is to be behaviour-
+     identical when unframed. Swapping in `dvh` here churned 122 screenshot
+     baselines: the two units differ, so every screen's height moved.
+
+     `dvh` IS the better value on real iOS Safari (a `100vh` screen is
+     permanently ~60px too tall under the collapsing URL bar) — but that is a
+     separate decision with its own re-baseline, not something a dev-only
+     device frame should smuggle in. */
+  --app-vh: 100vh;
+  --app-safe-top: env(safe-area-inset-top, 0px);
+  --app-safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@layer utilities {
+  /* Replaces `min-h-screen` on every screen root. */
+  .min-h-app {
+    min-height: var(--app-vh);
+  }
+  /* The frame's own scroller uses this; a screen that must not exceed the
+     phone (the call, the launch sequence) uses it directly. */
+  .h-app {
+    height: var(--app-vh);
+  }
+  .pt-safe {
+    padding-top: var(--app-safe-top);
+  }
+  .pb-safe {
+    padding-bottom: var(--app-safe-bottom);
+  }
+  /* §28.3's composer keeps a floor under the inset — a zero inset on a
+     laptop would put the send button flush against the edge. */
+  .pb-safe-min {
+    padding-bottom: max(var(--app-safe-bottom), 0.75rem);
+  }
+}

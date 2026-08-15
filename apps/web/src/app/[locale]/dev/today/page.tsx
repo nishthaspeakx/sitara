@@ -99,7 +99,7 @@ export default function DevTodayPage() {
     : null;
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-app flex-col">
       {/* Dev chrome. Deliberately plain — this is a tool, and dressing it in
           product components would make it another thing to keep in sync. */}
       <div className="sticky top-0 z-50 flex flex-wrap items-center gap-2 border-b border-border-subtle bg-surface p-3 text-caption">

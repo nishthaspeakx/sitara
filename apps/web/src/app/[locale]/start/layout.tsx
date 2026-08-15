@@ -68,7 +68,7 @@ export default function StartLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-bg-canvas" data-testid="onboarding-stack" data-step={step ?? ""}>
+    <div className="min-h-app bg-bg-canvas" data-testid="onboarding-stack" data-step={step ?? ""}>
       <Header variant="bare" onBack={back} />
       {step !== null ? (
         <div className="flex justify-center px-6 pb-2">
