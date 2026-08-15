@@ -158,6 +158,9 @@ class CallSession:
         self._buffer = buffer
         self._seq = 0
         self._ws_session: str | None = None
+        #: Whether the audio currently streaming is §25.3's holding phrase.
+        #: Read by `_on_tts_audio` to keep §33.5's measure honest.
+        self._holding = False
         self._resume_token: str | None = None
         self._conversation_id = ""
         self._locale = "en"
@@ -384,10 +387,18 @@ class CallSession:
 
         if kind == CallDownFrame.TTS_START.value:
             self._speaking = True
+            # §25.3's holding phrase is her VOICE but not her ANSWER, and the
+            # distinction has to survive this hop for two reasons that live on
+            # different sides of it: the browser needs it to return to
+            # `thinking` rather than showing a mic-live indicator over a turn
+            # still in flight, and `_on_tts_audio` below needs it to keep
+            # §33.5's `first_audio_seconds` timing the answer.
+            self._holding = bool(frame.get("holding"))
             await self.send(
                 ControlEventType.TTS_START,
                 {
                     "client_message_id": frame.get("client_message_id"),
+                    "holding": self._holding,
                     # Null, and the null is the point: a call's audio is
                     # streamed and never stored (§33.1), so there is no asset
                     # and nothing to replay. An invented id here would promise
@@ -405,15 +416,23 @@ class CallSession:
 
         if kind == CallDownFrame.TTS_END.value:
             self._speaking = False
+            was_holding = self._holding
+            self._holding = False
             chunks = int(frame.get("chunks") or 0)
             await self.send(
                 ControlEventType.TTS_END,
                 {
                     "client_message_id": frame.get("client_message_id"),
                     "duration_ms": self._duration_ms(chunks),
+                    "holding": was_holding,
                 },
             )
-            self._utterance = None
+            # The utterance is NOT finished when a holding phrase ends — §9 is
+            # still working on the answer this same utterance asked for.
+            # Clearing it here would orphan the answer's chunk metadata and
+            # lose the `first_audio_seconds` start time the measure needs.
+            if not was_holding:
+                self._utterance = None
             return
 
         if kind == CallDownFrame.TTS_CANCELLED.value:
@@ -516,7 +535,21 @@ class CallSession:
         )
 
     async def _on_tts_audio(self, pcm: bytes) -> None:
-        if self._utterance is not None and not self._utterance.first_audio_reported:
+        # §33.5's latency measure times the moment the user's utterance was
+        # finalised to the moment TARA'S ANSWER begins. A holding phrase is
+        # audio, and audio arriving 1.8s in would report 1.8s for a reply that
+        # took 5.8 — turning the cheapest thing in the system to produce into
+        # the number the release gate reads. `call_metrics` and `call_gate` are
+        # separate files precisely so a gate cannot be made to pass by changing
+        # how the evidence is counted; this is the same rule one layer down.
+        #
+        # The phrase's audio still goes to the browser, and still meters as
+        # synthesis cost on the API side. It just is not her answer.
+        if (
+            not self._holding
+            and self._utterance is not None
+            and not self._utterance.first_audio_reported
+        ):
             self._utterance.first_audio_reported = True
             if self._utterance.finalised_at is not None:
                 await self.report(

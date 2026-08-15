@@ -124,7 +124,9 @@ class VadStatePayload(BaseModel):
 class TtsStartPayload(BaseModel):
     """Server → client, on `tts.start`. §25.4: 'Tara's replies arrive as voice-note bubbles rendered from her TTS with transcript toggle'. Emitted after her `captions.final`, so the transcript the toggle shows is on screen before any audio plays — and is the same validated text the audio was rendered from, not a second generation.
 
-`tts_audio_asset_id` became OPTIONAL in M9-P10b, and the null is load-bearing rather than lax. A voice NOTE is synthesised whole and stored, so it has an asset and a bubble that can replay it. A live CALL is streamed and its audio is never stored at all (§13, §33.1) — so there is no asset, and there is nothing to replay. Null is the type saying exactly that. Carrying an invented id would have promised a playback control over audio that does not exist anywhere."""
+`tts_audio_asset_id` became OPTIONAL in M9-P10b, and the null is load-bearing rather than lax. A voice NOTE is synthesised whole and stored, so it has an asset and a bubble that can replay it. A live CALL is streamed and its audio is never stored at all (§13, §33.1) — so there is no asset, and there is nothing to replay. Null is the type saying exactly that. Carrying an invented id would have promised a playback control over audio that does not exist anywhere.
+
+`holding` marks §25.3's holding phrase — the line she speaks when §9 has out-run HOLDING_PHRASE_AFTER_MS. It is her voice but it is NOT her answer, and that difference is load-bearing on three separate paths (see the field)."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -132,6 +134,7 @@ class TtsStartPayload(BaseModel):
     tts_audio_asset_id: str | None = None
     sample_rate_hz: int
     voice_id: str | None = None
+    holding: bool = False
 
 
 class TtsChunkMetaPayload(BaseModel):
@@ -145,12 +148,15 @@ class TtsChunkMetaPayload(BaseModel):
 
 
 class TtsEndPayload(BaseModel):
-    """Server → client, on `tts.end`. Total duration for the bubble's scrubber, and the signal that no further chunk meta is coming."""
+    """Server → client, on `tts.end`. Total duration for the bubble's scrubber, and the signal that no further chunk meta is coming.
+
+`holding` repeats `tts.start`'s flag so each event is self-describing. The client could infer it by remembering the start, but then the meaning of an `end` would depend on a `start` it might not have seen — and the branch it drives is whether the screen goes back to `thinking` or to `listening`, which is the difference between showing a mic-live indicator over a live turn and not."""
 
     model_config = ConfigDict(frozen=True)
 
     client_message_id: str
     duration_ms: int
+    holding: bool = False
 
 
 class BargeInPayload(BaseModel):

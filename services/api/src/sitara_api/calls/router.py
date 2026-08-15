@@ -37,6 +37,7 @@ from typing import Any
 from fastapi import APIRouter, Header, Request, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
 from sitara_schemas import ErrorCode
+from sitara_schemas.voice import HOLDING_PHRASE_AFTER_MS
 
 from sitara_api.auth.router import CurrentSession
 from sitara_api.calls.media import (
@@ -239,6 +240,10 @@ class _MediaSession:
         #: implementation. Splitting them would have put half of §32.9 in a
         #: service that cannot read a subscription.
         self._meter: MinuteMeter | None = None
+        #: Which of §25.3's holding phrases plays next. Per CALL, so a caller
+        #: who hits three slow turns hears three different lines rather than
+        #: the same six words becoming a tic.
+        self._holding_index = 0
 
     # -- lifecycle ---------------------------------------------------------
 
@@ -424,18 +429,51 @@ class _MediaSession:
             # A call that could not say what today's timings are, on an account
             # whose city is stored, is the defect one layer further in.
             place_label = await place_label_for(self._app.state, self._grant.user_id)
-            spoken = await service.answer(
-                TurnRequest(
-                    user_id=self._grant.user_id,
-                    conversation_id=self._grant.conversation_id,
-                    text=text,
-                    locale=self._grant.locale,
-                    now=dt.datetime.now(dt.UTC),
-                    profile=profile,
-                    place_label=place_label,
-                ),
-                on_stage=on_stage,
+            answering = asyncio.create_task(
+                service.answer(
+                    TurnRequest(
+                        user_id=self._grant.user_id,
+                        conversation_id=self._grant.conversation_id,
+                        text=text,
+                        locale=self._grant.locale,
+                        now=dt.datetime.now(dt.UTC),
+                        profile=profile,
+                        place_label=place_label,
+                    ),
+                    on_stage=on_stage,
+                )
             )
+            # §25.3: "thinking … max 1.8s before she speaks a holding phrase".
+            #
+            # A CEILING ON SILENCE, not a delay to wait out — if §9 answers in
+            # 400ms she answers in 400ms and nothing below runs. §9's three
+            # model round-trips are in series, so a real reply is often ~5.8s,
+            # and the phrase is what turns four seconds of nothing into a pause
+            # somebody designed.
+            await asyncio.wait({answering}, timeout=HOLDING_PHRASE_AFTER_MS / 1000)
+            if not answering.done():
+                # AWAITED, not fired-and-forgotten. Both streams write PCM to
+                # the same socket, so overlapping them interleaves two voices
+                # into noise. Holding the answer's audio behind the phrase costs
+                # the phrase's length — under a second — and is the difference
+                # between a designed pause and a broken one.
+                #
+                # It goes through `self._speech` so §25.3's barge-in reaches it:
+                # `_stop_speaking` cancels that slot, and while the phrase was
+                # awaited inline the slot was empty — she would have talked over
+                # someone interrupting her. Filler is the thing it should be
+                # EASIEST to interrupt.
+                self._speech = asyncio.create_task(
+                    self._speak_holding_phrase(client_message_id)
+                )
+                with contextlib.suppress(asyncio.CancelledError, Exception):
+                    await self._speech
+                self._speech = None
+            # A barge-in over the phrase does not abandon the answer. §7.3
+            # already decides what happens to words spoken into an in-flight
+            # turn — they are committed unanswered — and cancelling here would
+            # throw away a turn §9 has nearly finished paying for.
+            spoken = await answering
         finally:
             forwarder.cancel()
             with contextlib.suppress(asyncio.CancelledError):
@@ -460,6 +498,90 @@ class _MediaSession:
             {"client_message_id": client_message_id, "turn": turn.model_dump(mode="json")},
         )
         self._speech = asyncio.create_task(self._speak(spoken.turn, client_message_id))
+
+    async def _speak_holding_phrase(self, client_message_id: str) -> None:
+        """§25.3's holding phrase — her voice, and not her answer.
+
+        Everything about this method is arranged so that a phrase can never
+        become an answer, and a failure to say one can never become a failure to
+        answer:
+
+        · **Nothing is stored.** No `commit_utterance`, no message, no turn. The
+          phrase makes no claim, so there is nothing for cite-or-die to check —
+          and putting it in the thread would carry filler into the Journal, the
+          §32.11 handoff transcript and tomorrow's memory retrieval.
+        · **`holding: True` rides on `tts_start`.** Realtime needs it to keep
+          §33.5's `first_audio_seconds` timing the ANSWER, and the client needs
+          it to return to `thinking` rather than showing a mic-live indicator
+          over a turn still in flight.
+        · **Any failure is swallowed into silence.** A dead synthesiser must
+          cost the courtesy and nothing else: the answer is still coming, and
+          raising here would abandon a turn that §9 is in the middle of. §25.3's
+          degrade ladder is for the ANSWER failing, not the filler.
+        · **The `client_message_id` is the utterance's**, so a barge-in that
+          arrives mid-phrase is attributed to the same utterance the user is
+          interrupting.
+        """
+        service = getattr(self._app.state, "call_turns", None)
+        if service is None:
+            return
+        message_id = client_message_id
+        chunk_seq = 0
+        try:
+            await self._send(
+                CallDownFrame.TTS_START,
+                {
+                    "client_message_id": message_id,
+                    "sample_rate_hz": 16_000,
+                    "holding": True,
+                },
+            )
+            async for chunk in service.speak_holding_phrase(
+                locale=self._grant.locale, turn_index=self._holding_index
+            ):
+                await self._ws.send_bytes(chunk)
+                chunk_seq += 1
+                # It is real synthesis and it costs what it costs — §33.5's
+                # cost measure would understate every call that used one if
+                # this were excluded. Metering the truth is the whole reason
+                # `call_metrics` and `call_gate` are separate files.
+                self._tts_seconds += len(chunk) / 2 / 16_000
+        except asyncio.CancelledError:
+            # §25.3's barge-in landed on the phrase. The user talked over
+            # filler, which is exactly what filler is for.
+            await self._send(
+                CallDownFrame.TTS_CANCELLED,
+                {
+                    "client_message_id": message_id,
+                    "after_chunk_seq": chunk_seq - 1 if chunk_seq else None,
+                    "reason": "user_speech",
+                },
+            )
+            raise
+        except Exception:
+            # Including `MissingString`: §2.4 forbids falling back to English,
+            # so a locale whose phrase went missing gets the silence it would
+            # have had. Logged, never spoken in the wrong language.
+            logger.warning("holding phrase not spoken", exc_info=True)
+            with contextlib.suppress(Exception):
+                await self._send(
+                    CallDownFrame.TTS_CANCELLED,
+                    {
+                        "client_message_id": message_id,
+                        "after_chunk_seq": chunk_seq - 1 if chunk_seq else None,
+                        "reason": "synthesis_failed",
+                    },
+                )
+            return
+        else:
+            await self._send(
+                CallDownFrame.TTS_END,
+                {"client_message_id": message_id, "chunks": chunk_seq},
+            )
+        finally:
+            # Rotate whether or not it played, so two consecutive slow turns
+            # never draw the same line twice — the tic this set exists to avoid.
+            self._holding_index += 1
 
     async def _forward_stages(self, stages: asyncio.Queue[str]) -> None:
         while True:

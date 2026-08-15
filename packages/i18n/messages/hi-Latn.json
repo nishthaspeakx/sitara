@@ -486,7 +486,8 @@
       "you": "Aap",
       "tara": "Tara",
       "summary_save": "Yeh call apni journal mein save karein?",
-      "start": "Tara ko call karein"
+      "start": "Tara ko call karein",
+      "thinking_still": "Abhi bhi soch rahi hoon"
     },
     "panchang": {
       "label": "Aaj ka panchang",
@@ -1144,5 +1145,12 @@
   "gift": {
     "activated": "Aapka gift live ho gaya. Swaagat hai.",
     "converted": "Aapki subscription mein jud gaya."
+  },
+  "call": {
+    "holding": {
+      "thinking": "Mujhe is par theek se sochne deejiye.",
+      "moment": "Ek pal — main yahin hoon.",
+      "time": "Is par mujhe thoda waqt deejiye."
+    }
   }
 }

@@ -97,6 +97,24 @@ def resolve(key: str, locale: str, **params: Any) -> str:
     raise MissingString(f"{key!r} missing for locale {locale!r} and its family")
 
 
+#: §25.3's holding phrases, in the order they rotate.
+#:
+#: A SET rather than one line, because a call is a conversation and a person who
+#: says the identical six words at every pause stops sounding like a person. The
+#: rotation is by index rather than random so a test can assert which phrase a
+#: given turn produced — §25.3 asks for the wait to feel designed, and a designed
+#: thing is one you can predict.
+#:
+#: They are held here, beside the safety and decline lines, because they share
+#: the property that matters: the SERVICE renders them, not the client, so a
+#: missing translation is a boot failure rather than a silence mid-call.
+HOLDING_PHRASE_KEYS: tuple[str, ...] = (
+    "call.holding.thinking",
+    "call.holding.moment",
+    "call.holding.time",
+)
+
+
 #: Keys the server itself renders. The client resolves everything else, but
 #: these are spoken by Tara or shown in place of her reply, so the service must
 #: be able to produce them in every launch locale — or it must not start.
@@ -107,6 +125,11 @@ SERVER_RENDERED_KEYS: tuple[str, ...] = (
     "chat.data.missing.birth_date",
     "chat.data.missing.birth_place",
     "chat.data.missing.current_location",
+    # §25.3's holding phrases. Tara SPEAKS these, so a missing Hindi one is a
+    # call that falls silent for 5.8 seconds in exactly the locale the phrase
+    # exists to hold — and it would fail at 1.8 seconds into a live call rather
+    # than at boot. Same reasoning as the crisis line above: loud at startup.
+    *HOLDING_PHRASE_KEYS,
 )
 
 

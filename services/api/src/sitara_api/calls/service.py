@@ -41,6 +41,7 @@ from sitara_schemas import PlaybackPolicy, TranscriptStatus
 
 from sitara_api.chat_orchestration.store import build_message
 from sitara_api.chat_orchestration.types import TurnRequest, TurnResult
+from sitara_api.localisation import HOLDING_PHRASE_KEYS, resolve
 from sitara_api.voice import pronunciation
 from sitara_api.voice.providers.base import (
     StreamingTtsProvider,
@@ -171,6 +172,49 @@ class CallTurnService:
         if self._tts is None:
             raise VoiceProviderUnavailable("no streaming TTS configured (§3.2)")
         spoken = pronunciation.apply(turn.text, locale, environment=self._environment)
+        async for chunk in self._tts.stream(
+            SynthesisRequest(text=spoken, locale=locale, voice_id=self._voice_id)
+        ):
+            yield chunk
+
+    # -- 3b. §25.3's holding phrase, which is not an answer -----------------
+
+    async def speak_holding_phrase(self, *, locale: str, turn_index: int) -> AsyncIterator[bytes]:
+        """Stream the short line she says when §9 has out-run 1.8 seconds.
+
+        **This method takes no text, and that is the guarantee.** `speak()` is
+        safe because it can only read `turn.text` — the presented, validated
+        turn — and `tests/voice/test_grounding_parity.py` asserts that from
+        outside. A holding phrase needs arbitrary words synthesised, which is
+        exactly the shape that would undo it: one `speak_text(text: str)` on
+        this class and a future caller could hand the synthesiser a model draft,
+        with the audio carrying the sentence grounding REJECTED while the
+        caption showed the one it accepted. No validator downstream can see the
+        difference.
+
+        So there is no text parameter. The words come from the catalogs, chosen
+        by index, and the only thing a caller can influence is WHICH of three
+        fixed lines plays. A draft cannot be expressed in this signature.
+
+        It is also not a turn: nothing here writes a message, and §9 never runs.
+        The phrase is chrome — it makes no claim, so there is nothing for
+        cite-or-die to validate, and storing it would put filler into the
+        thread, the Journal and tomorrow's memory retrieval.
+
+        §3.4's respellings are applied for the same reason `speak()` applies
+        them: this is the way into the synthesiser, and it is the only place
+        they belong.
+        """
+        if self._tts is None:
+            raise VoiceProviderUnavailable("no streaming TTS configured (§3.2)")
+        key = HOLDING_PHRASE_KEYS[turn_index % len(HOLDING_PHRASE_KEYS)]
+        # §2.4: no silent English fallback. `resolve` raises rather than
+        # falling across a language family, and `verify_catalogs` has already
+        # proved at boot that every one of these resolves in every launch
+        # locale — so a raise here means a catalog changed under a running
+        # process, which the caller turns into silence rather than English.
+        phrase = resolve(key, locale)
+        spoken = pronunciation.apply(phrase, locale, environment=self._environment)
         async for chunk in self._tts.stream(
             SynthesisRequest(text=spoken, locale=locale, voice_id=self._voice_id)
         ):

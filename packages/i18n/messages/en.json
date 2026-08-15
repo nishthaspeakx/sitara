@@ -486,7 +486,8 @@
       "you": "You",
       "tara": "Tara",
       "summary_save": "Save this call to your journal?",
-      "start": "Call Tara"
+      "start": "Call Tara",
+      "thinking_still": "Still thinking"
     },
     "panchang": {
       "label": "Today's panchang",
@@ -1144,5 +1145,12 @@
   "gift": {
     "activated": "Your gift is live. Welcome.",
     "converted": "Added to your subscription."
+  },
+  "call": {
+    "holding": {
+      "thinking": "Let me think about that properly.",
+      "moment": "One moment — I'm still with you.",
+      "time": "Give me a moment on that."
+    }
   }
 }

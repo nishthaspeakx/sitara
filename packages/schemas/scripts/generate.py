@@ -128,7 +128,18 @@ def py_shape(name: str, shape: dict) -> list[str]:
         "",
     ]
     for f in shape["fields"]:
-        default = " = None" if f["type"].endswith("?") else ""
+        # A declared `default` beats the nullable convention. Some fields are
+        # genuinely absent (a null asset id MEANS "streamed, never stored"), and
+        # some have a value every existing producer already implies — a flag
+        # added to a shipped payload is false for everyone who never sets it.
+        # Expressing that as `bool | None` would make three readers ask "or
+        # None?" about a question with two answers.
+        if "default" in f:
+            default = f" = {f['default']!r}"
+        elif f["type"].endswith("?"):
+            default = " = None"
+        else:
+            default = ""
         lines.append(f'    {f["name"]}: {py_type(f["type"])}{default}')
     lines.append("")
     return lines
@@ -147,7 +158,11 @@ def ts_enum(spec: dict) -> list[str]:
 def ts_shape(name: str, shape: dict) -> list[str]:
     lines = [f"/** {shape['$comment']} */", f"export interface {name} {{"]
     for f in shape["fields"]:
-        lines.append(f'  {f["name"]}: {ts_type(f["type"])};')
+        # A field with a default is OPTIONAL on the wire — a producer that
+        # predates it sends nothing, and TypeScript should say so rather than
+        # making every existing call site add a property it does not mean.
+        optional = "?" if "default" in f else ""
+        lines.append(f'  {f["name"]}{optional}: {ts_type(f["type"])};')
     lines += ["}", ""]
     return lines
 
