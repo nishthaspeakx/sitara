@@ -1,9 +1,10 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 
 import { expect, test } from "@playwright/test";
 
 import {
+  CONVERSATION_DELETE_IS_UNBUILT,
   DELETION_SCOPES,
   FAMILY_SHEET_ORDER,
   MEMORIAL_COPY,
@@ -323,6 +324,69 @@ test.describe("§45 — 'in memory of', the non-destructive half of the same she
         .join(" ");
       for (const phrase of forbidden) expect(sentences, locale).not.toContain(phrase);
     }
+  });
+});
+
+/**
+ * §30.5's fourth scope, and the marker that says why no screen renders it.
+ *
+ * The pattern is the one `MEMORIAL_STATE_IS_UNBUILT` used before CC-012 built
+ * it, and `tests/journal/test_search_provenance.py` uses for the Atlas index:
+ * an unbuilt thing is recorded in code with a test, so it stays visible and so
+ * the marker FAILS on the commit that makes it obsolete. A TODO would have been
+ * read once and then never again.
+ */
+test.describe("§30.5 — the conversation deletion, and why it is not here", () => {
+  test("its copy exists and is correct even though nothing renders it", () => {
+    // The copy is not the missing part, and leaving it unwritten would have
+    // meant the gap was invisible: a scope with no strings looks like a scope
+    // nobody has got to, and a scope with correct strings and no screen looks
+    // like exactly what it is.
+    const en = catalog("en");
+    for (const key of [
+      SCOPE_COPY.conversation.titleKey,
+      SCOPE_COPY.conversation.deletesKey,
+      SCOPE_COPY.conversation.keepsKey,
+      SCOPE_COPY.conversation.confirmKey,
+    ]) {
+      expect(lookup(en, key), key).toBeTruthy();
+    }
+  });
+
+  test("no screen wires a confirm sheet to it while the marker stands", () => {
+    // The failure this prevents is specific and tempting: wiring the sheet to
+    // `POST /v1/memories/scoped/conversation-deleted`, which exists. That call
+    // marks the memories' provenance destroyed and deletes no conversation, so
+    // the sheet would promise a deletion, return 200, and quietly corrupt the
+    // provenance of memories she chose to keep.
+    expect(CONVERSATION_DELETE_IS_UNBUILT.scope).toBe("conversation");
+
+    const appSrc = path.join(__dirname, "..", "src");
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          walk(full);
+          continue;
+        }
+        if (!/\.tsx?$/.test(entry.name)) continue;
+        const text = readFileSync(full, "utf-8");
+        // `ConfirmDeleteSheet`'s own `scope` prop already EXCLUDES
+        // `family_member` at the type level; this catches the conversation one,
+        // which is a valid `DeletionScope` and would typecheck happily.
+        if (/scope=\{?"conversation"/.test(text)) {
+          offenders.push(path.relative(appSrc, full));
+        }
+      }
+    };
+    walk(appSrc);
+
+    expect(
+      offenders,
+      "a screen renders the conversation confirm — if the endpoint now exists, " +
+        "delete CONVERSATION_DELETE_IS_UNBUILT and this test with it",
+    ).toEqual([]);
   });
 });
 

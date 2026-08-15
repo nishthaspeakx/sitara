@@ -916,6 +916,23 @@
       "deletes": "Tara ise jaanna band kar degi, aur yeh note bhi mit jaayega.",
       "keeps": "Aapki journal mein jo pehle likha ja chuka hai, woh waisa hi rahega — yeh aapka beeta hua badalta nahin.",
       "confirm": "Bhool jaayein"
+    },
+    "title": "Tara ko jo yaad hai",
+    "subtitle": "Keval woh baatein jinki aapne anumati di. Aur kuch nahin.",
+    "count": "{count, plural, =0 {Abhi kuch nahin} one {# note} other {# notes}}",
+    "filter_label": "Keval dikhayein",
+    "filter_all": "Sabhi",
+    "muted": "Alag rakha gaya",
+    "mute": "Ise alag rakhein",
+    "unmute": "Ise wapas laayein",
+    "mute_help": "Tara note rakhegi par uska upyog band kar degi. Aap ise wapas badal sakti hain.",
+    "forget": "Ise bhool jaayein",
+    "consented": "Aapne {date} ko sehmati di",
+    "not_found": "Yeh note ab aapke sangrah mein nahin hai.",
+    "back": "Tara ko jo yaad hai, wahaan wapas",
+    "source": {
+      "present": "Aapki kisi baatcheet se.",
+      "removed": "Jis baatcheet se yeh aaya tha woh hata di gayi hai. Note ab bhi aapka hai."
     }
   },
   "journal": {
@@ -925,6 +942,35 @@
       "keeps": "Ismein se Tara ne jo yaad rakha hai woh bana rahega, jab tak aap neeche wala box tick na karein.",
       "also_memories": "Yahaan se Tara ne jo seekha, woh bhi bhula dein",
       "confirm": "Entry delete karein"
+    },
+    "title": "Journal",
+    "subtitle": "Jo hua, jis kram mein hua.",
+    "open_search": "Khojein",
+    "today": "Aaj",
+    "yesterday": "Kal",
+    "open_day": "Yeh din kholein",
+    "entry_delete": "Yeh entry delete karein",
+    "saved": "Save kiya",
+    "source_gone": "Mool ab yahaan nahin hai.",
+    "back": "Journal par wapas",
+    "type": {
+      "brief": "Subah ka brief",
+      "reflection": "Raat ka chintan",
+      "call": "Call",
+      "guidance": "Saved guidance",
+      "milestone": "Padaav"
+    },
+    "day": {
+      "empty": "Is din kuch nahin likha gaya.",
+      "count": "{count, plural, one {# entry} other {# entries}}"
+    },
+    "search": {
+      "title": "Apni journal mein khojein",
+      "placeholder": "Koi shabd jo yaad ho",
+      "filter_label": "Keval dikhayein",
+      "filter_all": "Sab kuch",
+      "prompt": "Koi shabd likhein jo yaad ho — koi naam, koi jagah, koi bhaav.",
+      "results": "{count, plural, =0 {Kuch nahin mila} one {# result} other {# results}}"
     }
   },
   "family": {
@@ -948,6 +994,64 @@
       "revert_body": "Unka janmdin aur saalgirah phir aane waali taareekhon ki tarah dikhenge. Aur kuch nahin badalta, kyunki kuch kabhi liya hi nahin gaya tha.",
       "revert": "Parivaar ki suchi mein lautayein",
       "or": "Ya, agar aap chaahti hain ki record hi na rahe:"
+    },
+    "title": "Aapke apne",
+    "subtitle": "Jinhein aap chaahti hain, unki taareekhein aur kundliyaan jo Tara rakhti hai.",
+    "add": "Kisi ko jodein",
+    "no_birth_details": "Abhi janm-vivaran nahin",
+    "birth_details": "Janm-vivaran darj hai",
+    "attested": "Aapne pushti ki ki aap inhein rakh sakti hain.",
+    "chart_title": "Unki kundli",
+    "chart_unavailable": "Janm-vivaran ke bina koi kundli nahin banti, aur Tara andaaza nahin lagayegi.",
+    "record_action": "Hatayein ya smriti mein rakhein",
+    "memories_about": "Unke baare mein Tara ne jo likha hai",
+    "memories_none": "Unke baare mein abhi kuch nahin likha gaya.",
+    "not_found": "Woh vyakti ab aapki suchi mein nahin hai.",
+    "back": "Apnon par wapas",
+    "relation": {
+      "partner": "Jeevansaathi",
+      "mother": "Maa",
+      "father": "Pita",
+      "daughter": "Beti",
+      "son": "Beta",
+      "sister": "Behen",
+      "brother": "Bhai",
+      "grandmother": "Dadi/Nani",
+      "grandfather": "Dada/Nana",
+      "friend": "Mitra",
+      "other": "Parivaar"
+    }
+  },
+  "you": {
+    "title": "Aap",
+    "subtitle": "Tara kya rakhti hai, aur woh kiske baare mein hai.",
+    "section_yours": "Aapka",
+    "memories": "Tara ko jo yaad hai",
+    "memories_detail": "{count, plural, =0 {Abhi kuch nahin} one {# note} other {# notes}}",
+    "family": "Aapke apne",
+    "family_detail": "{count, plural, =0 {Abhi koi nahin} one {# vyakti} other {# vyakti}}",
+    "later": "Subscription, settings aur nijta aage kisi release mein aayengi."
+  },
+  "reflection": {
+    "title": "Aaj raat",
+    "intro": "Aaiye din ko vida dein.",
+    "mood_title": "Aaj ka din kaisa beeta?",
+    "mood_skip": "Abhi nahin kehna",
+    "done": "Din poora karein",
+    "saved": "Rakh liya.",
+    "back": "Aaj par wapas",
+    "gentle": "Jitna chaahein utna hi likhein. Yahaan kuch gina nahin jaata, aur ek khamosh raat se kuch nahin tootta.",
+    "prompt": {
+      "gratitude": "Aaj kis baat ki khushi hai?",
+      "weight": "Kya bhaari laga?",
+      "tomorrow": "Kal mein kya ho, aisa chaahengi?"
+    },
+    "mood": {
+      "heavy": "Bhaari",
+      "tired": "Thaka hua",
+      "steady": "Sthir",
+      "light": "Halka",
+      "joyful": "Anandmay"
     }
   }
 }

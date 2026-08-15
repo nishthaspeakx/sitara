@@ -199,6 +199,7 @@ test.describe("S22 — deleting a journal entry (§30.5)", () => {
     await page.locator(`[data-ref="${SEED.journal.guidance}"]`).getByTestId("entry-delete").click();
     await page.getByTestId("confirm-checkbox").check();
     await page.getByTestId("confirm-submit").click();
+    await expect(page.locator(`[data-ref="${SEED.journal.guidance}"]`)).toHaveCount(0);
 
     const after = await records(client);
     expect(day(after, "2026-08-14")?.entries.some((e) => e.ref === SEED.journal.guidance)).toBe(
@@ -271,6 +272,11 @@ test.describe("S28 — the family record sheet (§32.15, §45)", () => {
     await open(page, "en", `/you/family/${SEED.family.mother}`, '[data-testid="member"]');
     await page.getByTestId("member-record").click();
     await page.getByTestId("memorial-confirm").click();
+    // Wait on something the SCREEN does, never on the click alone. `records()`
+    // reads the stub out-of-band, so a bare read here races the request the
+    // click started — and a racing assertion about a deletion is the one kind
+    // that fails green as often as it fails red.
+    await expect(page.getByTestId("member-memorial")).toBeVisible();
 
     const after = await records(client);
     const member = after.family.find((m) => m.member_id === SEED.family.mother);
@@ -299,10 +305,13 @@ test.describe("S28 — the family record sheet (§32.15, §45)", () => {
     await open(page, "en", `/you/family/${SEED.family.mother}`, '[data-testid="member"]');
     await page.getByTestId("member-record").click();
     await page.getByTestId("memorial-confirm").click();
+    await expect(page.getByTestId("member-memorial")).toBeVisible();
 
     await page.getByTestId("member-record").click();
     await expect(page.getByTestId("memorial-revert")).toBeVisible();
     await page.getByTestId("memorial-revert").click();
+    // The badge going away is the revert having landed.
+    await expect(page.getByTestId("member-memorial")).toHaveCount(0);
 
     const after = await records(client);
     expect(after.family.find((m) => m.member_id === SEED.family.mother)?.memorial_state).toBe(
@@ -341,6 +350,7 @@ test.describe("S28 — the family record sheet (§32.15, §45)", () => {
       copy("en", SCOPE_COPY.family_member.deletesKey, { name: MOTHER }),
     );
     await page.getByTestId("confirm-submit").click();
+    await expect(page).toHaveURL(/\/you\/family$/);
 
     const after = await records(client);
     // What dies (§32.15's radius).
@@ -366,6 +376,7 @@ test.describe("S28 — the family record sheet (§32.15, §45)", () => {
       .getByRole("checkbox")
       .check();
     await page.getByTestId("confirm-submit").click();
+    await expect(page).toHaveURL(/\/you\/family$/);
 
     const after = await records(client);
     expect(hasMemory(after, SEED.memories.anniversary)).toBe(false);
@@ -384,10 +395,12 @@ test.describe("S28 — the family record sheet (§32.15, §45)", () => {
     await open(page, "en", `/you/family/${SEED.family.mother}`, '[data-testid="member"]');
     await page.getByTestId("member-record").click();
     await page.getByTestId("memorial-confirm").click();
+    await expect(page.getByTestId("member-memorial")).toBeVisible();
 
     await page.getByTestId("member-record").click();
     await expect(page.getByTestId("delete-section")).toBeVisible();
     await page.getByTestId("confirm-submit").click();
+    await expect(page).toHaveURL(/\/you\/family$/);
 
     const after = await records(client);
     expect(after.family.some((m) => m.member_id === SEED.family.mother)).toBe(false);

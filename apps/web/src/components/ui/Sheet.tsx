@@ -18,6 +18,16 @@ export interface SheetProps {
   open: boolean;
   onClose: () => void;
   titleKey: MessageKey;
+  /**
+   * ICU values for `titleKey`.
+   *
+   * The same convention `Header` already carries: a title that names a PERSON
+   * ("Remove Sudha?", §32.15) is a key plus user data, never a pre-rendered
+   * string — pre-rendering it at the call site would put the sentence's grammar
+   * in the screen instead of in the catalog, and Hindi and English do not agree
+   * about where the name goes.
+   */
+  titleValues?: Record<string, string>;
   descriptionKey?: MessageKey;
   children: ReactNode;
   /** Sticky action row pinned below the content. */
@@ -32,6 +42,7 @@ export function Sheet({
   open,
   onClose,
   titleKey,
+  titleValues,
   descriptionKey,
   children,
   footer,
@@ -103,7 +114,7 @@ export function Sheet({
         <div className="flex items-start justify-between gap-4 p-4">
           <div className="flex flex-col gap-1">
             <h2 id={`${id}-title`} className="text-h2 font-serif text-ink-primary">
-              {t(titleKey)}
+              {t(titleKey, titleValues)}
             </h2>
             {descriptionKey ? (
               <p id={`${id}-desc`} className="text-caption text-ink-muted">

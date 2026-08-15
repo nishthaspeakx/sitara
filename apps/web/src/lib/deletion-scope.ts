@@ -201,6 +201,44 @@ export const MEMORIAL_PROMISE_KEYS: readonly (keyof MemorialCopy)[] = [
 ];
 
 /**
+ * ── §30.5's conversation deletion is NOT BUILT, and this is the record ─────
+ *
+ * Three of the four scopes above have a screen in M10. The conversation scope
+ * does not, and the reason is not that it was skipped:
+ *
+ * **The API has the CONSEQUENCE and not the ACT.**
+ * `POST /v1/memories/scoped/conversation-deleted` exists and does exactly what
+ * §30.5 requires — marks dependent memory sources "source removed", leaves the
+ * memories themselves alone. There is no endpoint anywhere in `sitara_api` that
+ * deletes a conversation. `chat_orchestration/router.py` serves `/turn`,
+ * `/session`, `/ws/redeem`, `/ws/turn` and `/ws/voice-note`; nothing else.
+ *
+ * So a confirm sheet for it could only have been wired to an endpoint that does
+ * not exist, or to the scoped-effects call alone — which would mark the
+ * memories' provenance destroyed while the conversation it named stayed exactly
+ * where it was. That is worse than the gap: the sheet would promise a deletion,
+ * return 200, and silently corrupt the provenance of memories she kept.
+ *
+ * The copy is written, asserted and correct (see `tests/deletion-scope.spec.ts`)
+ * — §28.3's one-history also makes this an account-level act rather than a
+ * per-thread one, so its eventual home is S36 `/you/privacy`, not a chat
+ * overflow menu.
+ *
+ * This marker is the shape `MEMORIAL_STATE_IS_UNBUILT` used before CC-012 built
+ * it: a declared falsehood-free record, with a test that fails on the commit
+ * that makes it obsolete.
+ */
+export const CONVERSATION_DELETE_IS_UNBUILT = {
+  scope: "conversation" as const,
+  /** What is missing, named precisely enough to close. */
+  missing: "an endpoint that deletes a conversation",
+  /** What DOES exist, so nobody re-derives this from scratch. */
+  present: "POST /v1/memories/scoped/conversation-deleted (the consequence only)",
+  /** Where it belongs when it is built. */
+  home: "S36 /you/privacy (§28.3: one history, so this is an account-level act)",
+} as const;
+
+/**
  * Which scopes offer §30.5's checkbox. Derived rather than listed, so adding
  * a `checkboxKey` cannot leave a screen that never renders one.
  */

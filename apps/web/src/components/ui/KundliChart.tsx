@@ -50,7 +50,7 @@ import { useTranslations } from "next-intl";
 import { Card } from "./Card";
 import { ConfidenceChip } from "./ConfidenceChip";
 import { SegmentedControl } from "./SegmentedControl";
-import { cn, type ConfidenceState } from "./_util";
+import { cn, type ConfidenceState, type MessageKey } from "./_util";
 import {
   NORTH_HOUSES,
   NORTH_LINES,
@@ -104,6 +104,22 @@ export interface KundliChartProps {
    * in Moon-chart mode. A chart drawn from a guessed lagna must say so.
    */
   confidence?: ConfidenceState;
+  /**
+   * Whose chart this is.
+   *
+   * Defaults to `ui.kundli.title` — "Your kundli" — which was the only title
+   * this component had, and which is a FALSE STATEMENT on S28: that surface
+   * draws a family member's chart, and the first Devanagari baseline of it
+   * showed "उनकी कुंडली" as the section heading with "आपकी कुंडली" inside the
+   * card directly beneath. Nothing about that fails a typecheck, a lint or a
+   * behavioural test — the diagram was correct, and the sentence naming it was
+   * about the wrong person.
+   *
+   * A key rather than a string, because "their chart" and "your chart" are not
+   * the same sentence transformed, and the possessive does not sit in the same
+   * place in Devanagari as in English.
+   */
+  titleKey?: MessageKey;
   /** Opens the TrustSheet for the chart as a whole (§30.4, ≤1 tap). */
   onWhyThis?: () => void;
   className?: string;
@@ -121,6 +137,7 @@ export function KundliChart({
   style = "north",
   onStyleChange,
   confidence,
+  titleKey = "ui.kundli.title",
   className,
 }: KundliChartProps) {
   const t = useTranslations();
@@ -152,7 +169,7 @@ export function KundliChart({
   return (
     <Card className={cn("flex flex-col gap-3", className)}>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="font-serif text-h3 text-ink-primary">{t("ui.kundli.title")}</h3>
+        <h3 className="font-serif text-h3 text-ink-primary">{t(titleKey)}</h3>
         {onStyleChange ? (
           <SegmentedControl
             labelKey="ui.kundli.style_label"

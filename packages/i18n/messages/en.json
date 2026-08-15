@@ -916,6 +916,23 @@
       "deletes": "Tara stops knowing this, and the note is deleted along with what she learned from it.",
       "keeps": "Anything already written in your journal stays exactly as it is — this doesn't rewrite your past.",
       "confirm": "Forget this"
+    },
+    "title": "What Tara remembers",
+    "subtitle": "Only the notes you agreed to. Nothing else.",
+    "count": "{count, plural, =0 {Nothing yet} one {# note} other {# notes}}",
+    "filter_label": "Show only",
+    "filter_all": "All",
+    "muted": "Set aside",
+    "mute": "Set this aside",
+    "unmute": "Bring this back",
+    "mute_help": "Tara keeps the note and stops using it. You can undo this.",
+    "forget": "Forget this",
+    "consented": "You agreed on {date}",
+    "not_found": "This note is no longer in your vault.",
+    "back": "Back to what Tara remembers",
+    "source": {
+      "present": "From a conversation you had.",
+      "removed": "The conversation this came from has been deleted. The note is still yours."
     }
   },
   "journal": {
@@ -925,6 +942,35 @@
       "keeps": "Anything Tara remembers from it stays, unless you also tick the box below.",
       "also_memories": "Also make Tara forget what she learned here",
       "confirm": "Delete entry"
+    },
+    "title": "Journal",
+    "subtitle": "What happened, in the order it happened.",
+    "open_search": "Search",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "open_day": "Open this day",
+    "entry_delete": "Delete this entry",
+    "saved": "Saved",
+    "source_gone": "The original is no longer here.",
+    "back": "Back to the journal",
+    "type": {
+      "brief": "Morning brief",
+      "reflection": "Night reflection",
+      "call": "Call",
+      "guidance": "Saved guidance",
+      "milestone": "Milestone"
+    },
+    "day": {
+      "empty": "Nothing was written on this day.",
+      "count": "{count, plural, one {# entry} other {# entries}}"
+    },
+    "search": {
+      "title": "Search your journal",
+      "placeholder": "A word you remember",
+      "filter_label": "Show only",
+      "filter_all": "Everything",
+      "prompt": "Type a word you remember — a name, a place, a feeling.",
+      "results": "{count, plural, =0 {Nothing matched that} one {# result} other {# results}}"
     }
   },
   "family": {
@@ -948,6 +994,64 @@
       "revert_body": "Their birthday and anniversaries come back as dates ahead. Nothing else changes, because nothing was ever taken away.",
       "revert": "Return to the family list",
       "or": "Or, if you would rather the record itself did not stay:"
+    },
+    "title": "Your people",
+    "subtitle": "The dates and charts Tara holds for the people you love.",
+    "add": "Add someone",
+    "no_birth_details": "No birth details yet",
+    "birth_details": "Birth details on file",
+    "attested": "You confirmed you may hold these.",
+    "chart_title": "Their chart",
+    "chart_unavailable": "Without birth details there is no chart to draw, and Tara will not guess at one.",
+    "record_action": "Remove or remember",
+    "memories_about": "What Tara has noted about them",
+    "memories_none": "Nothing noted about them yet.",
+    "not_found": "That person is no longer in your family list.",
+    "back": "Back to your people",
+    "relation": {
+      "partner": "Partner",
+      "mother": "Mother",
+      "father": "Father",
+      "daughter": "Daughter",
+      "son": "Son",
+      "sister": "Sister",
+      "brother": "Brother",
+      "grandmother": "Grandmother",
+      "grandfather": "Grandfather",
+      "friend": "Friend",
+      "other": "Family"
+    }
+  },
+  "you": {
+    "title": "You",
+    "subtitle": "What Tara holds, and who it is about.",
+    "section_yours": "Yours",
+    "memories": "What Tara remembers",
+    "memories_detail": "{count, plural, =0 {Nothing yet} one {# note} other {# notes}}",
+    "family": "Your people",
+    "family_detail": "{count, plural, =0 {No one yet} one {# person} other {# people}}",
+    "later": "Subscription, settings and privacy arrive in a later release."
+  },
+  "reflection": {
+    "title": "Tonight",
+    "intro": "Let's close the day.",
+    "mood_title": "How did today sit?",
+    "mood_skip": "Rather not say",
+    "done": "Close the day",
+    "saved": "Kept.",
+    "back": "Back to today",
+    "gentle": "Write as little as you like. Nothing here is counted, and nothing is broken by a quiet night.",
+    "prompt": {
+      "gratitude": "What are you glad of today?",
+      "weight": "What sat heavy?",
+      "tomorrow": "What would you like tomorrow to hold?"
+    },
+    "mood": {
+      "heavy": "Heavy",
+      "tired": "Tired",
+      "steady": "Steady",
+      "light": "Light",
+      "joyful": "Joyful"
     }
   }
 }
