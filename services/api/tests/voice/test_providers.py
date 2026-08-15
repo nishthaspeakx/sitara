@@ -29,6 +29,7 @@ from sitara_api.voice.providers.base import (
     tts_language_for,
 )
 from sitara_api.voice.providers.cartesia import CartesiaSttProvider, CartesiaTtsProvider
+from sitara_api.voice.providers.voices import TARA_VOICES, voice_for
 
 # Only the adapter round-trips are async; the frame and mapping tests are pure.
 # A module-level asyncio mark would warn on every one of them.
@@ -253,7 +254,7 @@ async def test_tts_asks_for_exactly_the_ws_binary_frame_format(monkeypatch) -> N
         seen["body"] = json.loads(request.content)
         return httpx.Response(200, content=PCM)
 
-    provider = CartesiaTtsProvider("sk_test", voice_id="v-1")
+    provider = CartesiaTtsProvider("sk_test")
     monkeypatch.setattr("httpx.AsyncClient", _client_factory(transport(handler)))
 
     result = await provider.synthesise(
@@ -269,16 +270,33 @@ async def test_tts_asks_for_exactly_the_ws_binary_frame_format(monkeypatch) -> N
         "sample_rate": 16_000,
     }
     assert body["language"] == "hi"  # spoken with Hindi intonation (§3.3)
-    assert body["voice"] == {"mode": "id", "id": "v-1"}
+    # Resolved from the LOCALE, not from a value threaded down from settings.
+    # hi-Latn deliberately shares hi's voice: Hinglish is spoken Hindi with
+    # English words in it (`providers/voices.py`).
+    assert body["voice"] == {"mode": "id", "id": TARA_VOICES["hi-Latn"]}
+    assert TARA_VOICES["hi-Latn"] == TARA_VOICES["hi"]
 
 
 @pytest.mark.asyncio
 async def test_tts_refuses_to_pick_a_stranger_voice_for_tara() -> None:
-    """§3.2's anchor artist is a contracted clone. Falling back to a stock
-    voice would put someone else's voice under her name."""
+    """§2.4/§3.2/CC-008: an unvoiced locale DECLINES.
+
+    The failure this prevents is not silence — it is Tara answering a Tamil
+    user fluently in a Hindi woman's voice, with every accuracy metric green.
+    A locale earns a voice through the §12 gate, never by falling back to a
+    neighbour's.
+    """
     provider = CartesiaTtsProvider("sk_test")
-    with pytest.raises(VoiceProviderUnavailable, match="voice id"):
-        await provider.synthesise(SynthesisRequest(text="hello", locale="en"))
+    with pytest.raises(VoiceProviderUnavailable, match="no Tara voice for locale"):
+        await provider.synthesise(SynthesisRequest(text="vanakkam", locale="ta"))
+
+
+@pytest.mark.asyncio
+async def test_every_launch_locale_has_a_voice() -> None:
+    """§2.4 ships a language 100% or not at all, and a language Tara cannot
+    speak in is not shipped."""
+    for locale in ("en", "hi", "hi-Latn"):
+        assert voice_for(locale)
 
 
 def test_an_unconfigured_key_fails_at_construction_not_mid_turn() -> None:

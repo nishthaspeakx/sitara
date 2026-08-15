@@ -73,6 +73,9 @@ export default function CallPage() {
           // it knows whether this account has ever metered a minute, and a
           // client-side "have I called before?" would reset with storage.
           captionsOn: grant.captions_default_on,
+          // CC-014. Non-null only when the SERVER granted a browser bridge,
+          // so the label cannot appear on a path that is not using one.
+          browserSttActive: Boolean(grant.browser_stt_lang),
         }),
       onClosed: () => dispatch({ type: "socket_lost", at: Date.now() }),
       onRefused: (error) =>

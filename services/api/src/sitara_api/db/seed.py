@@ -33,6 +33,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from bson import ObjectId
+from sitara_schemas.payments import BillingRegion, PlanId, SubscriptionStatus
 
 from sitara_api.config import Settings
 from sitara_api.db.connection import MongoDb, make_mongo
@@ -69,20 +70,50 @@ class UnsafeSeedError(RuntimeError):
 @dataclass(frozen=True)
 class Persona:
     handle: str
+    #: What Tara CALLS her, in her own script (§2.4, §6.4 `name_pronunciation`).
+    #: Onboarding S10 collects this; a seeded persona skips S10, so without it
+    #: every seeded account reaches S12 with no name to say and the voice
+    #: preview correctly declines — a demo hitting a designed unavailable state
+    #: for want of a fixture rather than for want of a feature.
+    display_name: str
     locale: str
     script_pref: str
     timezone: str
     birth_date: str
     birth_time: str | None
     time_accuracy: str  # §10-6: exact | plus_minus_30 | day_part | unknown
+    #: Where she was BORN — the chart's coordinate (§30.2).
     place_label: str
     place_lat: float
     place_lon: float
+    #: Where she IS — onboarding S08, and the coordinate her morning panchang is
+    #: COMPUTED at. Separate from the birth place because for half this cast
+    #: they differ, which is the diaspora corridor the personas exist to cover.
+    #:
+    #: It must agree with `timezone`, and that is the whole reason it is its own
+    #: field rather than reusing the birth place: seeding Delhi's coordinates
+    #: against `America/New_York` produced a real brief with a Rahu Kaal running
+    #: 23:37–01:16 and a "favourable window" at 02:28. Every number was computed
+    #: correctly — for a longitude eight and a half hours away from the clock it
+    #: was rendered against. §30.2's "the place is never implied" is exactly
+    #: this failure: nothing on the screen is wrong, and the day is somebody
+    #: else's.
+    current_label: str
+    current_lat: float
+    current_lon: float
     priorities: tuple[str, ...]
     memory_consent: bool
-    plan: str
-    subscription_status: str
-    region: str
+    #: §30.3's own vocabulary, NOT free strings. These were `"premium"`/`"basic"`
+    #: and `"IN"`/`"US"` when M4 wrote this file, which is a year before M11
+    #: introduced `PlanId` and `BillingRegion` — and nothing failed, because the
+    #: seeder writes documents directly and no test reads one back through
+    #: `PaymentStore`. Every seeded persona's `GET /v1/subscription` therefore
+    #: 500'd on `ValueError: 'premium' is not a valid PlanId`, which is the whole
+    #: payments surface for the whole demo cast. Typing them as the enums is what
+    #: makes that unrepresentable rather than merely fixed.
+    plan: PlanId
+    subscription_status: SubscriptionStatus
+    region: BillingRegion
     family: tuple[tuple[str, str], ...] = ()  # (relation, name)
 
 
@@ -91,6 +122,7 @@ class Persona:
 PERSONAS: tuple[Persona, ...] = (
     Persona(
         handle="asha",
+        display_name="आशा",
         locale="hi",
         script_pref="deva",
         timezone="Asia/Kolkata",
@@ -100,15 +132,19 @@ PERSONAS: tuple[Persona, ...] = (
         place_label="Jaipur",
         place_lat=26.9124,
         place_lon=75.7873,
+        current_label="Jaipur",
+        current_lat=26.9124,
+        current_lon=75.7873,
         priorities=("family", "spiritual_growth", "health_adjacent"),
         memory_consent=True,
-        plan="premium",
-        subscription_status="active",
-        region="IN",
+        plan=PlanId.ANNUAL,
+        subscription_status=SubscriptionStatus.ACTIVE,
+        region=BillingRegion.INDIA,
         family=(("mother", "Sunita"), ("daughter", "Ira")),
     ),
     Persona(
         handle="meera",
+        display_name="Meera",
         locale="hi-Latn",
         script_pref="latn",
         timezone="Asia/Kolkata",
@@ -118,14 +154,19 @@ PERSONAS: tuple[Persona, ...] = (
         place_label="Mumbai",
         place_lat=19.076,
         place_lon=72.8777,
+        current_label="Mumbai",
+        current_lat=19.076,
+        current_lon=72.8777,
         priorities=("career", "relationships"),
         memory_consent=True,
-        plan="basic",
-        subscription_status="trialing",
-        region="IN",
+        plan=PlanId.TRIAL,
+        subscription_status=SubscriptionStatus.TRIALING,
+        region=BillingRegion.INDIA,
+        family=(("mother", "Shalini"), ("sister", "Priya")),
     ),
     Persona(
         handle="ritu",
+        display_name="Ritu",
         locale="en",
         script_pref="latn",
         timezone="America/New_York",
@@ -135,14 +176,19 @@ PERSONAS: tuple[Persona, ...] = (
         place_label="Delhi",
         place_lat=28.6139,
         place_lon=77.209,
+        current_label="New York",
+        current_lat=40.7128,
+        current_lon=-74.006,
         priorities=("wealth", "career", "family"),
         memory_consent=False,  # §32.4: consent is per-chip and may be withheld
-        plan="premium",
-        subscription_status="active",
-        region="US",
+        plan=PlanId.ANNUAL,
+        subscription_status=SubscriptionStatus.ACTIVE,
+        region=BillingRegion.INTERNATIONAL,
+        family=(("mother", "Kamala"), ("brother", "Vikram")),
     ),
     Persona(
         handle="kavita",
+        display_name="Kavita",
         locale="en",
         script_pref="latn",
         timezone="Europe/London",
@@ -152,15 +198,19 @@ PERSONAS: tuple[Persona, ...] = (
         place_label="Chennai",
         place_lat=13.0827,
         place_lon=80.2707,
+        current_label="London",
+        current_lat=51.5074,
+        current_lon=-0.1278,
         priorities=("health_adjacent", "spiritual_growth"),
         memory_consent=True,
-        plan="basic",
-        subscription_status="trialing",
-        region="UK",
-        family=(("husband", "Arun"),),
+        plan=PlanId.TRIAL,
+        subscription_status=SubscriptionStatus.TRIALING,
+        region=BillingRegion.INTERNATIONAL,
+        family=(("partner", "Arun"),),
     ),
     Persona(
         handle="divya",
+        display_name="Divya",
         locale="hi-Latn",
         script_pref="latn",
         timezone="Asia/Dubai",
@@ -170,14 +220,18 @@ PERSONAS: tuple[Persona, ...] = (
         place_label="Ahmedabad",
         place_lat=23.0225,
         place_lon=72.5714,
+        current_label="Dubai",
+        current_lat=25.2048,
+        current_lon=55.2708,
         priorities=("relationships", "career"),
         memory_consent=False,
-        plan="basic",
-        subscription_status="cancelled",
-        region="AE",
+        plan=PlanId.MONTHLY,
+        subscription_status=SubscriptionStatus.CANCELLED,
+        region=BillingRegion.INTERNATIONAL,
     ),
     Persona(
         handle="lata",
+        display_name="लता",
         locale="hi",
         script_pref="deva",
         timezone="Asia/Kolkata",
@@ -187,13 +241,91 @@ PERSONAS: tuple[Persona, ...] = (
         place_label="Lucknow",
         place_lat=26.8467,
         place_lon=80.9462,
+        current_label="Lucknow",
+        current_lat=26.8467,
+        current_lon=80.9462,
         priorities=("family", "spiritual_growth"),
         memory_consent=True,
-        plan="premium",
-        subscription_status="active",
-        region="IN",
+        plan=PlanId.MONTHLY,
+        subscription_status=SubscriptionStatus.ACTIVE,
+        region=BillingRegion.INDIA,
+        family=(("daughter", "मीना"), ("son", "अरुण")),
     ),
 )
+
+
+def _subscription_document(
+    persona: Persona, user_id: ObjectId, now: dt.datetime
+) -> dict[str, Any]:
+    """One §6.4 `subscriptions` row, in the shape `PaymentStore` reads back.
+
+    Built from the payments module's own primitives rather than hand-written,
+    because a hand-written one is what shipped: `plan: "premium"`,
+    `region: "IN"`, `provider: "razorpay"`, and no `live`, `period_start`,
+    `period_end`, `price_minor` or `currency` at all. Each of those is a
+    separate failure and the first two are fatal —
+
+      · `PlanId("premium")` raises, so `GET /v1/subscription` 500'd for EVERY
+        seeded persona. S30, S31 and S34 were unreachable for the entire demo
+        cast, and the payments section of the runbook walks all three.
+      · `live` is §6.4's second partial unique index and `lifecycle.is_live` is
+        its ONLY derivation. Absent, `find_live()` matched nothing, so a gift
+        redeemed onto a seeded subscriber took the "no existing subscription"
+        branch and INSERTED a second row — caught here only because the
+        `(user_id, status=active)` index refused it with a 500. Without that
+        index it would have been two rows granting access to one account, which
+        is the exact failure `is_live`'s docstring describes.
+      · `razorpay` is a DECLARED rail whose adapter raises on every method
+        (§30.3). The only IMPLEMENTED arm is the simulator, and a seeded row
+        naming a rail we cannot call is a row that lies about what happened.
+
+    None of it failed a test because the seeder writes documents directly and
+    nothing reads one back through `PaymentStore` — the root CLAUDE.md rule
+    ("a fake that accepts what the real system rejects is a defect in the
+    fake") pointed at a fixture rather than at an in-memory store.
+    """
+    from sitara_api.payments import lifecycle
+    from sitara_api.payments.money import price_for
+    from sitara_api.payments.providers.base import PaymentProviderName
+
+    price = price_for(persona.region, persona.plan)
+    # Period dates that make the row READABLE as a lived subscription: started
+    # in the past, still running. §22.13's ladder is projected from these, so a
+    # row with none of them renders a subscription with no renewal date.
+    #
+    # The offset is chosen per status rather than fixed, because `access_at`
+    # COMPUTES from the clock rather than trusting the stored status: a flat
+    # 30 days put a 7-day trial 23 days past its end, so the trial persona read
+    # back `downgraded` and §28.2's trial variant was unreachable in the demo.
+    # Day 5 of 7 also clears §28.2's "day-counter pill FROM DAY 4", so the pill
+    # is visible — which is the thing that variant exists to show.
+    days_in = 4 if persona.plan is PlanId.TRIAL else 30
+    period_start = now - dt.timedelta(days=days_in)
+    state = lifecycle.SubscriptionState(
+        plan=persona.plan,
+        region=persona.region,
+        status=persona.subscription_status,
+        period_start=period_start,
+        period_end=period_start + dt.timedelta(days=price.term_days),
+    )
+    return {
+        "_id": ObjectId(),
+        "user_id": user_id,
+        "plan": state.plan.value,
+        "region": state.region.value,
+        "status": state.status.value,
+        # THE one derivation (§6.4's second partial unique index).
+        "live": lifecycle.is_live(state.status),
+        "period_start": state.period_start,
+        "period_end": state.period_end,
+        "price_minor": price.amount.minor,
+        "currency": price.amount.currency.value,
+        # §30.3: the simulator is the only implemented arm. Naming a declared
+        # rail here would seed a row whose adapter raises on every method.
+        "provider": PaymentProviderName.SIMULATOR.value,
+        "provider_sub_id": f"synthetic_sub_{persona.handle}",
+        "gift_links": [],
+    }
 
 
 def assert_safe(settings: Settings) -> None:
@@ -286,7 +418,42 @@ async def seed(db: MongoDb, now: dt.datetime | None = None) -> dict[str, int]:
                 "persona": {"interest_level": "curious"},  # §10-8
                 "priorities": list(persona.priorities),
                 "honorific_prefs": {"register": "warm"},
-                "name_pronunciation": {"override": None},
+                # `display_name` is what Tara CALLS her; `override` is §2.4-6's
+                # phonetic respelling, which S12 writes and which reaches the
+                # SYNTHESISER and nothing else (§3.4). Seeded empty so the demo
+                # starts at "she says it as written" and the fix-pronunciation
+                # loop has somewhere to go.
+                "name_pronunciation": {
+                    "display_name": persona.display_name,
+                    "override": None,
+                },
+                # §30.2: "the place is never implied". This is the coordinate
+                # the morning's panchang is COMPUTED at, and `load_subject`
+                # reads `subject.lat`/`lon` from exactly here.
+                #
+                # It was absent, and the consequence was the whole astrology
+                # surface: `CompositeBriefFacts._panchang_facts` returns None
+                # the moment lat or lon is None, so no seeded persona ever got
+                # a tithi, a nakshatra, a sunrise, a Rahu Kaal or a single
+                # timing window. Today rendered the two FACT-FREE modules
+                # (`priorities`, `goal_check`), `/today/timings` served its
+                # designed empty state permanently, and the brief still came
+                # back `polished` — because composing nothing from nothing is
+                # not a failure, and §5.3 removes a claim rather than degrading
+                # a brief when a fact is missing. Nothing was red.
+                #
+                # Onboarding S08 writes this for a real user; a seeded persona
+                # skips S08.
+                "brief_place": {
+                    "label": persona.current_label,
+                    "lat": persona.current_lat,
+                    "lon": persona.current_lon,
+                    "tz": persona.timezone,
+                },
+                # §23.5's picker default, zero-padded because §7.1's index does
+                # a STRING range scan.
+                "brief_time": "07:00",
+                "density": "med",
             },
         )
         await put(
@@ -388,19 +555,7 @@ async def seed(db: MongoDb, now: dt.datetime | None = None) -> dict[str, int]:
                 "review_at": moment + dt.timedelta(days=30),
             },
         )
-        await put(
-            "subscriptions",
-            {
-                "_id": ObjectId(),
-                "user_id": user_id,
-                "plan": persona.plan,
-                "region": persona.region,
-                "provider": "razorpay" if persona.region == "IN" else "stripe",
-                "status": persona.subscription_status,
-                "provider_sub_id": f"synthetic_sub_{persona.handle}",
-                "gift_links": [],
-            },
-        )
+        await put("subscriptions", _subscription_document(persona, user_id, moment))
 
     return counts
 

@@ -108,14 +108,12 @@ class VoiceNoteService:
         tts: TtsProvider,
         pipeline: Any,
         asset_store: Any = None,
-        voice_id: str | None = None,
         environment: str = "dev",
     ) -> None:
         self._stt = stt
         self._tts = tts
         self._pipeline = pipeline
         self._assets = asset_store
-        self._voice_id = voice_id
         # §3.4: outside dev/test only REVIEWED overrides are served. Drafts are
         # audible in dev on purpose — a dictionary nobody can hear is one
         # nobody can review.
@@ -248,7 +246,6 @@ class VoiceNoteService:
                 SynthesisRequest(
                     text=spoken,
                     locale=request.locale,
-                    voice_id=self._voice_id,
                 )
             )
         except VoiceProviderUnavailable:

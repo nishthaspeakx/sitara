@@ -161,6 +161,17 @@ class PaymentService:
         self._store = PaymentStore(db)
         self._provider = provider
 
+    @property
+    def simulated(self) -> bool:
+        """Whether the rail behind this service moves any money.
+
+        A boolean about the DEPLOYMENT, not a vendor name — see the router's
+        header for why no endpoint returns the latter. Exposed so surfaces that
+        show a receipt can carry §30.3's honesty line without reaching into
+        `_provider`; `read()` already puts the same value on `SubscriptionView`.
+        """
+        return is_simulated(self._provider.name)
+
     # -- purchase ----------------------------------------------------------
 
     async def start_purchase(

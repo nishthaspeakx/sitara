@@ -10,6 +10,7 @@ from sitara_api.db.migrations import (
     m0001_baseline,
     m0002_journal_saves,
     m0003_memorial_state,
+    m0004_notification_vocabulary,
 )
 from sitara_api.db.migrations.runner import (
     ContractTooEarlyError,
@@ -24,6 +25,7 @@ ALL: tuple[Migration, ...] = (  # type: ignore[assignment]
     m0001_baseline,
     m0002_journal_saves,
     m0003_memorial_state,
+    m0004_notification_vocabulary,
 )
 
 __all__ = [

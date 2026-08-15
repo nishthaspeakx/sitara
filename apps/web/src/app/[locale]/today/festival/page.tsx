@@ -121,8 +121,34 @@ export default function FestivalPage() {
                   carried their own correct sentence in the catalogs since M8
                   and neither rendered it. §24.6 fixes the designed empty states
                   at NINE and neither of these is one of them, so the honest
-                  shape is the screen's own line. */}
-              <p className="text-body text-ink-muted">{t("today.festival.empty")}</p>
+                  shape is the screen's own line.
+
+                  TWO absences, and they are not the same sentence. "No
+                  observance falls today" is a CALENDAR CLAIM — it needs a
+                  source exactly as much as naming a festival does, and §5.3
+                  forbids fabricating a festival date in either direction. With
+                  §5.2 Layer B down there is nothing that knows: Layer A is
+                  authoritative for the astronomy and a tithi does not tell you
+                  it is Raksha Bandhan. Saying "nothing today" on the strength
+                  of having no source is the one sentence on this screen that
+                  could be confidently, unrecoverably wrong — on the very
+                  morning it matters most. */}
+              {view.payload.state.festival_calendar_available ? (
+                <p className="text-body text-ink-muted">{t("today.festival.empty")}</p>
+              ) : (
+                <div
+                  data-testid="festival-unchecked"
+                  className="flex max-w-prose flex-col gap-2 text-center"
+                >
+                  <p className="text-body text-ink-muted">{t("today.festival.unchecked")}</p>
+                  {/* What still stands. An honest unavailable state that only
+                      says what is missing reads as a broken screen; §8's
+                      degradation is meant to be legible, not alarming. */}
+                  <p className="text-caption text-ink-muted">
+                    {t("today.festival.unchecked_note")}
+                  </p>
+                </div>
+              )}
             </div>
           )
         ) : null}

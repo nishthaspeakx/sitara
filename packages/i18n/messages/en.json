@@ -86,7 +86,8 @@
     },
     "journal": {
       "not_saveable": "That one can't be saved on its own — it's a moment I keep for you rather than a note you can hold.",
-      "save_not_found": "I can't find that saved item — it may already be removed from your journal."
+      "save_not_found": "I can't find that saved item — it may already be removed from your journal.",
+      "bad_date": "That isn't a date I can open. Your journal is where it was."
     },
     "family": {
       "not_found": "I can't find that person in your family list — they may already be removed."
@@ -487,7 +488,8 @@
       "tara": "Tara",
       "summary_save": "Save this call to your journal?",
       "start": "Call Tara",
-      "thinking_still": "Still thinking"
+      "thinking_still": "Still thinking",
+      "browser_stt_demo": "Demo bridge — your speech is being transcribed by Chrome, not by Sitara. Hindi calls are not available yet."
     },
     "panchang": {
       "label": "Today's panchang",
@@ -803,7 +805,14 @@
       "subtitle": "She'll say your name. Tell her if she gets it wrong.",
       "play": "Hear her say it",
       "replay": "Say it again",
+      "preview_line": "Namaste, {name}. I'm Tara. I'll be here with you each morning.",
       "fix_pronunciation": "That's not how it sounds",
+      "fix_title": "How does it sound?",
+      "fix_help": "Write it the way it's said, not the way it's spelt. Only Tara's voice uses this — your name stays as you wrote it everywhere else.",
+      "fix_placeholder": "for example, Uh-SHA",
+      "fix_save": "Try it",
+      "fix_clear": "Say it as written",
+      "fix_cancel": "Never mind",
       "voice_on_label": "Tara speaks out loud",
       "voice_on_help": "You can always read instead. Change this any time in settings."
     },
@@ -905,6 +914,8 @@
       "title": "Today's observance",
       "tradition": "Reckoned by the {tradition} calendar.",
       "empty": "No observance falls today.",
+      "unchecked": "Sitara couldn't reach the festival calendar today, so she won't say either way.",
+      "unchecked_note": "The day's timings and your reading are computed here, and are unaffected.",
       "practice": "If you keep it"
     },
     "why": {
@@ -1032,9 +1043,11 @@
     "memories_detail": "{count, plural, =0 {Nothing yet} one {# note} other {# notes}}",
     "family": "Your people",
     "family_detail": "{count, plural, =0 {No one yet} one {# person} other {# people}}",
-    "later": "Settings and privacy arrive in a later release.",
+    "later": "Privacy controls arrive in a later release.",
     "subscription": "Subscription",
-    "subscription_detail": "Your plan and receipts"
+    "subscription_detail": "Your plan and receipts",
+    "notifications": "Notifications",
+    "notifications_detail": "What Tara sends, and where."
   },
   "reflection": {
     "title": "Tonight",
@@ -1084,7 +1097,7 @@
     "region_keep": "Keep {current}",
     "region_switch": "Switch to {other}",
     "founding_note": "You're on the founding price. It doesn't carry across billing regions.",
-    "simulated": "Demo mode — no money moves. Payments run against a simulator (§30.3).",
+    "simulated": "Demo mode — no money moves. Payments run against a simulator.",
     "manage_store": "Manage in the App Store",
     "gift_extended": "A gift added {days} days. Your subscription keeps its own plan and currency.",
     "unavailable": "We can't take payments in your region yet.",
@@ -1139,12 +1152,32 @@
     "migration_mid_cycle": "You can change billing region at your next renewal, not mid-cycle.",
     "not_simulated": "That control only works with the payment simulator.",
     "gift": {
-      "unredeemable": "That gift code can't be used. Write to us and we'll sort it out."
+      "unredeemable": "That gift code can't be used. Write to us and we'll sort it out.",
+      "activated": "Your gift is live. Welcome.",
+      "converted": "Added to your subscription."
     }
   },
   "gift": {
-    "activated": "Your gift is live. Welcome.",
-    "converted": "Added to your subscription."
+    "title": "Give Sitara",
+    "subtitle": "Buy a year or a month for someone. You'll get a code to pass on however you like.",
+    "buy": "Buy this gift",
+    "code_title": "Here's the code",
+    "code_help": "Send it to them however you like — Sitara doesn't message anyone on your behalf.",
+    "copy": "Copy the code",
+    "copied": "Copied",
+    "expires": "Can be used until {date}.",
+    "recipient_note": "They'll enter it at sitara.app, or open the link you send.",
+    "redeem": {
+      "title": "You've been given Sitara",
+      "subtitle": "Enter the code you were sent.",
+      "label": "Gift code",
+      "placeholder": "SITARA-XXXX-XXXX",
+      "cta": "Use this gift",
+      "value": "The giver paid {amount}.",
+      "extended": "Your subscription now runs to {date}.",
+      "open": "Open Sitara",
+      "support": "Write to us"
+    }
   },
   "call": {
     "holding": {
@@ -1152,5 +1185,98 @@
       "moment": "One moment — I'm still with you.",
       "time": "Give me a moment on that."
     }
+  },
+  "notifications": {
+    "morning": {
+      "title": "Good morning",
+      "body": "Your brief for today is ready."
+    },
+    "night": {
+      "title": "Winding down",
+      "body": "A quiet moment to look back on the day, whenever you like."
+    },
+    "contextual": {
+      "title": "Worth knowing",
+      "body": "There's something in today worth a look."
+    },
+    "festival": {
+      "title": "{festival}",
+      "body": "{festival} today. Tara has a note about it."
+    },
+    "marketing": {
+      "title": "From Tara",
+      "body": "A note about your subscription, whenever you have a minute."
+    },
+    "trigger": {
+      "user_reminder": {
+        "title": "The reminder you asked for",
+        "body": "You asked Tara to remind you: {note}"
+      },
+      "muhurat": {
+        "title": "Your window is coming up",
+        "body": "The window you asked about opens at {time}."
+      },
+      "festival_or_family": {
+        "title": "{occasion}",
+        "body": "{occasion} — Tara has a note about it."
+      },
+      "reflection_followup": {
+        "title": "From last night",
+        "body": "You wanted to come back to {topic} today."
+      },
+      "transit_change": {
+        "title": "Something shifted",
+        "body": "{graha} has moved. Tara has put it in today's brief."
+      },
+      "quiet_reengagement": {
+        "title": "Whenever you're ready",
+        "body": "Tara has your brief ready when you want it."
+      }
+    },
+    "held_by_quiet_hours": "Held until your quiet hours end.",
+    "all_channels_off": "You've turned this off everywhere.",
+    "channel_unavailable": "This channel isn't available yet.",
+    "channel_pending": "WhatsApp isn't switched on yet.",
+    "no_reachable_address": "We don't have a way to reach you for this yet."
+  },
+  "notifsettings": {
+    "title": "Notifications",
+    "subtitle": "What Tara sends, and where.",
+    "category": {
+      "morning": "Morning brief",
+      "night": "Night reflection",
+      "contextual": "Worth knowing",
+      "festival": "Festivals & family dates",
+      "marketing": "News from Sitara"
+    },
+    "category_detail": {
+      "morning": "Your daily brief, at the time you choose.",
+      "night": "An optional nudge to look back on the day.",
+      "contextual": "At most one a day, and only when there's a reason.",
+      "festival": "Festivals in your tradition, and dates you've saved.",
+      "marketing": "Offers and product news. Off unless you turn it on."
+    },
+    "channel": {
+      "push": "Push",
+      "whatsapp": "WhatsApp",
+      "email": "Email"
+    },
+    "channel_pending": "Not available yet",
+    "quiet_hours": "Quiet hours",
+    "quiet_hours_detail": "Nothing arrives between these times, except security messages.",
+    "quiet_from": "From",
+    "quiet_to": "Until",
+    "brief_time": "Brief time",
+    "brief_time_detail": "When your morning brief arrives.",
+    "overlap_notice": "Your brief arrives inside your quiet hours — that's fine, just checking.",
+    "overlap_ack": "Got it",
+    "pause": "Pause everything for a week",
+    "pause_detail": "Security messages still come through. Stated plainly, because they do.",
+    "paused_until": "Paused until {date}.",
+    "resume": "Turn notifications back on",
+    "travel": "When you travel",
+    "travel_follow": "Follow my timezone",
+    "travel_home": "Keep home time",
+    "saved": "Saved."
   }
 }

@@ -11,13 +11,19 @@ from __future__ import annotations
 import ast
 import inspect
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 from sitara_api import prototype
 from sitara_api.config import Settings
 
-DEV = {"environment": "dev"}
+#: Annotated, because it is SPLATTED into `Settings(...)`. Inferred as
+#: `dict[str, str]`, pyright checks it against every parameter of that
+#: constructor — so the day a non-string setting is added (M12 added an SMTP
+#: port, a bool and a timeout), this line grows an error per new field per call
+#: site, in a file that has nothing to do with the setting.
+DEV: dict[str, Any] = {"environment": "dev"}
 
 
 # ---------------------------------------------------------------------------
@@ -203,3 +209,46 @@ async def test_without_the_switch_the_ledger_meters_exactly_as_before() -> None:
     entitlement = await ledger.load("6a70000000000000000000a1", now=dt.datetime.now(dt.UTC))
     # No db → the fail-toward-the-smallest-pool path, unchanged.
     assert entitlement.plan is CallPlan.NONE
+
+
+class TestAccessTtlWidening:
+    """The demo hazard this removes, and the posture it must not change.
+
+    A short access cookie with a long rotating refresh IS §6.2's design, and
+    `apiCall` already recovers from an expired one. Widening it in dev removes
+    a round trip that would otherwise happen on the first tap of a demo given
+    from a laptop left open since the rehearsal — not a bug fix, and not
+    something a deployment may ever see.
+    """
+
+    def test_the_shipped_default_is_untouched(self) -> None:
+        """DECLARED default, not `Settings()` — which reads the ambient .env
+        and would assert the developer's machine (the M10 lesson)."""
+        from sitara_api.config import Settings
+
+        assert Settings.model_fields["access_ttl_seconds"].default == 900
+
+    @pytest.mark.parametrize("environment", ["prod", "staging", "beta", "test"])
+    def test_no_environment_but_dev_is_widened(self, environment: str) -> None:
+        settings = Settings(**{**DEV, "environment": environment, "prototype_mode": True})
+        assert prototype.access_ttl_seconds(settings) == settings.access_ttl_seconds
+
+    def test_the_switch_alone_is_not_enough(self) -> None:
+        settings = Settings(**{**DEV, "prototype_mode": False})
+        assert prototype.access_ttl_seconds(settings) == settings.access_ttl_seconds
+
+    def test_it_widens_in_prototype_dev(self) -> None:
+        settings = Settings(**{**DEV, "prototype_mode": True})
+        assert prototype.access_ttl_seconds(settings) == 12 * 3600
+
+    def test_it_never_narrows(self) -> None:
+        """`max(declared, …)`: an operator who set a LONGER ttl keeps it. A
+        resolver that could shorten a lifetime is one that could revoke access
+        early, which is the opposite of what a widening switch may do."""
+        settings = Settings(**{**DEV, "prototype_mode": True, "access_ttl_seconds": 99 * 3600})
+        assert prototype.access_ttl_seconds(settings) == 99 * 3600
+
+    def test_the_refresh_ttl_is_not_touched(self) -> None:
+        """Lengthening the half of the pair that ROTATES would be a change to
+        the security posture rather than the removal of a demo hazard."""
+        assert not hasattr(prototype, "refresh_ttl_seconds")

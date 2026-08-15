@@ -13,6 +13,7 @@ from typing import Any
 from bson import ObjectId
 from sitara_schemas import ErrorCode
 
+from sitara_api import prototype
 from sitara_api.config import Settings
 from sitara_api.db import MongoDb, Redis
 from sitara_api.errors import ApiError
@@ -69,7 +70,11 @@ class SessionService:
         await self._redis.set(
             _ACCESS_KEY.format(digest=_digest(access_token)),
             f"{user_id}:{session_id}",
-            ex=self._settings.access_ttl_seconds,
+            # `prototype.access_ttl_seconds`, not the raw setting: the Redis
+            # TTL is the AUTHORITATIVE expiry and the cookie's max_age only
+            # mirrors it, so widening one without the other would leave a
+            # cookie the browser keeps and the server has already forgotten.
+            ex=prototype.access_ttl_seconds(self._settings),
         )
         return access_token
 

@@ -6,6 +6,7 @@ import datetime as dt
 import re
 
 import pytest
+from sitara_schemas.payments import BillingRegion
 
 from sitara_api.config import Settings
 from sitara_api.db.seed import (
@@ -78,8 +79,16 @@ class TestCoverage:
         assert {p.locale for p in PERSONAS} == {"en", "hi-Latn", "hi"}
 
     def test_both_corridors_are_covered(self) -> None:
+        """§22.1's two postures: INR-with-GST at home, zero-rated export abroad.
+
+        Compared as `BillingRegion`, not as strings. The personas carried
+        `"IN"`/`"US"`/`"UK"`/`"AE"` — codes §30.3 has no notion of — so this
+        test passed on `"IN" in regions` while every seeded subscription was
+        unreadable by `PaymentStore`. The corridors were covered; the
+        vocabulary was not, and only one of those was being checked.
+        """
         regions = {p.region for p in PERSONAS}
-        assert "IN" in regions and len(regions) > 1
+        assert regions == {BillingRegion.INDIA, BillingRegion.INTERNATIONAL}
 
     def test_every_birth_time_accuracy_is_covered(self) -> None:
         """§10-6 drives the confidence system, so all four states need a fixture."""

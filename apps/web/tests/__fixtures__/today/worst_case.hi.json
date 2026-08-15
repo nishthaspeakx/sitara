@@ -146,7 +146,8 @@
     "birth_time_missing": true,
     "trial_day": 6,
     "plan": "grace",
-    "story_ring_enabled": false
+    "story_ring_enabled": false,
+    "festival_calendar_available": true
   },
   "timings": [
     {

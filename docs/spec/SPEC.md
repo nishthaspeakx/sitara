@@ -1190,3 +1190,37 @@ This is a decision about REGISTER, not about capability, and it is the same clas
 **46.4 Consequential (recorded, no decision required).** `apps/web/src/lib/dates.ts` already formats through `en-IN`/`hi-IN` without a numbering-system extension, which is this ruling; the file carries the reasoning and the separate, unrelated note that `hi-Latn` must never be resolved to `hi` by `Intl`, since that would fill a Hinglish surface with Devanagari. The 65 M10 baselines were recorded under this behaviour and need no re-recording. No locale catalog changes: ICU number formatting follows the locale tag, and the tags are unchanged.
 
 **Freeze statement (updated):** the specification is **FROZEN as v3.13 — Implementation Ready**. Cumulative audit trail: six audit rounds plus thirteen change-control entries, 83 findings raised, 83 resolved, **one baseline decision changed** (CC-008, Tara's production method). The §31.3 door remains the only door.
+
+---
+
+# 47. Change-Control Entry 014 (v3.14) — A Prototype-Only Browser STT Bridge for Hindi Listening (M12)
+**Date: 16 August 2026 · Approved: Founder (Nishtha Agarwal) · Raised by: Implementation (voice work).**
+
+Per §31.3 this section is the change-control record. **No baseline decision changes. CC-010 is untouched and its release gate remains OPEN.**
+
+**47.1 What was added.** When `SITARA_PROTOTYPE` is active **and** the environment is `dev` **and** the browser is Chrome, a `hi` or `hi-Latn` live call transcribes the user's speech in the browser through the Web Speech API (`SpeechRecognition`, `lang: hi-IN`). The finalised transcript is sent up §34.6's existing socket as a `captions.final` — the frame a typed turn already uses and the one Ink's own finals take — so nothing downstream changes: §9 receives an ordinary user turn and every validator runs on it unmodified.
+
+**47.2 This is a DEMO BRIDGE and explicitly NOT the Indic streaming solution.** CC-010 ruled that `hi`/`hi-Latn` have no streaming recogniser and must never be routed to an English one, because an English model fed Hindi audio does not fail — it produces fluent, confident nonsense that reaches §9 as the user's question. That ruling stands in full. The bridge does not close it, weaken it, or partially satisfy it:
+
+- `voice/providers/routing.py`'s `CAPABILITIES` matrix is **unchanged**. The bridge adds no cell and is never consulted by `resolve()`. `calls_available_in("hi")` still returns `False`.
+- §33.5's `safety_interception` and `call_naturalness` measures still read **BLOCKED** for `hi`/`hi-Latn`, and `voice.call_gate` still prints **DOES NOT PASS**.
+- Release gate `call.indic_streaming_stt` remains **OPEN**, blocking `public_launch`, with its detail unchanged: *"blocked — no streaming STT for hi, hi-Latn"*.
+- `tests/voice/test_browser_bridge.py` asserts each of the above directly, so a future change that closed the gate on this bridge fails there rather than in a launch review.
+
+A release gate is a question about **our product's** capability. A demo aid that runs on one laptop, in one browser, against a third party's servers is not that, and a gate that closed on it would report a capability nobody has.
+
+**47.3 Privacy: audio reaches Google, and this is why the bridge is confined.** Chrome's `SpeechRecognition` is a **network service, not on-device**: the microphone stream is transmitted to Google's servers and a transcript is returned. That is a third-party processor, with no DPA and no §13 vendor review, receiving a user's voice.
+
+For anything beyond a local demo this **violates §13** (vendor data handling, minimisation, no PII to unreviewed processors) and **§33.1** (call audio is never stored — and by extension never routed to a party that may store it). It is acceptable here, and only here, because three conditions hold together and are enforced in code rather than by convention:
+
+1. `prototype.is_active` requires the switch **and** `environment == "dev"`, evaluated on every call rather than trusted from a boot-time assertion, and `browser_bridge.recogniser_for` has **no parameter** — no `force`, no `allow`, no default — through which it could be reached otherwise;
+2. the accounts are the synthetic `+9199999` personas of §22.12, so no real user's voice is involved;
+3. the call screen carries a **permanent, untappable label** for the whole call — *"Demo bridge — your speech is being transcribed by Chrome, not by Sitara. Hindi calls are not available yet."* — rendered from the same server field that permits the bridge, so the label cannot be on while the bridge is off or off while it is on.
+
+**47.4 It never degrades silently.** If the Web Speech API is absent (any non-Chrome browser) or the recogniser errors, the call falls back to **today's honest refusal** — `errors.voice.call_language_unavailable` — exactly as it does now. There is no path from the bridge to an English recogniser: `en` is deliberately absent from `BRIDGED_LOCALES` (it has a real recogniser and the demo should keep exercising it), and every bridged locale maps to an `hi-` tag. The fluent-nonsense failure CC-010 exists to prevent remains unreachable.
+
+**47.5 A known defect, stated rather than discovered.** Chrome has no Hinglish recogniser. `hi-IN` fed romanised Hinglish returns **Devanagari**, so for `hi-Latn` the bridge is knowingly wrong about script — which contradicts §2.4's ruling that `hi-Latn` IS a Latin-script locale. This is recorded in `browser_bridge.SCRIPT_CAVEAT` and asserted by a test so it cannot quietly become folklore. A real Indic streaming STT (Sarvam Saaras, §3.3) is what fixes it, and landing it remains **one cell** of the capability matrix plus an adapter.
+
+**47.6 Consequential (recorded, no decision required).** Voice notes are **unchanged** and continue to work in all three locales through Ink's batch endpoint (49 languages); §25.4 is not touched by this entry, and `voice_notes_available_in` remains separate from `calls_available_in` for the reason CC-010 gave. `CallSessionGrant` gains one nullable field, `browser_stt_lang`, null on every path that ships.
+
+**Freeze statement (updated):** the specification is **FROZEN as v3.14 — Implementation Ready**. Cumulative audit trail: six audit rounds plus fourteen change-control entries, 83 findings raised, 83 resolved, **one baseline decision changed** (CC-008, Tara's production method). The §31.3 door remains the only door.

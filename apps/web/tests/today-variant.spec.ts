@@ -26,6 +26,10 @@ function state(overrides: Partial<TodayState> = {}): TodayState {
     trial_day: null,
     plan: "premium",
     story_ring_enabled: false,
+    // §32.1's precedence rule never reads this — it decides which BANNERS
+    // stack, and S17's two absences are one screen down. Present because the
+    // type is total, and `true` so the festival cases below mean what they say.
+    festival_calendar_available: true,
     ...overrides,
   };
 }

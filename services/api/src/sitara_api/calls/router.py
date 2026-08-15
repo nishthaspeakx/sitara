@@ -59,6 +59,7 @@ from sitara_api.errors import ApiError
 from sitara_api.prototype import calls_enabled as prototype_calls_enabled
 from sitara_api.voice.call_metrics import CallObservation
 from sitara_api.voice.entitlements import MinuteLedger, MinuteMeter
+from sitara_api.voice.providers import browser_bridge
 from sitara_api.voice.providers.base import VoiceProviderUnavailable
 from sitara_api.voice.providers.registry import build_streaming_stt
 from sitara_api.voice.providers.routing import Modality, resolve
@@ -88,6 +89,14 @@ class CallSessionGrant(BaseModel):
     resume_window_s: int
     entitlement: dict[str, Any]
     captions_default_on: bool
+    #: CC-014. Non-null ONLY on a prototype-mode dev machine, and then only for
+    #: the locales CC-010 leaves without a recogniser. The client reads it as
+    #: "transcribe locally in Chrome and send me finals"; its presence is also
+    #: what the screen renders its demo-bridge label from, so the label cannot
+    #: drift from the behaviour — one field drives both.
+    #:
+    #: `None` on every other path, which is every path that ships.
+    browser_stt_lang: str | None = None
 
 
 def _tickets(request: Request) -> WsTicketService:
@@ -110,11 +119,27 @@ async def call_session(
         raise ApiError(ErrorCode.VOICE_PROVIDER_UNAVAILABLE, "errors.voice.calls_not_enabled")
 
     route = resolve(Modality.STREAMING, payload.locale)
-    if not route.available:
+
+    # CC-014's demo bridge, asked SEPARATELY and never through `resolve()`.
+    #
+    # This is the whole shape of the thing: `routing.CAPABILITIES` is untouched,
+    # so `calls_available_in("hi")` is still False, §33.5's gate still reads
+    # hi/hi-Latn as BLOCKED, and `call.indic_streaming_stt` stays open. A cell
+    # added to the matrix would have closed a gate on a capability nobody has.
+    #
+    # It can only ever WIDEN, and only on a dev machine with prototype mode on
+    # — `browser_bridge.recogniser_for` has no parameter that could force it.
+    bridge_lang = browser_bridge.recogniser_for(settings, payload.locale)
+
+    if not route.available and bridge_lang is None:
         # CC-010's ruling, read from the one matrix that holds it. The reason
         # key distinguishes "a vendor documents it and nobody has built it"
         # from "nobody offers it", because those are different sentences to a
         # user waiting for Hindi calls.
+        #
+        # This is still the DEFAULT answer for hi/hi-Latn, and it is what comes
+        # back the instant the bridge is unavailable — including when the
+        # browser is not Chrome, which the client decides for itself.
         raise ApiError(
             ErrorCode.VOICE_PROVIDER_UNAVAILABLE,
             route.reason_key or "errors.voice.call_language_unavailable",
@@ -145,6 +170,11 @@ async def call_session(
         # metered a minute has never had a call, and that is a fact the server
         # already holds.
         captions_default_on=entitlement.used_minutes <= 0.0,
+        # Null unless CC-014's bridge is both permitted and needed. A locale
+        # with a real recogniser never gets it, even in prototype mode: `en`
+        # is absent from `BRIDGED_LOCALES` so the demo keeps exercising the
+        # vendor path that actually ships.
+        browser_stt_lang=bridge_lang if not route.available else None,
     )
 
 

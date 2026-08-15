@@ -35,39 +35,42 @@ import datetime as dt
 import hashlib
 import logging
 from dataclasses import dataclass
-from enum import StrEnum
 from typing import Any
 from zoneinfo import ZoneInfo
+
+from sitara_schemas.notifications import (
+    BRIEF_EXPIRY_LOCAL_HOUR,
+    MessageClass,
+    NotificationStatus,
+)
 
 from sitara_api.daily_guidance.templates import TEMPLATE_VERSION
 from sitara_api.daily_guidance.types import Brief, BriefStatus
 
 logger = logging.getLogger(__name__)
 
-
-class MessageClass(StrEnum):
-    """§23.1's four classes. Behaviour differs by class and is hard-coded —
-    "not configurable per template"."""
-
-    TRANSACTIONAL = "T"
-    DAILY_LOOP = "D"
-    CONTEXTUAL = "C"
-    MARKETING = "M"
-
-
-class NotificationStatus(StrEnum):
-    """§23.7's single source-of-truth lifecycle."""
-
-    QUEUED = "queued"
-    SENT = "sent"
-    DELIVERED = "delivered"
-    FAILED = "failed"
-    EXPIRED = "expired"
-    SUPERSEDED = "superseded"
-
-
-#: §23.4: "morning brief push expires at 12:00 local".
-BRIEF_EXPIRY_LOCAL_HOUR = 12
+#: Re-exported, never redeclared. This module DECLARED `MessageClass`,
+#: `NotificationStatus` and the noon expiry hour until M12 — privately, in the
+#: daily-guidance package, while §23.5's preference screen was about to name the
+#: same sets on the other side of the wire. That is the window in which the
+#: confidence states, the presence states, the memory types and the voice
+#: vocabulary each drifted, so the sets moved to `sitara_schemas.notifications`
+#: before the second declaration existed rather than after a screen rendered the
+#: disagreement. The names stay importable from here because §7.1's callers
+#: already use them.
+__all__ = [
+    "BRIEF_EXPIRY_LOCAL_HOUR",
+    "BriefNotification",
+    "MessageClass",
+    "NotificationQueue",
+    "NotificationStatus",
+    "build",
+    "collapse_key_for",
+    "expiry_for",
+    "message_id_for",
+    "revision_for",
+    "should_hold_for_regenerate",
+]
 
 #: §32.7: "if delivery is <10 min away, the notification waits for the
 #: regenerate (never delivers the wrong language)".

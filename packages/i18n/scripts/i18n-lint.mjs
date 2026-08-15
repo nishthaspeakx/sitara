@@ -103,8 +103,17 @@ function expand(template, decl) {
 // exists at all. M10 adds those two alongside its own five rather than only its
 // own, because a blind spot you have already walked past once is not a blind
 // spot any more.
+//
+// **It had happened again**, and this time the blind spot hid a real defect
+// rather than only the risk of one. `pay` and `gift` were both missing, so
+// nothing checked either namespace — and `payments/gifting.py` had been
+// sending `pay.gift.activated` and `pay.gift.converted` since M11 while the
+// catalogs carried those two strings at `gift.activated`/`gift.converted`.
+// Parity kept all three locales consistently wrong, and no screen consumed the
+// keys until S33 was built, so a successful redemption would have rendered a
+// raw dotted key at the one moment a gift is supposed to feel like a welcome.
 const LITERAL_KEY =
-  /"((?:ui|errors|auth|verify|dob|home|app|chat|panchang|numerology|terms|memory|start|launch|brief|today|festivals|journal|vault|family|you|reflection|call|subscription|payresult)\.[a-z0-9_.]+)"/g;
+  /"((?:ui|errors|auth|verify|dob|home|app|chat|panchang|numerology|terms|memory|start|launch|brief|today|festivals|journal|vault|family|you|reflection|call|subscription|payresult|pay|gift|notifications|notifsettings)\.[a-z0-9_.]+)"/g;
 const TEMPLATE_KEY = /`([a-z0-9_.]+\.\$\{[^`]+)`/g;
 
 const referenced = new Set();

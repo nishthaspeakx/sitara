@@ -12,10 +12,26 @@
 
 import { useTranslations } from "next-intl";
 
+import { NOTIFICATION_CHANNELS, type NotificationChannel } from "@sitara/schemas";
+
 import { cn, focusRing, motionStandard, touchTarget, type MessageKey } from "./_util";
 
-export const NOTIFICATION_CHANNELS = ["push", "whatsapp", "email"] as const;
-export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[number];
+/**
+ * Re-exported, no longer declared. This file held its own
+ * `["push", "whatsapp", "email"]` from M7 until M12, when §23's closed sets
+ * landed in `packages/schemas` — the fourth time a set has moved there after
+ * two sides named it, and the first time one moved BEFORE they disagreed.
+ * The values and their order are unchanged, so no baseline moves.
+ *
+ * `classKey` is now given a §23.5 CATEGORY key by S41, not a class key. The
+ * prop name predates the distinction and is left alone deliberately: renaming
+ * it is a change to the 49-component contract for no behavioural gain, and the
+ * type has always been "a MessageKey for this row's label". The stale
+ * `ui.notif.class.*` catalog entries are a separate cleanup — they name four
+ * things that are not §23.1's four classes ("conversational" is not one), and
+ * one of them is a transactional row §23.5 offers no toggle for.
+ */
+export { NOTIFICATION_CHANNELS, type NotificationChannel };
 
 export type ChannelState = "on" | "off" | "unavailable";
 

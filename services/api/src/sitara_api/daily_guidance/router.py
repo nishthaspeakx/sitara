@@ -25,16 +25,25 @@ import logging
 from typing import Annotated
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Query, Request, Response
 from sitara_schemas import ErrorCode
 from sitara_schemas.today import BriefStatus, TodayPayload, TodayState, time_band
 
 from sitara_api.auth.router import CurrentSession
-from sitara_api.daily_guidance import personal_inputs, presenter, today_state, wiring
+from sitara_api.daily_guidance import (
+    personal_inputs,
+    presenter,
+    read_aloud,
+    today_state,
+    wiring,
+)
 from sitara_api.daily_guidance.store import BriefStore
 from sitara_api.daily_guidance.templates import compose_taras_line
 from sitara_api.daily_guidance.types import Brief, BriefSubject
 from sitara_api.errors import ApiError
+from sitara_api.voice.audio import pcm_to_wav
+from sitara_api.voice.providers.base import VoiceProviderUnavailable
+from sitara_api.voice.providers.registry import build_tts
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +99,7 @@ async def get_today(
         local_date=local_date,
         brief_count=await _brief_count(db, subject.user_id),
         stories_enabled=getattr(request.app.state.settings, "stories_enabled", False),
+        festival_calendar_available=_calendar_available(request),
     )
     return build_payload(
         subject,
@@ -99,6 +109,68 @@ async def get_today(
         local_time=local_time,
         place_label=await _place_label(db, subject.user_id),
     )
+
+
+@router.post("/today/audio")
+async def get_today_audio(
+    request: Request,
+    session: CurrentSession,
+    date: Annotated[str | None, Query(description="Local ISO date; defaults to today")] = None,
+) -> Response:
+    """§27's listen-to-your-brief, for S14's `AudioPlayer`.
+
+    **No request body and no text parameter.** The words are the stored brief's
+    own composed sentences, already through §9's grounding — see
+    `read_aloud.py`. POST rather than GET for `voice/preview.py`'s reason: a GET
+    is what a prefetcher and the bfcache issue unasked, and each one is a vendor
+    call nobody wanted.
+    """
+    user_id, _ = session
+    db = request.app.state.db
+
+    subject = await wiring.load_subject(db, str(user_id))
+    if subject is None:
+        raise ApiError(ErrorCode.SYS_VALIDATION, "errors.sys.validation")
+
+    local_date = date or local_now(subject).date().isoformat()
+    brief = await BriefStore(db).get(subject.user_id, local_date)
+    if brief is None:
+        # Not generated yet. `/v1/today` is the door that generates one, and
+        # doing it here would mean a play button could spend a model call.
+        raise ApiError(ErrorCode.VOICE_PROVIDER_UNAVAILABLE)
+
+    try:
+        result = await read_aloud.synthesise_brief(
+            build_tts(request.app.state.voice_settings),
+            brief,
+            environment=getattr(request.app.state.settings, "environment", "dev"),
+        )
+    except VoiceProviderUnavailable as exc:
+        # §30.1: her voice being unavailable is a designed state. S14 renders
+        # the player's `unavailable` line and the written brief is untouched.
+        logger.info("brief read-aloud unavailable: %s", exc)
+        raise ApiError(ErrorCode.VOICE_PROVIDER_UNAVAILABLE) from exc
+
+    return Response(
+        content=pcm_to_wav(result.audio, result.sample_rate_hz),
+        media_type="audio/wav",
+        headers={"Cache-Control": "private, no-store", "Content-Disposition": "inline"},
+    )
+
+
+def _calendar_available(request: Request) -> bool:
+    """Whether §5.2 Layer B's calendar half answered when it was last asked.
+
+    Read from the panchang service's own observation rather than from whether a
+    vendor is CONFIGURED: a key that is present and whose every route 404s is
+    configured and unavailable, and only an attempt can tell those apart. No
+    service, or one that has never been asked, is not availability — see
+    `CalendarLayer`, and §5.3 for why the optimistic default is the wrong one.
+    """
+    from sitara_api.panchang.service import CalendarLayer
+
+    service = getattr(request.app.state, "panchang_service", None)
+    return getattr(service, "calendar_layer", None) is CalendarLayer.AVAILABLE
 
 
 async def _generate_on_open(

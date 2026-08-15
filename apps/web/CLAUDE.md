@@ -135,7 +135,7 @@ Nine surfaces: S21 `/journal` · S22 `/journal/[date]` · S23 `/journal/search` 
 
 ## The live walkthrough (M10) — what only a real run could see
 
-`docs/runbooks/demo-walkthrough.md` is the script. Three client-side findings are worth keeping here:
+`docs/runbooks/DEMO.md` is the script. Three client-side findings are worth keeping here:
 
 - **`apiCall` refreshes ONCE on a spent access token.** The access cookie lives 15 minutes and the refresh cookie 30 days, and no client code had ever called `POST /auth/session/refresh` — so every app open older than a quarter of an hour met a 401 on its first read and rendered "Tara will be right back … that sign-in didn't go through", with a trace code, because a token had done exactly what it was designed to do. Single-flight, only for `AUTH_SESSION_EXPIRED`/`AUTH_INVALID_TOKEN`, and never on the refresh endpoint itself — a 401 from that one is a real sign-out, and retrying it loops behind a screen that merely looks slow.
 - **`EmptyState id="saved_guidance"` is not a general "nothing here" state.** It renders "Nothing saved yet." S16 and S17 both used it for "the panchang cell was cold" and "no observance today", and both had carried their own correct sentence (`today.timings.empty`, `today.festival.empty`) in the catalogs since M8 without rendering it. §24.6 fixes the designed empty states at NINE; a screen that is not one of them says its own line.

@@ -23,7 +23,7 @@ from sitara_api.panchang.providers.breaker import CircuitBreaker
 from sitara_api.panchang.providers.divineapi import DivineApiProvider
 from sitara_api.panchang.providers.http import VendorClient
 from sitara_api.panchang.providers.prokerala import ProkeralaProvider
-from sitara_api.panchang.service import PanchangService
+from sitara_api.panchang.service import CalendarLayer, PanchangService
 from tests.panchang.conftest import MUMBAI
 from tests.panchang.replay import failing_transport, transport_for
 
@@ -282,6 +282,85 @@ class TestCacheShortCircuitsTheLadder:
         assert result.confidence is ConfidenceState.APPROXIMATE
         assert result.sources == (FactSource.DIVINEAPI,)  # still served
         assert all(f.confidence is ConfidenceState.APPROXIMATE for f in result.facts)
+
+
+class TestTheCalendarLayerReportsWhetherItWasReachable:
+    """§5.3, applied to an ABSENCE.
+
+    Nothing here is about panchang facts — Layer A supplies those and the
+    ladder above already proves it. It is about a sentence S17 renders: "No
+    observance falls today." That is a calendar claim, and a calendar claim
+    needs a source exactly as much as naming a festival does. Layer A is
+    authoritative for the deterministic astronomy and knows nothing about the
+    calendar; a tithi does not tell you it is Raksha Bandhan.
+
+    So `festival is None` has two causes that must not read alike, and the
+    service is the only thing that knows which one happened.
+    """
+
+    async def test_it_starts_unknown_rather_than_available(self, cache) -> None:  # noqa: ANN001
+        """UNKNOWN is not AVAILABLE. A brief read from the store makes no
+        vendor call at all, so a fresh process has genuinely not asked — and
+        optimism about a question nobody put is the false negative getting back
+        in through the default."""
+        assert service(cache).calendar_layer is CalendarLayer.UNKNOWN
+
+    async def test_a_live_calendar_source_reports_available(self, cache) -> None:  # noqa: ANN001
+        svc = service(cache, divineapi=provider("divineapi", transport_for("divineapi")))
+        await svc.panchang(ON, MUMBAI, Tradition.AMANTA)
+        assert svc.calendar_layer is CalendarLayer.AVAILABLE
+
+    async def test_prokerala_alone_still_counts_as_a_calendar_source(self, cache) -> None:  # noqa: ANN001
+        """It may never be cached and never wins a dispute, but it does know
+        what day it is in a tradition — which is the only question here."""
+        svc = service(
+            cache,
+            divineapi=provider("divineapi", failing_transport(503)),
+            prokerala=provider("prokerala", transport_for("prokerala")),
+            astro=FakeAstro(None),
+        )
+        await svc.panchang(ON, MUMBAI, Tradition.AMANTA)
+        assert svc.calendar_layer is CalendarLayer.AVAILABLE
+
+    async def test_a_cached_row_counts_because_a_vendor_wrote_it(self, cache) -> None:  # noqa: ANN001
+        await service(
+            cache, divineapi=provider("divineapi", transport_for("divineapi"))
+        ).panchang(ON, MUMBAI, Tradition.AMANTA)
+        svc = service(
+            cache,
+            divineapi=provider("divineapi", failing_transport(503)),
+            prokerala=provider("prokerala", failing_transport(503)),
+        )
+        await svc.panchang(ON, MUMBAI, Tradition.AMANTA)
+        assert svc.calendar_layer is CalendarLayer.AVAILABLE
+
+    async def test_both_vendors_down_reports_unavailable_even_though_layer_a_answered(  # noqa: E501
+        self, cache
+    ) -> None:  # noqa: ANN001
+        """The case this whole class exists for, and the one the deployment is
+        actually in: the panchang is complete and correct from our own engine,
+        the request succeeds, and NOTHING knows whether a festival falls
+        today."""
+        svc = service(
+            cache,
+            divineapi=provider("divineapi", failing_transport(404)),
+            prokerala=provider("prokerala", failing_transport(400)),
+            astro=FakeAstro(layer_a_facts()),
+        )
+        result = await svc.panchang(ON, MUMBAI, Tradition.AMANTA)
+
+        # The astronomy is fine — that is the point.
+        assert result.sources == (FactSource.LAYER_A,)
+        assert result.facts
+        # The calendar is not.
+        assert svc.calendar_layer is CalendarLayer.UNAVAILABLE
+
+    async def test_no_vendor_configured_is_unavailable_not_unknown(self, cache) -> None:  # noqa: ANN001
+        """A deployment with no calendar vendor at all has been asked and has
+        answered — there is no source. That is knowledge, not ignorance."""
+        svc = service(cache, astro=FakeAstro(layer_a_facts()))
+        await svc.panchang(ON, MUMBAI, Tradition.AMANTA)
+        assert svc.calendar_layer is CalendarLayer.UNAVAILABLE
 
 
 class TestDayTimingsLadder:

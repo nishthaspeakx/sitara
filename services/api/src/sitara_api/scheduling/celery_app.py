@@ -108,6 +108,39 @@ def beat_schedule() -> dict[str, dict]:
             "schedule": timedelta(minutes=PREJOB_TICK_MINUTES),
             "options": {"queue": QUEUE_MAINTENANCE, "expires": PREJOB_TICK_MINUTES * 60},
         },
+        # §23.7's delivery pass. Every minute, because §23.8's SLO is "95% of
+        # morning briefs delivered within 5 min of target time" and a coarser
+        # tick spends the whole budget on the schedule: a 5-minute tick alone
+        # would put the median brief 2.5 minutes late before a single byte had
+        # moved. The pass is a bounded indexed query and does nothing when the
+        # queue is empty.
+        "notification-dispatch": {
+            "task": "sitara.notifications.dispatch_due",
+            "schedule": timedelta(minutes=1),
+            # Expires with the tick. A dispatch pass that has not started by
+            # the time the next one fires has nothing to add — the next pass
+            # selects the same rows — and running both would put two workers
+            # down the same ladder, which §23.3's dedupe key would stop and
+            # §23.9 would rather never happen.
+            "options": {"queue": QUEUE_DAILY, "expires": 60},
+        },
+        # §23.4's "dropped, not late-delivered", as a sweep. Every 5 minutes
+        # rather than every minute: `store.due` already excludes expired rows,
+        # so nothing stale can be delivered between passes and this is only
+        # about retiring them honestly for §23.8.
+        "notification-expiry": {
+            "task": "sitara.notifications.expire_sweep",
+            "schedule": timedelta(minutes=5),
+            "options": {"queue": QUEUE_MAINTENANCE, "expires": 300},
+        },
+        # §23.2's "auto-paused and flagged", daily. The pause itself is read
+        # live at selection time from the same observations — this task is the
+        # "and flagged" half, which is the half a human reads.
+        "notification-trigger-review": {
+            "task": "sitara.notifications.review_triggers",
+            "schedule": timedelta(days=1),
+            "options": {"queue": QUEUE_MAINTENANCE, "expires": 6 * 3600},
+        },
         # Diagram 8: "Nightly consolidation: dedupe · decay stale · theme
         # extraction". 02:30 UTC is 08:00 IST — deliberately AFTER the Indian
         # morning wave rather than before it, so consolidation never competes

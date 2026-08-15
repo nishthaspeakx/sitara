@@ -82,6 +82,7 @@ from sitara_api.voice.providers.base import (
     stt_language_for,
     tts_language_for,
 )
+from sitara_api.voice.providers.voices import voice_for
 
 logger = logging.getLogger(__name__)
 
@@ -179,27 +180,19 @@ class CartesiaTtsProvider:
         self._timeout = timeout_seconds
 
     async def synthesise(self, request: SynthesisRequest) -> SynthesisResult:
-        voice_id = request.voice_id or self._voice_id
-        if not voice_id:
-            # §3.2's anchor artist is a contracted clone; there is no sensible
-            # default voice for Tara and picking a stock one would put a
-            # stranger's voice on her name.
-            raise VoiceProviderUnavailable("no Tara voice id configured (§3.2)")
+        # Resolved from the LOCALE (`providers/voices.py`), never from a value
+        # threaded down from settings. `request.voice_id` stays as a per-request
+        # override for a bake-off harness; every production caller leaves it
+        # None. An unmapped locale raises rather than borrowing a voice.
+        voice_id = request.voice_id or voice_for(request.locale)
 
-        body: dict[str, Any] = {
-            "model_id": self._model,
-            "transcript": request.text,
-            "voice": {"mode": "id", "id": voice_id},
-            "language": tts_language_for(request.locale),
-            # `raw` + pcm_s16le at 16 kHz is §34.6's binary frame exactly, so
-            # her reply and the user's note are the same format on the wire and
-            # in storage — one decoder on the client, one codec field in Mongo.
-            "output_format": {
-                "container": "raw",
-                "encoding": "pcm_s16le",
-                "sample_rate": self._sample_rate_hz,
-            },
-        }
+        body = tts_body(
+            text=request.text,
+            voice_id=voice_id,
+            locale=request.locale,
+            model=self._model,
+            sample_rate_hz=self._sample_rate_hz,
+        )
         try:
             async with httpx.AsyncClient(timeout=self._timeout) as client:
                 response = await client.post(
@@ -411,12 +404,9 @@ class CartesiaStreamingTtsProvider:
         self._sample_rate_hz = sample_rate_hz
 
     async def stream(self, request: SynthesisRequest) -> AsyncIterator[bytes]:
-        voice_id = request.voice_id or self._voice_id
-        if not voice_id:
-            # Same rule as the batch adapter: §3.2's anchor artist is a
-            # contracted clone, and a stock default would put a stranger's
-            # voice on Tara's name.
-            raise VoiceProviderUnavailable("no Tara voice id configured (§3.2)")
+        # Same rule as the batch adapter: resolved from the LOCALE, and an
+        # unmapped locale declines rather than borrowing a voice (CC-008).
+        voice_id = request.voice_id or voice_for(request.locale)
 
         url = _ws_url(self._base_url, "/tts/websocket", {"cartesia_version": CARTESIA_VERSION})
         body = tts_stream_body(
@@ -472,6 +462,82 @@ class CartesiaStreamingTtsProvider:
         }
 
 
+# ---------------------------------------------------------------------------
+# §4's persona — and why NO prosody controls are sent
+# ---------------------------------------------------------------------------
+#
+# `speed` and `emotion` are NOT in the body below, and their absence is a
+# measurement rather than an oversight.
+#
+# **Measured against the live sonic-3.5 endpoint, 16 Aug 2026.** Every control
+# returns HTTP 200 and none of them does anything:
+#
+#   baseline        mean 4.46s   spread 0.32s      (n=4, one Hindi sentence)
+#   speed=slow      mean 4.38s   spread 0.56s
+#   speed=slowest   mean 4.16s   spread 0.64s
+#   speed=fastest   mean 4.38s   spread 0.24s
+#
+# `slowest` and `fastest` sit inside each other's noise, and `slowest` came back
+# SHORTER than baseline. Sonic is generative, so the same text twice differs by
+# up to 0.6s on its own; the parameter is not moving anything.
+#
+# A 200 is not evidence, which is the trap worth naming: the endpoint 404s on a
+# bad `model_id`, 404s on a bad voice id and 400s on `language: "zz"` — but it
+# returns 200 for `{"this_field_is_invented": true}` and for `speed: "banana"`.
+# It validates the fields it knows and SILENTLY DROPS the ones it does not. So
+# `__experimental_controls` (Sonic-1 era) also "succeeds" on 3.5, and any
+# plausible-looking control added here would sit in the source looking
+# effective forever.
+#
+# This is the `context_id` lesson inverted. There, a missing field produced a
+# loud vendor error and a silent product failure. Here, an unsupported field
+# produces a cheerful 200 and a comment that lies. Both are only visible from a
+# real call.
+#
+# **So §4's register comes from the two levers that demonstrably work:**
+#
+#   1. the VOICE itself (`providers/voices.py`) — chosen per locale, and the
+#      only place warmth is actually decided;
+#   2. the TEXT, via §3.4's dictionary, which inserts real pauses. Its
+#      respellings carry double spaces ("राहु  काल"), and that whitespace is a
+#      prosodic instruction the model does honour — it is why the dictionary
+#      improves pacing on tradition terms and not only pronunciation.
+#
+# If a future Sonic version documents real controls, add them HERE, and prove
+# they moved the duration before believing the 200.
+
+
+def tts_body(
+    *,
+    text: str,
+    voice_id: str,
+    locale: str,
+    model: str = DEFAULT_TTS_MODEL,
+    sample_rate_hz: int = 16_000,
+) -> dict[str, Any]:
+    """The Sonic REST request, in ONE place.
+
+    Shares `_persona_controls` with the streaming body below, so her voice
+    cannot drift between a voice-note reply and a live call — which is the
+    same divergence `tts_stream_body`'s own header records about the recorder,
+    pointed at prosody instead of at shape.
+    """
+    return {
+        "model_id": model,
+        "transcript": text,
+        "voice": {"mode": "id", "id": voice_id},
+        "language": tts_language_for(locale),
+        # `raw` + pcm_s16le at 16 kHz is §34.6's binary frame exactly, so her
+        # reply and the user's note are the same format on the wire and in
+        # storage — one decoder on the client, one codec field in Mongo.
+        "output_format": {
+            "container": "raw",
+            "encoding": "pcm_s16le",
+            "sample_rate": sample_rate_hz,
+        },
+    }
+
+
 def tts_stream_body(
     *,
     text: str,
@@ -492,17 +558,13 @@ def tts_stream_body(
     adapter does not send is a fixture that proves nothing about the adapter.
     """
     return {
-        "model_id": model,
-        "transcript": text,
-        "voice": {"mode": "id", "id": voice_id},
-        "language": tts_language_for(locale),
-        # `raw` + pcm_s16le at 16 kHz is §34.6's binary frame exactly, so her
-        # reply and the user's note are one format on the wire and in storage.
-        "output_format": {
-            "container": "raw",
-            "encoding": "pcm_s16le",
-            "sample_rate": sample_rate_hz,
-        },
+        **tts_body(
+            text=text,
+            voice_id=voice_id,
+            locale=locale,
+            model=model,
+            sample_rate_hz=sample_rate_hz,
+        ),
         # **REQUIRED — found live, 15 Aug 2026.** Without it Sonic answers every
         # utterance with `{"type":"error","title":"context_id is invalid"}`, so a
         # call reached her validated words and then fell silent, every time. The

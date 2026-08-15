@@ -16,6 +16,7 @@ system of record for calendar facts.
 import datetime as dt
 import logging
 from dataclasses import dataclass, field
+from enum import StrEnum
 
 from sitara_schemas.cache_keys import muhurat_key, panchang_key
 from sitara_schemas.facts import ConfidenceState, FactSnapshot, FactSource, MuhuratType, Tradition
@@ -37,6 +38,27 @@ from sitara_api.panchang.providers.base import (
 from sitara_api.panchang.providers.http import ProviderUnavailable, engine_unavailable
 
 logger = logging.getLogger(__name__)
+
+
+class CalendarLayer(StrEnum):
+    """Whether §5.2's Layer B — the CALENDAR half — could be consulted at all.
+
+    This exists because "no festival today" and "no source that knows about
+    festivals" are the same absence to every caller downstream, and they are
+    not the same statement to a user. §5.3 forbids fabricating a festival date;
+    asserting that no festival falls today is the same calendar claim inverted,
+    and it needs a source just as much. Layer A is authoritative for the
+    deterministic astronomy and knows nothing about the calendar — a tithi does
+    not tell you whether it is Raksha Bandhan.
+
+    UNKNOWN is deliberately not AVAILABLE. This process may simply not have
+    asked yet (a brief read from the store makes no vendor call), and optimism
+    about a question nobody put is how the false negative gets back in.
+    """
+
+    AVAILABLE = "available"
+    UNAVAILABLE = "unavailable"
+    UNKNOWN = "unknown"
 
 
 @dataclass(frozen=True)
@@ -67,6 +89,25 @@ class PanchangService:
         self._divineapi = divineapi
         self._prokerala = prokerala
         self._astro = astro
+        #: What the last REAL attempt on the calendar layer observed. Not a
+        #: probe and not a guess about configuration: a configured vendor whose
+        #: every route 404s is configured and unavailable, and only an attempt
+        #: can tell the two apart.
+        self._calendar_layer = CalendarLayer.UNKNOWN
+
+    @property
+    def calendar_layer(self) -> CalendarLayer:
+        """Whether the calendar half of Layer B answered when last asked.
+
+        Read by §28.2's Today state so S17 can say which of "nothing falls
+        today" and "we could not check" is true. See `CalendarLayer`.
+        """
+        return self._calendar_layer
+
+    def _note_calendar(self, available: bool) -> None:  # noqa: FBT001
+        self._calendar_layer = (
+            CalendarLayer.AVAILABLE if available else CalendarLayer.UNAVAILABLE
+        )
 
     # ---- panchang -------------------------------------------------------
 
@@ -139,6 +180,9 @@ class PanchangService:
 
         cached = await self._cache.get(key)
         if cached is not None:
+            # A cached row is a DivineAPI row (nothing else may be persisted),
+            # so the calendar layer did answer — just not in this request.
+            self._note_calendar(True)
             return self._from_cache(cached, place, tradition)
 
         if self._divineapi is not None:
@@ -157,6 +201,7 @@ class PanchangService:
                     provider=ProviderName.DIVINEAPI,
                     payload={"facts": [f.model_dump(mode="json") for f in facts]},
                 )
+                self._note_calendar(True)
                 return PanchangResult(
                     facts=facts,
                     confidence=ConfidenceState.TRADITION_BASED_GENERAL,
@@ -171,6 +216,7 @@ class PanchangService:
             except ProviderUnavailable as exc:
                 logger.info("prokerala unavailable (%s)", exc.reason)
             else:
+                self._note_calendar(True)
                 return PanchangResult(
                     facts=factbuild.panchang_facts(
                         reading, place, tradition, confidence=ConfidenceState.APPROXIMATE
@@ -182,6 +228,10 @@ class PanchangService:
                     notes=("degraded_to_prokerala", "never_cached_tos"),
                 )
 
+        # Every calendar source is down, or none is configured. The astronomy
+        # still stands above this — but nothing here knows what day it is in
+        # anyone's tradition.
+        self._note_calendar(False)
         return None
 
     # ---- day timings ----------------------------------------------------

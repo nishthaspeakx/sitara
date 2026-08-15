@@ -186,6 +186,7 @@ def gen_python(
     chat: dict,
     voice: dict,
     payments: dict,
+    notifications: dict,
 ) -> None:
     PY_OUT.mkdir(parents=True, exist_ok=True)
 
@@ -387,6 +388,80 @@ def gen_python(
         lines += ["", f"#: {const['$comment']}", f"{name} = {py_const(const['value'])}"]
     lines.append("")
     (PY_OUT / "payments.py").write_text("\n".join(lines), encoding="utf-8")
+
+    # notifications.py
+    lines = [
+        f'"""{HEADER}',
+        "",
+        "SPEC §23 — the vocabulary of a notification.",
+        "",
+        "`sitara_api.notifications` writes these onto `notifications`,",
+        "`push_subscriptions` and `notification_preferences` rows; S41 renders",
+        "the §23.5 category × channel matrix from them. Two of these sets were",
+        "already declared privately in `daily_guidance.notify` — this is the",
+        "package's rule applied at the moment the second declaration was about",
+        "to appear rather than after a screen had rendered the drift.",
+        "",
+        "The RULES over these ids — which class bypasses quiet hours, which",
+        "trigger consumes the 1/day slot, what a dead subscription does to the",
+        "fallback ladder — belong to `sitara_api.notifications`, exactly as",
+        "§32.4's consent rules stay in `memory.taxonomy` and §22.13's clock",
+        "stays in `payments.lifecycle`. This file is the closed sets only.",
+        '"""',
+        "",
+        "from enum import StrEnum",
+        "",
+        "__all__ = [",
+    ]
+    notification_exports = [
+        *(e["enum_name"] for e in notifications["enums"].values()),
+        *(e["const_name"] for e in notifications["enums"].values()),
+        *notifications["constants"],
+        "CONTEXTUAL_TRIGGER_PRIORITY",
+        "MESSAGE_CLASS_LETTER",
+    ]
+    for name in sorted(notification_exports):
+        lines.append(f'    "{name}",')
+    lines += ["]", ""]
+    for enum in notifications["enums"].values():
+        lines += py_enum(enum)
+        lines += [
+            "",
+            f"{enum['const_name']}: tuple[{enum['enum_name']}, ...] = (",
+            *(f"    {enum['enum_name']}.{py_ident(m['id'])}," for m in enum["members"]),
+            ")",
+            "",
+        ]
+    classes = notifications["enums"]["message_class"]
+    lines += [
+        "",
+        "#: §23.1's own labels. Documentation, and the word an operator uses when",
+        "#: they say 'stop the D queue' — never the wire format. The IDs are the",
+        "#: wire format, for the reason §4.3's ordinals are not: a letter in every",
+        "#: call site makes the one question a reader has (does this class bypass",
+        "#: quiet hours?) a lookup rather than a word.",
+        f"MESSAGE_CLASS_LETTER: dict[{classes['enum_name']}, str] = {{",
+    ]
+    for m in classes["members"]:
+        lines.append(f'    {classes["enum_name"]}.{py_ident(m["id"])}: "{m["letter"]}",')
+    triggers = notifications["enums"]["contextual_trigger"]
+    lines += [
+        "}",
+        "",
+        "#: §23.2's catalogue in ITS OWN priority order — 'highest wins, tie-broken",
+        "#: by user's engagement history'. A tuple rather than an ordinal map",
+        "#: because the only thing anything does with this is walk it in order,",
+        "#: and a map would let a caller iterate a dict and get insertion order by",
+        "#: luck. The ordinals in the source JSON are checked against 1..6.",
+        f"CONTEXTUAL_TRIGGER_PRIORITY: tuple[{triggers['enum_name']}, ...] = (",
+    ]
+    for m in sorted(triggers["members"], key=lambda m: m["ordinal"]):
+        lines.append(f"    {triggers['enum_name']}.{py_ident(m['id'])},")
+    lines += [")", ""]
+    for name, const in notifications["constants"].items():
+        lines += ["", f"#: {const['$comment']}", f"{name} = {py_const(const['value'])}"]
+    lines.append("")
+    (PY_OUT / "notifications.py").write_text("\n".join(lines), encoding="utf-8")
 
     # modules.py
     lines = [
@@ -632,6 +707,37 @@ def gen_python(
         ")",
         "from sitara_schemas.memory_types import MEMORY_TYPE_ORDER, MemoryType",
         "from sitara_schemas.modules import MORNING_MODULE_ORDER, MorningModule",
+        "from sitara_schemas.notifications import (",
+        "    BRIEF_DELIVERY_SLO_MINUTES,",
+        "    BRIEF_EXPIRY_LOCAL_HOUR,",
+        "    CONTEXTUAL_DAILY_CAP,",
+        "    CONTEXTUAL_TRIGGER_PRIORITY,",
+        "    CONTEXTUAL_TRIGGERS,",
+        "    DAILY_CAP,",
+        "    DEDUPE_WINDOW_HOURS,",
+        "    DELIVERY_FAILURES,",
+        "    MARKETING_WEEKLY_CAP,",
+        "    MESSAGE_CLASS_LETTER,",
+        "    MESSAGE_CLASSES,",
+        "    NIGHT_NUDGE_EXPIRY_LOCAL,",
+        "    NOTIFICATION_CATEGORIES,",
+        "    NOTIFICATION_CHANNELS,",
+        "    NOTIFICATION_STATUSES,",
+        "    OTP_EXPIRY_MINUTES,",
+        "    PAUSE_EVERYTHING_DAYS,",
+        "    PREFERENCE_APPLY_SECONDS,",
+        "    PUSH_CONSECUTIVE_FAILURES_DEAD,",
+        "    PUSH_SUBSCRIPTION_STATES,",
+        "    QUIET_HOURS_DEFAULT_END,",
+        "    QUIET_HOURS_DEFAULT_START,",
+        "    ContextualTrigger,",
+        "    DeliveryFailure,",
+        "    MessageClass,",
+        "    NotificationCategory,",
+        "    NotificationChannel,",
+        "    NotificationStatus,",
+        "    PushSubscriptionState,",
+        ")",
         "from sitara_schemas.payments import (",
         "    ANNUAL_REFUND_WINDOW_DAYS,",
         "    BILLING_REGIONS,",
@@ -707,6 +813,35 @@ def gen_python(
     for name in sorted(
         [
             "BARGE_IN_REASONS",
+            "BRIEF_DELIVERY_SLO_MINUTES",
+            "BRIEF_EXPIRY_LOCAL_HOUR",
+            "CONTEXTUAL_DAILY_CAP",
+            "CONTEXTUAL_TRIGGERS",
+            "CONTEXTUAL_TRIGGER_PRIORITY",
+            "ContextualTrigger",
+            "DAILY_CAP",
+            "DEDUPE_WINDOW_HOURS",
+            "DELIVERY_FAILURES",
+            "DeliveryFailure",
+            "MARKETING_WEEKLY_CAP",
+            "MESSAGE_CLASSES",
+            "MESSAGE_CLASS_LETTER",
+            "MessageClass",
+            "NIGHT_NUDGE_EXPIRY_LOCAL",
+            "NOTIFICATION_CATEGORIES",
+            "NOTIFICATION_CHANNELS",
+            "NOTIFICATION_STATUSES",
+            "NotificationCategory",
+            "NotificationChannel",
+            "NotificationStatus",
+            "OTP_EXPIRY_MINUTES",
+            "PAUSE_EVERYTHING_DAYS",
+            "PREFERENCE_APPLY_SECONDS",
+            "PUSH_CONSECUTIVE_FAILURES_DEAD",
+            "PUSH_SUBSCRIPTION_STATES",
+            "PushSubscriptionState",
+            "QUIET_HOURS_DEFAULT_END",
+            "QUIET_HOURS_DEFAULT_START",
             "ANNUAL_REFUND_WINDOW_DAYS",
             "BILLING_REGIONS",
             "CURRENCIES",
@@ -854,6 +989,7 @@ def gen_typescript(
     chat: dict,
     voice: dict,
     payments: dict,
+    notifications: dict,
 ) -> None:
     TS_OUT.mkdir(parents=True, exist_ok=True)
     bf = ws["binary_frame"]
@@ -1010,6 +1146,42 @@ def gen_typescript(
         ]
     lines += [
         "// ---------------------------------------------------------------------------",
+        "// SPEC §23 — the vocabulary of a notification.",
+        "// The CATEGORIES are §23.5's matrix rows and the CHANNELS are its columns;",
+        "// S41 renders the grid from these two sets. `message_class` is deliberately",
+        "// a separate set from `notification_category`: a class is behaviour the",
+        "// server hard-codes (§23.1) and a category is a choice the user makes, and",
+        "// they differ exactly where it matters — Class T has no toggle at all.",
+        "// ---------------------------------------------------------------------------",
+    ]
+    for enum in notifications["enums"].values():
+        lines += ts_enum(enum)
+    classes = notifications["enums"]["message_class"]
+    lines += [
+        "/** §23.1's own labels. Documentation — the IDs are the wire format. */",
+        f"export const MESSAGE_CLASS_LETTER: Record<{classes['enum_name']}, string> = {{",
+    ]
+    for m in classes["members"]:
+        lines.append(f'  {m["id"]}: "{m["letter"]}",')
+    triggers = notifications["enums"]["contextual_trigger"]
+    trigger_ids = ", ".join(
+        f'"{m["id"]}"' for m in sorted(triggers["members"], key=lambda m: m["ordinal"])
+    )
+    lines += [
+        "};",
+        "",
+        "/** §23.2's catalogue in its own priority order — highest wins. */",
+        f"export const CONTEXTUAL_TRIGGER_PRIORITY = [{trigger_ids}] as const;",
+        "",
+    ]
+    for name, const in notifications["constants"].items():
+        lines += [
+            f"/** {const['$comment']} */",
+            f"export const {name} = {json.dumps(const['value'])} as const;",
+            "",
+        ]
+    lines += [
+        "// ---------------------------------------------------------------------------",
         "// SPEC §34.6 — control-event payloads: the text chat (S18), voice notes",
         "// (M9) and the live call (M9-P10b). All fifteen members are typed now; the",
         "// member SET is unchanged and stays closed at fifteen (§31.3).",
@@ -1076,19 +1248,48 @@ def main() -> None:
     voice = load("voice.json")
     call_media = load("call-media.json")
     payments = load("payments.json")
+    notifications = load("notifications.json")
 
     assert len(modules["members"]) == 17, "SPEC §34.3: exactly 17 morning modules"
     assert len(confidence["members"]) == 5, "SPEC §5.4: exactly 5 confidence states"
     assert len(ws["members"]) == 15, "SPEC §34.6: closed set of 15 control events"
     assert len(presence["members"]) == 12, "SPEC §4.3: exactly 12 presence states"
     assert len(memory_types["members"]) == 11, "SPEC §32.4: exactly 11 memory types"
+    assert len(notifications["enums"]["message_class"]["members"]) == 4, (
+        "SPEC §23.1: exactly four message classes, and their behaviour is "
+        "hard-coded per class — a fifth would be a behaviour nothing implements"
+    )
+    assert len(notifications["enums"]["contextual_trigger"]["members"]) == 6, (
+        "SPEC §23.2: the contextual catalogue is SIX triggers and closed — "
+        "'Nothing else qualifies'"
+    )
     # §4.3 and §32.4 both NUMBER their members, and the numbering is what a
     # reader checks this file against the spec with. A gap in it means one was
-    # dropped in an edit and the list still looks complete.
-    for source, spec in ((presence, "§4.3"), (memory_types, "§32.4")):
-        assert [m["ordinal"] for m in source["members"]] == list(
+    # dropped in an edit and the list still looks complete. §23.2 numbers its
+    # triggers too, and there the numbering is not documentation at all — it is
+    # the PRIORITY ORDER the 1/day slot is awarded by.
+    for source, spec in (
+        (presence, "§4.3"),
+        (memory_types, "§32.4"),
+        (notifications["enums"]["contextual_trigger"], "§23.2"),
+    ):
+        assert sorted(m["ordinal"] for m in source["members"]) == list(
             range(1, len(source["members"]) + 1)
         ), f"{spec} numbers its members 1..n with no gaps"
+
+    # §23.2's trigger 1 is the one the catalogue would be wrong without: a
+    # user-requested reminder "always wins, and does NOT consume the contextual
+    # slot (it is Class T, user-initiated)". If it were ever renumbered below
+    # another trigger, "always wins" would still be in the comment and would
+    # stop being true — and the failure is invisible, because every OTHER
+    # trigger would still be awarded the slot correctly.
+    assert (
+        min(
+            notifications["enums"]["contextual_trigger"]["members"],
+            key=lambda m: m["ordinal"],
+        )["id"]
+        == "user_reminder"
+    ), "SPEC §23.2(1): a user-requested reminder always wins"
     for m in codes["members"]:
         assert any(m["code"].startswith(ns) for ns in codes["namespaces"]), (
             f"error code {m['code']} outside closed namespaces"
@@ -1117,7 +1318,19 @@ def main() -> None:
         "state, and the difference between them is what the user may still do"
     )
 
-    gen_python(modules, codes, envelope, ws, today, presence, memory_types, chat, voice, payments)
+    gen_python(
+        modules,
+        codes,
+        envelope,
+        ws,
+        today,
+        presence,
+        memory_types,
+        chat,
+        voice,
+        payments,
+        notifications,
+    )
     gen_call_media(call_media)
     gen_typescript(
         modules,
@@ -1131,11 +1344,12 @@ def main() -> None:
         chat,
         voice,
         payments,
+        notifications,
     )
     print(
         "generated: python/sitara_schemas/"
         "{__init__,modules,errors,ws_events,today,presence,memory_types,chat,voice,"
-        "call_media,payments}.py"
+        "call_media,payments,notifications}.py"
     )
     print("generated: typescript/src/index.ts")
 

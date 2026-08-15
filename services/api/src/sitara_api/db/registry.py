@@ -1204,6 +1204,117 @@ SPECS: tuple[CollectionSpec, ...] = (
         notes="Built by M1.",
     ),
     CollectionSpec(
+        name="push_subscriptions",
+        spec_ref="§23.6 / §6.2",
+        purpose=(
+            "§23.6's web-push token lifecycle: 'Web-push subscriptions: stored "
+            "per device with `endpoint`, keys, UA, created/last-success'. Its "
+            "own collection and not a field on `users` because §23.6 is "
+            "explicitly PER DEVICE — a phone, a laptop and an installed PWA "
+            "are three subscriptions, and one of them dying must not retire "
+            "the other two."
+        ),
+        retention=(
+            "with user; a dead subscription is KEPT, not deleted — §23.6 "
+            "attempts a silent re-subscribe on next app open, and a deleted "
+            "row makes 'this device had push and lost it' indistinguishable "
+            "from 'this device never had it'"
+        ),
+        shard_key="hashed(user_id)",
+        fields={
+            "user_id": OID,
+            #: The push service's own URL. Opaque, and NOT a secret — it is
+            #: however a capability: anyone holding it can send this browser a
+            #: (correctly VAPID-signed) push, which is why §13's no-PII-in-logs
+            #: rule is applied to it in `webpush.py`.
+            "endpoint": STR,
+            "p256dh": STR,
+            "auth": STR,
+            #: §23.6 names the UA. Kept for the operator question §23.8 raises
+            #: — a dead-token rate that is entirely one browser version is a
+            #: different problem from one spread evenly.
+            "user_agent": [STR, "null"],
+            "state": STR,
+            "last_success_at": [DT, "null"],
+            #: §23.6's "3 consecutive failures → dead". Consecutive, so any
+            #: success resets it — a cumulative count would retire a
+            #: subscription that has worked every morning for a year.
+            "consecutive_failures": INT,
+            "dead_at": [DT, "null"],
+            "dead_reason": [STR, "null"],
+        },
+        required=("user_id", "endpoint", "p256dh", "auth", "state"),
+        indexes=(
+            IndexSpec(
+                _asc("user_id", "state"),
+                cite=(
+                    "§23.3 — the fallback ladder asks 'has this user a LIVE "
+                    "subscription' on every daily-loop message"
+                ),
+            ),
+            IndexSpec(
+                _asc("endpoint"),
+                unique=True,
+                name="uniq_endpoint",
+                cite=(
+                    "§23.6 — a re-subscribe returns the SAME endpoint when the "
+                    "browser still holds it, so an upsert on this key is what "
+                    "makes the silent re-subscribe idempotent rather than "
+                    "accumulating a row per app open"
+                ),
+            ),
+        ),
+        notes="Built by M12 (§23).",
+    ),
+    CollectionSpec(
+        name="notification_preferences",
+        spec_ref="§23.5 / §32.6",
+        purpose=(
+            "§23.5's preference centre (S41): the category × channel matrix, "
+            "quiet hours, brief time, the one-week pause and the travel "
+            "toggle. One document per user."
+        ),
+        retention="with user",
+        shard_key="hashed(user_id)",
+        fields={
+            "user_id": OID,
+            #: The 5×3 grid, stored as "category:channel" → bool. A nested
+            #: document per category would make a missing CHANNEL and a missing
+            #: CATEGORY two different absences to handle on read; one flat map
+            #: has exactly one.
+            "matrix": OBJ,
+            "quiet_hours_start": STR,
+            "quiet_hours_end": STR,
+            #: §7.1's zero-padded local "HH:MM". The padding is load-bearing —
+            #: the §7.1 wave index does a STRING range scan over the same value
+            #: on `users`, and "7:00" sorts after "10:00".
+            "brief_time": STR,
+            #: §23.5's pause, as an instant rather than a flag. A flag a job has
+            #: not yet cleared is a pause that outlives its week.
+            "paused_until": [DT, "null"],
+            "follow_timezone": BOOL,
+            "home_timezone": STR,
+            #: §32.6 — "The settings UI flags the overlap once". The
+            #: fingerprint she acknowledged, so a LATER overlap she has never
+            #: seen flags again and an unchanged one stays quiet.
+            "quiet_overlap_acknowledged": [STR, "null"],
+        },
+        required=("user_id", "matrix"),
+        indexes=(
+            IndexSpec(
+                _asc("user_id"),
+                unique=True,
+                name="uniq_user",
+                cite=(
+                    "§23.5 — one preference centre per user. Two rows would "
+                    "make 'which of these is she looking at' a race between "
+                    "the screen and the notification worker"
+                ),
+            ),
+        ),
+        notes="Built by M12 (§23).",
+    ),
+    CollectionSpec(
         name="link_conflicts",
         spec_ref="§32.12",
         purpose="One pending account-link choose-flow per user at a time.",

@@ -247,6 +247,12 @@ def _state(**overrides) -> TodayState:  # noqa: ANN003
         # §30.6: hidden in P0. A dev switcher that turned it on would be
         # previewing a surface the build does not ship.
         "story_ring_enabled": False,
+        # The fixtures exist to render every DESIGNED state, and a festival
+        # variant that could not check the calendar would be previewing the
+        # outage rather than the design. The `provider_degraded` variant below
+        # overrides it to False, which is what makes S17's honest absence a
+        # state someone can actually look at.
+        "festival_calendar_available": True,
     }
     return TodayState(**{**base, **overrides})
 
@@ -286,7 +292,15 @@ VARIANTS: dict[str, tuple] = {
     # in it, exactly as a real one would.
     "offline": (full_facts(), "08:30", {}, True),
     # The ONE variant that must run the polish stage: §7.1's degrade is
-    "provider_degraded": (degraded_facts(), "08:30", {}, False),
+    # The provider that is degraded here IS the calendar layer (§5.2 Layer B),
+    # so this variant is also the one that renders S17's "we could not check"
+    # absence rather than its "nothing falls today" one.
+    "provider_degraded": (
+        degraded_facts(),
+        "08:30",
+        {"festival_calendar_available": False},
+        False,
+    ),
     "trial": (full_facts(), "08:30", {"plan": PlanState.TRIAL, "trial_day": 4}, True),
     "premium": (full_facts(), "08:30", {"plan": PlanState.PREMIUM}, True),
     "free": (full_facts(), "08:30", {"plan": PlanState.FREE}, True),

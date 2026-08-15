@@ -19,8 +19,11 @@ from sitara_schemas import ErrorCode
 from sitara_api.auth.router import CurrentSession
 from sitara_api.chat_orchestration.store import to_object_id
 from sitara_api.errors import ApiError
+from sitara_api.voice import preview
 from sitara_api.voice.audio import pcm_to_wav
 from sitara_api.voice.expiry import delete_note
+from sitara_api.voice.providers.base import VoiceProviderUnavailable
+from sitara_api.voice.providers.registry import build_tts
 from sitara_api.voice.storage import MongoVoiceAssetStore
 
 logger = logging.getLogger(__name__)
@@ -32,6 +35,22 @@ class AudioRetentionPayload(BaseModel):
     """§33.1's global setting: "delete my audio after transcription"."""
 
     delete_after_transcription: bool
+
+
+class NamePronunciationPayload(BaseModel):
+    """§2.4-6's per-user name override, from S12's "that's not how it sounds".
+
+    `override` is a RESPELLING, not a new name: §3.4 sends it to the
+    synthesiser and nowhere else, and `display_name` — what the user is
+    actually called, in their thread and their brief — is untouched by this
+    endpoint. None clears it and returns Tara to saying the name as written.
+
+    The field name matches `profiles.name_pronunciation.override`, which
+    `db/seed.py` has declared since M4. See `voice/preview.py` for why a new
+    name beside it would have been the wrong call.
+    """
+
+    override: str | None = None
 
 
 def _store(request: Request) -> MongoVoiceAssetStore:
@@ -99,6 +118,90 @@ async def delete_note_audio(
         raise ApiError(ErrorCode.AUTH_FORBIDDEN, "errors.auth.forbidden")
 
     await delete_note(request.app.state.db, asset_id)
+    return Response(status_code=204)
+
+
+@router.post("/preview")
+async def get_voice_preview(request: Request, session: CurrentSession) -> Response:
+    """S12: Tara says the user's name (§29.1, §0.11 item 11).
+
+    **There is no request body carrying text, and there is no query parameter
+    carrying text.** The sentence is a catalog key resolved server-side in the
+    account's locale; the only thing that varies is the user's own name. See
+    `voice/preview.py` — this is `speak_holding_phrase`'s rule on a second
+    surface, and the signature is the guarantee rather than a convention.
+
+    POST rather than GET because it costs a vendor call: a GET is what a
+    prefetcher, a link scanner and a browser's back-forward cache will all
+    issue on their own, and each one is money and a rate-limit slot spent on
+    audio nobody asked to hear.
+    """
+    user_id, _session_id = session
+    db = getattr(request.app.state, "db", None)
+    if db is None:
+        raise ApiError(ErrorCode.SYS_UNAVAILABLE, "errors.sys.unavailable")
+
+    oid = to_object_id(user_id, field_name="user_id")
+    profile = await db.profiles.find_one({"user_id": oid})
+    user = await db.users.find_one({"_id": oid}) or {}
+    # §2.4: the ACCOUNT's locale, never a client-supplied one. A preview is the
+    # first time the product speaks, and letting the caller pick the language
+    # is how it speaks the wrong one.
+    locale = user.get("locale") or (profile or {}).get("locale")
+    if not locale:
+        raise ApiError(ErrorCode.SYS_VALIDATION, "errors.sys.validation")
+
+    settings = request.app.state.voice_settings
+    try:
+        result = await preview.synthesise_preview(
+            build_tts(settings),
+            locale=locale,
+            profile=profile,
+            environment=getattr(request.app.state.settings, "environment", "dev"),
+        )
+    except VoiceProviderUnavailable as exc:
+        # §30.1: her voice being unavailable is a designed state on this
+        # screen, not an error page. S12 already renders it.
+        logger.info("voice preview unavailable: %s", exc)
+        # Retryability is a property of the CODE (`DEFAULT_RETRYABLE`), not of
+        # the call site — so the envelope says retryable here without this
+        # raise having an opinion about it.
+        raise ApiError(ErrorCode.VOICE_PROVIDER_UNAVAILABLE) from exc
+
+    return Response(
+        content=pcm_to_wav(result.audio, result.sample_rate_hz),
+        media_type="audio/wav",
+        headers={
+            # Her voice saying a specific person's name. §13's rule for the
+            # user's own audio applies to this for the same reason.
+            "Cache-Control": "private, no-store",
+            "Content-Disposition": "inline",
+        },
+    )
+
+
+@router.put("/settings/name-pronunciation", status_code=204)
+async def set_name_pronunciation(
+    payload: NamePronunciationPayload, request: Request, session: CurrentSession
+) -> Response:
+    """§2.4-6: "Tara asks once, in-locale, how to say it, and stores the
+    phonetic override in the user's profile."
+
+    Writes ONE field, beside the display name rather than over it. §3.4 keeps
+    the two apart on purpose: a respelling that reached a transcript would put
+    a stranger's spelling of someone's own name into their own thread.
+    """
+    user_id, _session_id = session
+    db = getattr(request.app.state, "db", None)
+    if db is None:
+        raise ApiError(ErrorCode.SYS_UNAVAILABLE, "errors.sys.unavailable")
+
+    spoken = (payload.override or "").strip() or None
+    await db.profiles.update_one(
+        {"user_id": to_object_id(user_id, field_name="user_id")},
+        {"$set": {"name_pronunciation.override": spoken}},
+        upsert=False,
+    )
     return Response(status_code=204)
 
 

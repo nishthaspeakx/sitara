@@ -74,6 +74,19 @@ export interface PurchaseResult {
   provider_ref: string;
 }
 
+export interface GiftResult {
+  code: string;
+  plan: PlanId;
+  region: BillingRegion;
+  /** The gift's OWN money (§30.3), which need not be the redeemer's currency. */
+  value_minor: number;
+  currency: string;
+  term_days: number;
+  expires_at: string;
+  /** Whether the rail that took this money moves any. S32 says so plainly. */
+  simulated: boolean;
+}
+
 export interface RedemptionResult {
   outcome: string;
   message_key: string;
@@ -152,6 +165,30 @@ export function cancelSubscription(): Promise<ApiResult<Subscription>> {
 /** §22.16's 7-day no-questions window, annual only. */
 export function requestRefund(): Promise<ApiResult<Subscription>> {
   return apiCall<Subscription>("/v1/subscription/refund", { method: "POST" });
+}
+
+/**
+ * §30.3's S32 — buy a term for somebody else.
+ *
+ * There is no recipient parameter, and there is none on the server either.
+ * §25/§27 make a gift a bearer instrument: the buyer gets a code and passes it
+ * on however they like. An email or phone field here would make this a flow
+ * that MESSAGES a third party — a §23 notification, with a §23.5 consent
+ * question attached, to someone who has no account and agreed to nothing.
+ */
+export function purchaseGift(body: {
+  plan: PlanId;
+  region: BillingRegion;
+  idempotencyKey: string;
+}): Promise<ApiResult<GiftResult>> {
+  return apiCall<GiftResult>("/v1/subscription/gift", {
+    method: "POST",
+    body: JSON.stringify({
+      plan: body.plan,
+      region: body.region,
+      idempotency_key: body.idempotencyKey,
+    }),
+  });
 }
 
 export function redeemGift(code: string): Promise<ApiResult<RedemptionResult>> {

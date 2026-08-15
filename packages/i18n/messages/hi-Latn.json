@@ -86,7 +86,8 @@
     },
     "journal": {
       "not_saveable": "Use alag se save nahin kiya ja sakta — woh ek lamha hai jo main aapke liye rakhti hoon, koi note nahin.",
-      "save_not_found": "Woh saved cheez mujhe nahin mil rahi — shayad aapke journal se pehle hi hata di gayi hai."
+      "save_not_found": "Woh saved cheez mujhe nahin mil rahi — shayad aapke journal se pehle hi hata di gayi hai.",
+      "bad_date": "Yeh aisi tareekh nahin hai jise main khol sakoon. Aapki journal jahan thi wahin hai."
     },
     "family": {
       "not_found": "Woh vyakti aapki family list mein nahin mil rahe — shayad pehle hi hata diye gaye hain."
@@ -487,7 +488,8 @@
       "tara": "Tara",
       "summary_save": "Yeh call apni journal mein save karein?",
       "start": "Tara ko call karein",
-      "thinking_still": "Abhi bhi soch rahi hoon"
+      "thinking_still": "Abhi bhi soch rahi hoon",
+      "browser_stt_demo": "Demo bridge — aapki aawaaz Chrome likh raha hai, Sitara nahin. Hindi mein call abhi uplabdh nahin hai."
     },
     "panchang": {
       "label": "Aaj ka panchang",
@@ -803,7 +805,14 @@
       "subtitle": "Woh aapka naam lengi. Galat lage to bata dijiye.",
       "play": "Unse suniye",
       "replay": "Phir se kahein",
+      "preview_line": "Namaste, {name}. Main Tara hoon. Har subah main aapke saath rahungi.",
       "fix_pronunciation": "Yeh aise nahin bola jaata",
+      "fix_title": "Yeh kaise bola jaata hai?",
+      "fix_help": "Jaise bola jaata hai waise likhiye, jaise likha jaata hai waise nahin. Iska upyog sirf Tara ki aawaaz karti hai — baaki har jagah aapka naam waisa hi rahega jaisa aapne likha.",
+      "fix_placeholder": "jaise, Aa-SHA",
+      "fix_save": "Sunkar dekhiye",
+      "fix_clear": "Jaisa likha hai waise hi bolein",
+      "fix_cancel": "Rehne dijiye",
       "voice_on_label": "Tara bolkar batayein",
       "voice_on_help": "Aap hamesha padh bhi sakti hain. Ise kabhi bhi settings mein badla ja sakta hai."
     },
@@ -905,6 +914,8 @@
       "title": "Aaj ka parv",
       "tradition": "{tradition} panchang ke anusaar.",
       "empty": "Aaj koi parv nahin hai.",
+      "unchecked": "Aaj Sitara parv panchang tak nahin pahunch saki, isliye woh kuch nahin kahegi.",
+      "unchecked_note": "Din ke muhurat aur aapka paath yahin ganana kiye jaate hain — un par koi asar nahin pada.",
       "practice": "Agar aap ise maanti hain"
     },
     "why": {
@@ -1032,9 +1043,11 @@
     "memories_detail": "{count, plural, =0 {Abhi kuch nahin} one {# note} other {# notes}}",
     "family": "Aapke apne",
     "family_detail": "{count, plural, =0 {Abhi koi nahin} one {# vyakti} other {# vyakti}}",
-    "later": "Settings aur nijta aage kisi release mein aayengi.",
+    "later": "Nijta niyantran aage kisi release mein aayenge.",
     "subscription": "Subscription",
-    "subscription_detail": "Aapka plan aur receipts"
+    "subscription_detail": "Aapka plan aur receipts",
+    "notifications": "Soochnaayein",
+    "notifications_detail": "Tara kya bhejti hai, aur kahaan."
   },
   "reflection": {
     "title": "Aaj raat",
@@ -1084,7 +1097,7 @@
     "region_keep": "{current} hi rakhiye",
     "region_switch": "{other} mein badliye",
     "founding_note": "Aap founding price par hain. Yeh doosre billing region mein nahi jaata.",
-    "simulated": "Demo mode — koi paisa nahi jaata. Payments simulator par chalte hain (§30.3).",
+    "simulated": "Demo mode — koi paisa nahi jaata. Payments simulator par chalte hain.",
     "manage_store": "App Store mein manage kijiye",
     "gift_extended": "Ek gift ne {days} din jode. Aapki subscription ka plan aur currency wahi rahenge.",
     "unavailable": "Aapke region mein hum abhi payments nahi le sakte.",
@@ -1139,12 +1152,32 @@
     "migration_mid_cycle": "Billing region aap agle renewal par badal sakti hain, beech mein nahi.",
     "not_simulated": "Woh control sirf payment simulator ke saath kaam karta hai.",
     "gift": {
-      "unredeemable": "Yeh gift code istemaal nahi ho sakta. Humein likhiye, hum hal kar denge."
+      "unredeemable": "Yeh gift code istemaal nahi ho sakta. Humein likhiye, hum hal kar denge.",
+      "activated": "Aapka gift live ho gaya. Swaagat hai.",
+      "converted": "Aapki subscription mein jud gaya."
     }
   },
   "gift": {
-    "activated": "Aapka gift live ho gaya. Swaagat hai.",
-    "converted": "Aapki subscription mein jud gaya."
+    "title": "Sitara gift mein dijiye",
+    "subtitle": "Kisi ke liye ek saal ya ek mahina kharidiye. Aapko ek code milega, jise aap jaise chahein bhej sakti hain.",
+    "buy": "Yeh gift kharidiye",
+    "code_title": "Yeh raha code",
+    "code_help": "Ise jaise chahein bhejiye — Sitara aapki or se kisi ko message nahin bhejti.",
+    "copy": "Code copy kijiye",
+    "copied": "Copy ho gaya",
+    "expires": "{date} tak istemaal kiya ja sakta hai.",
+    "recipient_note": "Woh ise sitara.app par daalenge, ya aapka bheja link kholenge.",
+    "redeem": {
+      "title": "Aapko Sitara gift mein mili hai",
+      "subtitle": "Aapko bheja gaya code daaliye.",
+      "label": "Gift code",
+      "placeholder": "SITARA-XXXX-XXXX",
+      "cta": "Yeh gift istemaal kijiye",
+      "value": "Dene waale ne {amount} diye.",
+      "extended": "Ab aapki subscription {date} tak chalegi.",
+      "open": "Sitara kholiye",
+      "support": "Humein likhiye"
+    }
   },
   "call": {
     "holding": {
@@ -1152,5 +1185,98 @@
       "moment": "Ek pal — main yahin hoon.",
       "time": "Is par mujhe thoda waqt deejiye."
     }
+  },
+  "notifications": {
+    "morning": {
+      "title": "Suprabhat",
+      "body": "Aaj ka aapka brief taiyaar hai."
+    },
+    "night": {
+      "title": "Din ka ant",
+      "body": "Din par ek nazar daalne ke liye ek shaant pal, jab bhi aap chaahein."
+    },
+    "contextual": {
+      "title": "Jaanne yogya",
+      "body": "Aaj kuch aisa hai jis par nazar daalna accha rahega."
+    },
+    "festival": {
+      "title": "{festival}",
+      "body": "Aaj {festival} hai. Tara ne is par ek baat likhi hai."
+    },
+    "marketing": {
+      "title": "Tara ki or se",
+      "body": "Aapki subscription ke baare mein ek baat, jab bhi aapke paas ek minute ho."
+    },
+    "trigger": {
+      "user_reminder": {
+        "title": "Aapne jo yaad dilaane ko kaha tha",
+        "body": "Aapne Tara se yaad dilaane ko kaha tha: {note}"
+      },
+      "muhurat": {
+        "title": "Aapka muhurat paas hai",
+        "body": "Jis muhurat ke baare mein aapne poocha tha wah {time} baje shuru hota hai."
+      },
+      "festival_or_family": {
+        "title": "{occasion}",
+        "body": "{occasion} — Tara ne is par ek baat likhi hai."
+      },
+      "reflection_followup": {
+        "title": "Kal raat se",
+        "body": "Aap aaj {topic} par waapas aana chaahti theen."
+      },
+      "transit_change": {
+        "title": "Kuch badla hai",
+        "body": "{graha} ki chaal badli hai. Tara ne ise aaj ke brief mein rakha hai."
+      },
+      "quiet_reengagement": {
+        "title": "Jab bhi aap taiyaar hon",
+        "body": "Tara ke paas aapka brief taiyaar hai, jab aap chaahein."
+      }
+    },
+    "held_by_quiet_hours": "Aapke shaant ghante khatm hone tak roka gaya.",
+    "all_channels_off": "Aapne ise har jagah band kar rakha hai.",
+    "channel_unavailable": "Yah maadhyam abhi uplabdh nahin hai.",
+    "channel_pending": "WhatsApp abhi chaalu nahin hai.",
+    "no_reachable_address": "Iske liye aap tak pahunchne ka koi raasta abhi hamaare paas nahin hai."
+  },
+  "notifsettings": {
+    "title": "Soochnaayein",
+    "subtitle": "Tara kya bhejti hai, aur kahaan.",
+    "category": {
+      "morning": "Subah ka brief",
+      "night": "Raat ka chintan",
+      "contextual": "Jaanne yogya",
+      "festival": "Tyohaar aur paarivaarik tithiyaan",
+      "marketing": "Sitara ki khabrein"
+    },
+    "category_detail": {
+      "morning": "Aapka roz ka brief, aapke chune hue samay par.",
+      "night": "Din par nazar daalne ke liye ek vaikalpik sanket.",
+      "contextual": "Din mein zyaada se zyaada ek, aur tabhi jab koi kaaran ho.",
+      "festival": "Aapki parampara ke tyohaar, aur aapki saheji hui tithiyaan.",
+      "marketing": "Offers aur product samaachaar. Jab tak aap chaalu na karein, band rehte hain."
+    },
+    "channel": {
+      "push": "Push",
+      "whatsapp": "WhatsApp",
+      "email": "Email"
+    },
+    "channel_pending": "Abhi uplabdh nahin",
+    "quiet_hours": "Shaant ghante",
+    "quiet_hours_detail": "In samayon ke beech kuch nahin aata, suraksha sandeshon ke alaawa.",
+    "quiet_from": "Se",
+    "quiet_to": "Tak",
+    "brief_time": "Brief ka samay",
+    "brief_time_detail": "Aapka subah ka brief kab aata hai.",
+    "overlap_notice": "Aapka brief aapke shaant ghanton ke bheetar aata hai — yah theek hai, bas bata rahe hain.",
+    "overlap_ack": "Samajh gayi",
+    "pause": "Ek hafte ke liye sab kuch rokein",
+    "pause_detail": "Suraksha sandesh phir bhi aate rahenge. Saaf-saaf keh rahe hain, kyunki ve aate hain.",
+    "paused_until": "{date} tak ruka hua.",
+    "resume": "Soochnaayein phir chaalu karein",
+    "travel": "Jab aap yaatra karein",
+    "travel_follow": "Mera time zone apnaayein",
+    "travel_home": "Ghar ka samay rakhein",
+    "saved": "Saheja gaya."
   }
 }

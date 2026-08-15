@@ -35,6 +35,8 @@ from sitara_api.journal.store import JournalStore
 from sitara_api.localisation import verify_catalogs
 from sitara_api.memory import MemorySettings, build_memory_service
 from sitara_api.memory.router import router as memory_router
+from sitara_api.notifications.router import router as notifications_router
+from sitara_api.notifications.wiring import build_service as build_notifications
 from sitara_api.numerology.adapter import AstroNumerologyAdapter
 from sitara_api.numerology.router import router as numerology_router
 from sitara_api.onboarding.router import router as onboarding_router
@@ -163,7 +165,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 app.state.chat_pipeline.message_store if app.state.chat_pipeline else None
             ),
             tts=build_streaming_tts(app.state.voice_settings),
-            voice_id=app.state.voice_settings.tara_voice_id,
             environment=settings.environment,
         )
         app.state.minute_ledger = MinuteLedger(db, settings)
@@ -179,6 +180,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # because these are counters and a reservoir, and no TTL because a
         # launch gate whose evidence expired would quietly reset the decision.
         app.state.call_metrics = CallMetrics(RedisMetricStore(app.state.redis))
+        # §23's send path. Built after Redis because all three of its
+        # cross-process guards live there — §23.3's 24h dedupe key, §23.5's
+        # 60-second preference cache and §23.7's emergency stop — and after the
+        # database because §23.7 makes the `notifications` document the single
+        # source of truth for every message's status.
+        #
+        # It is built even when NO channel is configured. §23's gates are the
+        # product; the channels are how the result leaves the building, and a
+        # deployment with no VAPID key still runs quiet hours, the caps and the
+        # catalogue and then records honestly that it could reach nobody.
+        app.state.notifications = build_notifications(db, app.state.redis, settings)
         # §7.1's pipeline, for the on-open path `GET /v1/today` needs (§28.2).
         # Built ONCE here rather than per request: it provisions a CSFLE codec
         # holding a key-vault connection, and Today is the app's busiest screen.
@@ -209,6 +221,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.minute_ledger = None
     app.state.payments = None
     app.state.payment_rail = None
+    app.state.notifications = None
     # §2.4: the service renders §9's safety and decline strings itself. A
     # missing catalog must surface here, not when an L4 turn needs the crisis
     # line.
@@ -258,11 +271,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(onboarding_router)
     app.include_router(today_router)
     app.include_router(subscription_router)
+    app.include_router(notifications_router)
     # §28.2's variant switcher runs the REAL service over fact fixtures, and
     # it exists ONLY in dev — `db.seed` refuses a non-dev host for the same
     # reason: a convenience that can reach production data is not one.
     if settings.environment == "dev":
         from sitara_api.daily_guidance.dev_router import router as today_dev_router
+        from sitara_api.notifications.dev_router import router as notifications_dev_router
         from sitara_api.payments.dev_router import router as payments_dev_router
 
         app.include_router(today_dev_router)
@@ -270,6 +285,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # grace period", "gift to an existing subscriber". Dev only, for the
         # obvious reason: it can grant paid access.
         app.include_router(payments_dev_router)
+        # §23's driver — fire any class or trigger, halt a queue, kill a push
+        # subscription and watch the ladder fall back. Dev only for the equally
+        # obvious reason: it can send a person a message.
+        app.include_router(notifications_dev_router)
 
     @app.get("/healthz")
     def healthz() -> dict[str, str]:

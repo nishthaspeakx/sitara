@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel
 from sitara_schemas import ErrorCode
 
+from sitara_api import prototype
 from sitara_api.auth.firebase import FirebaseVerifier, get_verifier
 from sitara_api.auth.service import AuthService
 from sitara_api.auth.sessions import ACCESS_COOKIE, REFRESH_COOKIE, MintedSession, SessionService
@@ -63,7 +64,9 @@ def _set_cookies(response: Response, minted: MintedSession, settings: Settings) 
     response.set_cookie(
         ACCESS_COOKIE,
         minted.access_token,
-        max_age=settings.access_ttl_seconds,
+        # Mirrors the Redis TTL above it (`sessions.mint_access`), through the
+        # same resolver so the two cannot drift.
+        max_age=prototype.access_ttl_seconds(settings),
         httponly=True,
         secure=settings.cookie_secure,
         samesite="lax",

@@ -1,0 +1,183 @@
+{
+  "$comment": "SPEC §23 — the vocabulary of a notification. It lands here under the package's own rule, and this time with a second reason on top of it: `sitara_api.daily_guidance.notify` had ALREADY declared `MessageClass` and `NotificationStatus` privately, and S41's §23.5 preference matrix is a screen that renders a category × channel grid the server is the authority on. So the set was about to be declared twice — which is exactly the window in which the confidence states, the presence states, the memory types and the voice vocabulary each drifted. The RULES over these ids — which class bypasses quiet hours, which trigger consumes the 1/day slot, what a dead subscription does to the ladder — belong to `sitara_api.notifications`, exactly as §32.4's consent rules stay in `memory.taxonomy` and §22.13's clock stays in `payments.lifecycle`. This file is the closed sets and nothing else. NOTE the deliberate absence: there is no `notification_provider` enum. Which push service, which SMTP host or which BSP carried a message never crosses to the client — the same rule `payments.json` states about rails, for the same reason.",
+  "$spec": "§23.1, §23.2, §23.3, §23.4, §23.5, §23.6, §23.7, §32.6",
+  "enums": {
+    "message_class": {
+      "$comment": "§23.1's four classes. 'behaviour differs by class — hard-coded, not configurable per template', which is why this is a closed set of four and not a template field. The ID is the wire format and the LETTER is §23's own label — the same split §4.3's presence ordinals and §32.4's memory numbering already use. Writing the letters as the ids would put `MessageClass.T` in every call site and make the one thing a reader most needs (is this the class that bypasses quiet hours?) a lookup rather than a word.",
+      "enum_name": "MessageClass",
+      "const_name": "MESSAGE_CLASSES",
+      "members": [
+        { "id": "transactional", "letter": "T", "note": "§23.1 — OTP, payment receipts/failures, mandate pre-debit notices, security alerts, data-export ready, L4 safety resources. Bypasses quiet hours AND the 3/day cap, never suppressed, highest queue priority, no marketing content ever." },
+        { "id": "daily_loop", "letter": "D", "note": "§23.1 — morning brief, optional night nudge. Scheduled to the user's local clock; quiet hours apply EXCEPT for §32.6's brief_time appointment." },
+        { "id": "contextual", "letter": "C", "note": "§23.1 — max 1/day, earned, never filler. The catalogue is `contextual_trigger` and nothing else qualifies." },
+        { "id": "marketing", "letter": "M", "note": "§23.1 — founding-offer, referral, win-back. Separate legal consent, default OFF, hard-capped 2/week, one-tap unsubscribe per channel. §22.13's dunning is NOT this class." }
+      ]
+    },
+    "notification_channel": {
+      "$comment": "§23.3's three delivery surfaces. Deliberately NOT a provider list: `push` is the browser's own Push API over VAPID (§6.2), `email` is whichever SMTP host is configured, and `whatsapp` is a BSP — which of them answered is `notifications.providers.base.ChannelProviderName` and never crosses to a client. A channel is a thing a user toggles in §23.5's matrix; a provider is a thing operations swaps.",
+      "enum_name": "NotificationChannel",
+      "const_name": "NOTIFICATION_CHANNELS",
+      "members": [
+        { "id": "push", "note": "§6.2 — web push via VAPID. iOS requires an installed PWA ≥16.4, which is why §23.6 offers it only after install." },
+        { "id": "whatsapp", "note": "§23.3 — Meta-compliant explicit opt-in at onboarding step 21; utility vs marketing template categories map to D/T vs M." },
+        { "id": "email", "note": "§23.3 — SES in production, per-class configuration sets, List-Unsubscribe on Class M only." }
+      ]
+    },
+    "notification_category": {
+      "$comment": "§23.5's five per-category toggles — the ROWS of the preference matrix, whose columns are `notification_channel`. Deliberately not the same set as `message_class`: a class is a behaviour the code hard-codes and a category is a choice the user makes, and the two differ in exactly the place that matters. §23.5 gives no toggle for Class T at all (an OTP is not something to opt out of), and it splits Class C into `contextual` and `festival` because a person who wants festival greetings and no transit nudges is an ordinary person rather than an edge case.",
+      "enum_name": "NotificationCategory",
+      "const_name": "NOTIFICATION_CATEGORIES",
+      "members": [
+        { "id": "morning", "note": "§23.5 — the morning brief. Class D. Its time is `brief_time` and §32.6 lets it through quiet hours." },
+        { "id": "night", "note": "§23.5 — the optional night nudge. Class D. Expires 23:30 local (§23.4)." },
+        { "id": "contextual", "note": "§23.5 — the §23.2 catalogue minus festivals. Class C." },
+        { "id": "festival", "note": "§23.5 — festival and family-date reminders. Class C, its own toggle." },
+        { "id": "marketing", "note": "§23.5 / §23.1 — Class M. Default OFF and separately consented; this toggle is the consent's UI, not a second switch beside it." }
+      ]
+    },
+    "contextual_trigger": {
+      "$comment": "§23.2's catalogue, and it is CLOSED — 'Nothing else qualifies.' The ordinal is §23.2's own priority order, highest wins, ties broken by the user's engagement history. Trigger 1 is the odd one and its oddity is load-bearing: a user-requested reminder is Class T (user-initiated), so it neither respects quiet hours nor consumes the 1/day contextual slot, and modelling it anywhere but inside this catalogue would leave 'always wins' as a sentence nothing implements. Every send records its trigger id — that is what §23.2's auto-pause reads.",
+      "enum_name": "ContextualTrigger",
+      "const_name": "CONTEXTUAL_TRIGGERS",
+      "members": [
+        { "id": "user_reminder", "ordinal": 1, "note": "§23.2(1) — 'remind me before the 3pm call'. ALWAYS wins, Class T, does NOT consume the slot." },
+        { "id": "muhurat_window", "ordinal": 2, "note": "§23.2(2) — a muhurat window the user asked about is ≤2h away. TTL expires when the window opens." },
+        { "id": "festival_or_family", "ordinal": 3, "note": "§23.2(3) — festival today/tomorrow relevant to the user's tradition, plus family reminders from the family profile." },
+        { "id": "reflection_followup", "ordinal": 4, "note": "§23.2(4) — an open concern from last night's reflection." },
+        { "id": "transit_change", "ordinal": 5, "note": "§23.2(5) — the ranking engine flagged a transit above the relevance threshold." },
+        { "id": "quiet_reengagement", "ordinal": 6, "note": "§23.2(6) — 3+ quiet days → ONE gentle check-in per week maximum, warm not guilt-based (§29.2)." }
+      ]
+    },
+    "notification_status": {
+      "$comment": "§23.7's single source-of-truth lifecycle: 'status: queued → sent → delivered/failed/expired'. `superseded` is the sixth and is ours rather than the spec's — §23.4's collapse key requires that a regenerated brief REPLACE its push, and a replaced row is neither failed (nothing went wrong) nor expired (its time had not passed). Recording it as either would make §23.8's delivery analytics describe a defect that did not happen.",
+      "enum_name": "NotificationStatus",
+      "const_name": "NOTIFICATION_STATUSES",
+      "members": [
+        { "id": "queued", "note": "written, not yet handed to a channel" },
+        { "id": "sent", "note": "the channel accepted it. NOT the same as delivered." },
+        { "id": "delivered", "note": "the channel confirmed handoff to the device or inbox" },
+        { "id": "failed", "note": "every rung of the §23.3 ladder refused it" },
+        { "id": "expired", "note": "§23.4 — `expires_at` passed while queued. DROPPED, never late-delivered." },
+        { "id": "superseded", "note": "§23.4 — a newer message under the same collapse key replaced it" }
+      ]
+    },
+    "push_subscription_state": {
+      "$comment": "§23.6's token lifecycle, as two states rather than a boolean, because the two die differently and the difference is what the ladder reads. There is no `expiring` member: §23.6 marks a 410/404 dead IMMEDIATELY and 3 consecutive failures dead, and a middle state would be a subscription the router kept trying while the push service had already told us it was gone.",
+      "enum_name": "PushSubscriptionState",
+      "const_name": "PUSH_SUBSCRIPTION_STATES",
+      "members": [
+        { "id": "active", "note": "usable. `last_success_at` is what §23.8's dead-token rate is measured against." },
+        { "id": "dead", "note": "§23.6 — 410/404 from the push service, or 3 consecutive failures. Triggers a silent re-subscribe attempt on next app open; routing falls back meanwhile." }
+      ]
+    },
+    "delivery_failure": {
+      "$comment": "Why a channel did not take a message, NORMALISED — the same rule `payment_failure_reason` states, for the same reason: a push service's status line, an SMTP reply code and a BSP's error body are three vocabularies, and §2.4 would render any of them in the wrong language even where §13 permitted them in a log. The distinction that earns this enum is `subscription_gone` versus `transient`: §23.6 kills a subscription on the first of those and tolerates two of the second, so collapsing them would either kill live subscriptions on a flaky network or keep pushing at an endpoint the browser has already discarded.",
+      "enum_name": "DeliveryFailure",
+      "const_name": "DELIVERY_FAILURES",
+      "members": [
+        { "id": "subscription_gone", "note": "§23.6 — 404/410. The endpoint no longer exists; the subscription is dead on the FIRST occurrence." },
+        { "id": "transient", "note": "timeout, 5xx, a refused connection. Counts toward §23.6's three consecutive failures." },
+        { "id": "rejected", "note": "the channel understood and declined — a payload too large, a suppressed address. Not retryable and not a dead token." },
+        { "id": "unconfigured", "note": "no adapter is wired for this channel in this deployment. §23.3's ladder moves on; it is not a failure of the message." }
+      ]
+    }
+  },
+  "constants": {
+    "DAILY_CAP": {
+      "$comment": "§23.1 / §23.9 — the 3/day cap Class T bypasses. §23.9 makes a cap breach release-blocking, so the number lives here rather than in the job that enforces it and the test that checks it.",
+      "value": 3
+    },
+    "CONTEXTUAL_DAILY_CAP": {
+      "$comment": "§23.1 / §23.2 — 'Class C — Contextual (max 1/day)'. The slot §23.2's trigger 1 deliberately does not consume.",
+      "value": 1
+    },
+    "MARKETING_WEEKLY_CAP": {
+      "$comment": "§23.1 — Class M is 'hard-capped 2/week'. A rolling seven days, not a calendar week: a calendar reset lets four land inside 48 hours across a Sunday.",
+      "value": 2
+    },
+    "QUIET_HOURS_DEFAULT_START": {
+      "$comment": "§23.5 — 'quiet hours (default 22:30–07:00 local, user-adjustable)'. Zero-padded local HH:MM, the same string form §7.1's `brief_time` uses and for the same reason: these are compared as strings.",
+      "value": "22:30"
+    },
+    "QUIET_HOURS_DEFAULT_END": {
+      "$comment": "§23.5 — the other end of the default window. It is BEFORE the start in string order, which is what makes the window wrap midnight; every comparison over it has to handle that and a test pins it.",
+      "value": "07:00"
+    },
+    "PREFERENCE_APPLY_SECONDS": {
+      "$comment": "§23.5 — 'Changes apply within 60s (preferences cached in Redis with pub/sub invalidation)'. This is the cache TTL, which is the ceiling on the promise when the pub/sub message is lost; the invalidation is what makes the ordinary case instant.",
+      "value": 60
+    },
+    "PAUSE_EVERYTHING_DAYS": {
+      "$comment": "§23.5 — 'one-tap \"pause everything for a week\" (Class T exempt, stated plainly)'.",
+      "value": 7
+    },
+    "BRIEF_EXPIRY_LOCAL_HOUR": {
+      "$comment": "§23.4 — 'morning brief push expires at 12:00 local (undelivered → dropped, not late-delivered; the brief itself is in-app regardless)'.",
+      "value": 12
+    },
+    "NIGHT_NUDGE_EXPIRY_LOCAL": {
+      "$comment": "§23.4 — 'night nudge expires at 23:30 local'. A time rather than an hour because 23:30 is not on an hour boundary and rounding it to 23:00 or 00:00 changes who gets a nudge.",
+      "value": "23:30"
+    },
+    "OTP_EXPIRY_MINUTES": {
+      "$comment": "§23.4 — 'Class T never expires except OTP (10 min)'. The ONE exception to the one exception, which is why it is a named constant rather than a literal in the OTP sender.",
+      "value": 10
+    },
+    "DEDUPE_WINDOW_HOURS": {
+      "$comment": "§23.3 — 'cross-channel dedupe key `user+message_id` in Redis, 24h'. What stops the push→WhatsApp fallback from being a double send.",
+      "value": 24
+    },
+    "PUSH_CONSECUTIVE_FAILURES_DEAD": {
+      "$comment": "§23.6 — '3 consecutive failures → dead'. Consecutive, so any success resets the counter; a cumulative count would retire a subscription that has worked a thousand times over a year of flaky mornings.",
+      "value": 3
+    },
+    "REENGAGEMENT_QUIET_DAYS": {
+      "$comment": "§23.2(6) — '3+ quiet days' before a single re-engagement check-in becomes eligible.",
+      "value": 3
+    },
+    "REENGAGEMENT_MAX_PER_WEEK": {
+      "$comment": "§23.2(6) — 'ONE gentle check-in per week maximum'. §29.2 is why there is no second.",
+      "value": 1
+    },
+    "MUHURAT_REMINDER_LEAD_HOURS": {
+      "$comment": "§23.2(2) — the muhurat window the user asked about is 'approaching (≤2h)'.",
+      "value": 2
+    },
+    "TRIGGER_AUTOPAUSE_OPEN_RATE": {
+      "$comment": "§23.2 — 'any trigger with open-rate <15% trailing 14 days is auto-paused and flagged'. Strictly below: a trigger sitting exactly at 15% is not paused.",
+      "value": 0.15
+    },
+    "TRIGGER_AUTOPAUSE_WINDOW_DAYS": {
+      "$comment": "§23.2 — the trailing window the open rate is measured over.",
+      "value": 14
+    },
+    "OPT_OUT_SPIKE_MULTIPLE": {
+      "$comment": "§23.8 — 'opt-out spike >2× baseline on any template (auto-pauses that template, flags admin)'.",
+      "value": 2
+    },
+    "MORNING_WAVE_DELIVERY_FLOOR": {
+      "$comment": "§23.8 — 'morning-wave delivery <97% by +15 min (pages on-call)'.",
+      "value": 0.97
+    },
+    "MORNING_WAVE_ALARM_MINUTES": {
+      "$comment": "§23.8 — the '+15 min' the delivery floor is measured at.",
+      "value": 15
+    },
+    "BRIEF_DELIVERY_SLO_MINUTES": {
+      "$comment": "§23.8 — 'SLO: 95% of morning briefs delivered within 5 min of target time'. This is the number the §23.9 timezone matrix asserts against, which is what makes 'the brief arrives at brief_time' a measurement rather than a claim.",
+      "value": 5
+    },
+    "BRIEF_DELIVERY_SLO_RATE": {
+      "$comment": "§23.8 — the 95% of that SLO.",
+      "value": 0.95
+    },
+    "EMERGENCY_STOP_SECONDS": {
+      "$comment": "§23.7 — 'Emergency stop (§12) halts queues per class/channel/locale in <30s and is drill-tested'. The number the drill measures against.",
+      "value": 30
+    },
+    "LANGUAGE_HEALTH_BAND": {
+      "$comment": "§23.8 — 'a language whose notification open rates sit outside the ±20% band gets the same named-owner treatment as any other per-language metric' (§18).",
+      "value": 0.2
+    }
+  }
+}
