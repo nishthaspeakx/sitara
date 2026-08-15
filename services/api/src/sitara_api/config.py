@@ -5,7 +5,18 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    # `populate_by_name=True` because this class carries `validation_alias`es
+    # (`divineapi_api_key`, `prototype_mode`), and **an alias REPLACES the field
+    # name**: without it `Settings(prototype_mode=True)` silently yields False
+    # while looking like it worked. That is the defect this repo has already
+    # paid for twice — `ChatSettings` for a whole milestone, then
+    # `MemorySettings` — and it was latent here for `divineapi_api_key` too.
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        populate_by_name=True,
+    )
 
     # dev | test | staging | production. Gates the §22.12 hygiene rules: the
     # local KMS provider and the synthetic seeder both refuse to run outside
@@ -69,6 +80,22 @@ class Settings(BaseSettings):
     # because an unconfigured guard on a service-to-service endpoint that runs
     # the pipeline for an arbitrary user id is an open door that looks shut.
     service_key: str | None = None
+
+    # --- PROTOTYPE MODE (dev only) ----------------------------------------
+    # A DEMO AID, not a configuration option. One switch that unblocks a local
+    # walkthrough: calls on regardless of §33.5, Stories on regardless of
+    # §30.6, and §7.3's minute ceiling lifted.
+    #
+    # `prototype.assert_safe` RAISES at app construction if this is set in any
+    # environment but dev, and `prototype.is_active` re-checks the environment
+    # on every read rather than trusting that boot check ran. Release-gate
+    # statuses are never influenced — `release_gates.py` and `voice/call_gate.py`
+    # do not import that module, and a test asserts it from their source.
+    #
+    # Set as `SITARA_PROTOTYPE=1`; see docs/runbooks/live-call-verification.md.
+    prototype_mode: bool = Field(
+        default=False, validation_alias=AliasChoices("SITARA_PROTOTYPE", "PROTOTYPE_MODE")
+    )
 
     # --- local development sign-in ----------------------------------------
     # A browser needs NEXT_PUBLIC_FIREBASE_* to reach Firebase, and a local

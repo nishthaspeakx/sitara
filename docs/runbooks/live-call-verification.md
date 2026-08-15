@@ -14,11 +14,49 @@ The whole test suite can be green with every frame name in this adapter wrong.
 
 ---
 
+## Prototype mode — a demo aid, and only that
+
+**If you want to walk the product end to end rather than verify the vendors,
+set one switch instead of the several below:**
+
+```bash
+SITARA_PROTOTYPE=1 AUTH_DEV_BYPASS=true uv run --directory services/api uvicorn sitara_api.main:app --port 8001
+```
+
+It turns on calls regardless of §33.5, Stories regardless of §30.6, and lifts
+§7.3's minute ceiling so a walkthrough cannot end mid-sentence on a quota.
+
+**It is not a configuration option and there is no non-dev use of it.** The app
+REFUSES TO BOOT if it is set in any other environment — `prototype.assert_safe`
+raises, because a demo aid that silently did nothing in staging is worse than
+one that crashes. Every resolver re-checks the environment on each read rather
+than trusting that boot check ran.
+
+Three things it deliberately does NOT do:
+
+- **It does not move a single release-gate status.** `release_gates.py` and
+  `voice/call_gate.py` do not import it, and a test reads their source to keep
+  it that way. §33.5 still says DOES NOT PASS with the switch on — which is the
+  point: the demo is unblocked, the truth is not edited.
+- **It does not lift CC-010.** `hi`/`hi-Latn` calls stay refused. Routing Hindi
+  audio to an English recogniser does not fail, it produces fluent nonsense
+  that reaches §9 as the user's question, and demoing that is worse than not
+  demoing.
+- **It does not touch §9** — no validator, no safety ladder, no cite-or-die.
+  Those are the product working, not a gate awaiting a human.
+
+Everything below is the VERIFICATION procedure, which is a different job: it
+exists to find out whether the vendor adapters are right, and it wants the
+narrow switches rather than the broad one.
+
+---
+
 ## 0. What you need before you start
 
 | Secret | Why | Without it |
 |---|---|---|
 | `CARTESIA_API_KEY` | Ink STT websocket + Sonic TTS websocket | The call is refused at the grant — "provider down" (§30.1) |
+| `AUTH_DEV_BYPASS=true` | a local checkout has no `NEXT_PUBLIC_FIREBASE_*`, so real sign-in fails before it can send an OTP | you cannot sign in at all. Dev only, seeded synthetic personas only — see `auth/dev_verifier.py` |
 | `VOICE_TARA_VOICE_ID` | §3.2's anchor voice | TTS declines rather than picking a stock voice — a stranger's voice on her name |
 | `ANTHROPIC_API_KEY` | §9's pipeline | Her turn fails; you would be testing the degrade ladder, not the call |
 | `SITARA_SERVICE_KEY` | realtime → api service auth | `require_service_key` fails closed and the media socket is refused |
@@ -113,7 +151,7 @@ the third surface worth having open.
 | 4 | **Live captions appear as you speak** | On screen, greyed while partial | **Finding #2 and the big one.** Captions never appearing means the frame shape is wrong — the adapter branches on `type == "transcript"` and `is_final`. Log the raw frames if so |
 | 5 | Your finished sentence turns solid | Caption goes full opacity | A partial that never finalises = `is_final` is named something else |
 | 6 | She thinks, then speaks | State chip: Listening → Thinking → Tara is speaking | Thinking for more than ~2s without a holding phrase is a §25.3 miss worth noting |
-| 7 | **You hear her** | Audio | **Finding #3.** Silence with a `tts.start` on the wire means Sonic's chunk frames are not named `chunk`/`data` |
+| 7 | **You hear her** | Audio | **Was finding #3, now FIXED:** Sonic requires a `context_id` on the websocket request. Without it every utterance returned `{"type":"error","title":"context_id is invalid"}` and the call fell silent after her words appeared. If it recurs, the frames are in `fixtures/streaming_en.json` |
 | 8 | **Interrupt her mid-sentence** | She stops within a beat | This is §33.5's barge-in measure. If she talks over you, the cancel is not reaching the vendor |
 | 9 | The transcript is in the thread | Navigate to `/en/ask` | Everything you both said should be there. **If it is not, stop — that is the milestone's central claim failing** |
 
@@ -155,6 +193,19 @@ Either way, the §33.5 numbers this run produces are real and worth reading:
 ```bash
 uv run --directory services/api python -m sitara_api.voice.call_gate
 ```
+
+### What the first live run (15 Aug 2026) established
+
+- **`context_id` is required on Sonic's TTS websocket.** Found here, nowhere
+  else — 1,457 tests were green and none of them reaches a vendor.
+- **Ink emits a final transcript PER PHRASE, not per utterance.** One sentence
+  came back as two `is_final` frames, so a speaker who pauses mid-thought is
+  currently answered twice. Known, unhandled — the debounce is a product call.
+- **first-audio was ~5.8s against §33.5's 1.2s ceiling, and 5.5s of it is §9.**
+  Profiled: safety_pre 1.56s + intent 1.70s + generate 2.26s, three model calls
+  in series. Sonic's own first byte is 0.235s — **the voice vendors are not the
+  bottleneck**, and connection pooling would not have helped. §25.3's holding
+  phrase (1.8s, already specified, unbuilt) is the designed answer.
 
 `first_audio_p95_s`, `barge_in_success` and `network_recovery_success` will have
 values after a few calls. `cost_per_call_user` and `call_naturalness` will not,

@@ -44,6 +44,7 @@ from sitara_api.panchang.places import default_resolver
 from sitara_api.panchang.registry import build_registry
 from sitara_api.panchang.router import router as panchang_router
 from sitara_api.panchang.service import PanchangService
+from sitara_api.prototype import assert_safe as assert_prototype_safe
 from sitara_api.reflection.router import router as reflection_router
 from sitara_api.reflection.service import ReflectionService
 from sitara_api.voice.call_metrics import CallMetrics, RedisMetricStore
@@ -162,7 +163,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             voice_id=app.state.voice_settings.tara_voice_id,
             environment=settings.environment,
         )
-        app.state.minute_ledger = MinuteLedger(db)
+        app.state.minute_ledger = MinuteLedger(db, settings)
         # §33.5's evidence, from the first call (§43.5). Redis and not Mongo
         # because these are counters and a reservoir, and no TTL because a
         # launch gate whose evidence expired would quietly reset the decision.
@@ -199,6 +200,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # missing catalog must surface here, not when an L4 turn needs the crisis
     # line.
     verify_catalogs(LAUNCH_LOCALES)
+    # PROTOTYPE MODE refuses to exist outside dev, and does it here — before a
+    # single route is mounted or a single session issued.
+    assert_prototype_safe(settings)
+
     # §6.3's adapter rule, and `firebase.py`'s own "fakeable boundary". The
     # dev verifier RAISES unless environment == "dev", so a mis-set env var in
     # any other environment fails at boot — loudly, and before it can issue a

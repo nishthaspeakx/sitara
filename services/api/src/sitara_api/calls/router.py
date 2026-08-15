@@ -55,6 +55,7 @@ from sitara_api.chat_orchestration.ws_session import (
     require_service_key,
 )
 from sitara_api.errors import ApiError
+from sitara_api.prototype import calls_enabled as prototype_calls_enabled
 from sitara_api.voice.call_metrics import CallObservation
 from sitara_api.voice.entitlements import MinuteLedger, MinuteMeter
 from sitara_api.voice.providers.base import VoiceProviderUnavailable
@@ -99,7 +100,10 @@ async def call_session(
     user_id, session_id = session
     settings = request.app.state.settings
 
-    if not getattr(settings, "calls_enabled", False):
+    # `prototype.calls_enabled`, not `settings.calls_enabled` — the resolver is
+    # `setting OR (prototype AND dev)`, so it can only ever widen and only ever
+    # on a laptop. §33.5's gate is untouched and still does not pass.
+    if not prototype_calls_enabled(settings):
         # §33.5. Not `SYS_UNAVAILABLE` — nothing is broken and retrying will not
         # help. The client renders the affordance as absent, not as failed.
         raise ApiError(ErrorCode.VOICE_PROVIDER_UNAVAILABLE, "errors.voice.calls_not_enabled")
@@ -115,7 +119,7 @@ async def call_session(
             route.reason_key or "errors.voice.call_language_unavailable",
         )
 
-    ledger = MinuteLedger(request.app.state.db)
+    ledger = MinuteLedger(request.app.state.db, settings)
     entitlement = await ledger.load(str(user_id), now=dt.datetime.now(dt.UTC))
     if entitlement.exhausted:
         # §32.9 warns at 5 and 2 minutes so this is never the first a user

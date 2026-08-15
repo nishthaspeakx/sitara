@@ -248,14 +248,19 @@ class MinuteMeter:
 class MinuteLedger:
     """The Mongo half: read the plan, read the spend, write the session.
 
+    Takes `settings` only so it can ask `prototype.lifts_entitlement_ceiling`.
+    It is optional and defaults to None, so every existing caller and every
+    test is unchanged and gets exactly the metering it had.
+
     §25.7 puts per-session metering in `voice_sessions`, and §6.4's validator on
     that collection structurally rejects any audio field — which is why the
     call's minutes go there and not into some new collection that would have to
     re-earn the same guarantee.
     """
 
-    def __init__(self, db: object) -> None:
+    def __init__(self, db: object, settings: object | None = None) -> None:
         self._db = db
+        self._settings = settings
 
     async def load(self, user_id: str, *, now: dt.datetime) -> Entitlement:
         """The user's pool as of `now`.
@@ -268,6 +273,17 @@ class MinuteLedger:
         anything they did not buy.
         """
         from sitara_api.chat_orchestration.store import to_object_id
+        from sitara_api.prototype import lifts_entitlement_ceiling
+
+        if self._settings is not None and lifts_entitlement_ceiling(self._settings):
+            # PROTOTYPE MODE (dev only). An unlimited pool, so a walkthrough
+            # cannot end mid-sentence on a quota. §32.9's warnings are still
+            # demonstrable — set a real plan and they fire exactly as they do
+            # in production, because nothing about the WARNING logic is bypassed
+            # here, only the ceiling it counts down from.
+            return Entitlement(
+                plan=CallPlan.PREMIUM, quota_minutes=None, used_minutes=0.0
+            )
 
         try:
             oid = to_object_id(user_id, field_name="user_id")
