@@ -43,7 +43,29 @@
     },
     "$never_emitted_for_tara": "captions.partial. A partial caption is pre-validation text, and §9 puts grounding, language-quality and safety-post AFTER generation. Streaming tokens would race past all three, so the socket is built to never hold them: it receives a finished TurnResult and has nothing else to send. That is the fabrication gate, and it is structural rather than remembered. M9 gives the member a payload for the FIRST time and does not weaken this: `PartialCaptionPayload.role` is the constant `user`, so an interim caption of the USER's own speech is expressible and one of Tara's is not. The rule stopped depending on nobody writing the frame.",
     "$heartbeat": "The transport's own ping/pong, every 10s — which is why the closed set has no heartbeat member. Reap at 30s of pong silence (§29.2).",
+    "$m10_is_the_same_protocol": "M9-P10b's live call adds NO member. It was always going to be the test of whether §34.6 is one protocol or three wearing one name, and the answer is that the call is said in the fifteen that already exist — the last two payload shapes land here and the set does not move. Where the call differs from the chat is WHO opens a bracket: §25.4's note is bracketed by a finger, so the client mints the `client_message_id` before the first PCM byte; §25.3's call is bracketed by SERVER-SIDE VAD (that is what 'barge-in = just speak' means), so the SERVER mints it and sends the opening `vad.state` down. The field keeps its name because it keeps its job — it is still the one id the partial caption, the final transcript, the turn and the synthesised audio all hang off — and renaming it would have split one shape into two for a difference in who speaks first.",
     "$binary": "M9 answered the §33.1 storage question, so binary is accepted on the chat socket — but only INSIDE a bracket. A frame is admissible between a `vad.state: speech_start` and its `speech_end`/`cancelled`, and nowhere else; outside one it is still SYS_VALIDATION. That is narrower than 'accepted' on purpose: the bracket is what binds a run of PCM to a client_message_id, a locale and a consent posture, and PCM arriving with none of those attached is audio nobody can account for. The 4-byte header seq is checked for monotonicity — a gap fails the note rather than silently concatenating across the hole, because a note missing its middle transcribes into a sentence the user never said."
+  },
+  "$call_mapping": {
+    "$comment": "SPEC §25.3's live call, in the same fifteen members. Written down beside the text-chat mapping so `services/realtime` and `apps/web` read ONE description of the call rather than two implementations of it — the same reason the chat mapping is here.",
+    "client_to_server": {
+      "session.start": "ticket + conversation_id + locale, exactly as the chat sends it. The ticket is minted by POST /v1/call/session, which is also where the §33.5 flag, CC-010's locale gate and the §7.3 entitlement snapshot are evaluated — a call that must not happen is refused before a socket exists.",
+      "session.end": "the user pressed end (§25.3's red control). Metering stops here.",
+      "$binary": "16 kHz mono PCM, continuously, for as long as the microphone is live. A call has no hold-to-record bracket — §25.3's mute is client-hard, so silence on the wire is what a muted user sounds like."
+    },
+    "server_to_client": {
+      "vad.state": "§25.3's server-side VAD, and the M9-P10b sense the member was widened for. `speech_start` opens an utterance and carries the SERVER-minted client_message_id; `speech_end` closes it. There is no `cancelled` in a call — nothing was held, so there is nothing to slide away from.",
+      "barge_in": "the user spoke while Tara was speaking. The server has already stopped synthesising; this tells the client to drop what it has buffered and not to expect a `tts.end` for that utterance.",
+      "captions.partial": "§25.3's live captions, of the USER's own speech only — `role` is still the constant `user`, and that is what makes captions live without racing §9's validators.",
+      "captions.final": "the user's finalised utterance in their direction, and the whole validated ChatTurn in Tara's. Unchanged from the chat, which is the point.",
+      "presence.state": "§25.3's call states are driven from the same §9 stage transitions the chat uses.",
+      "tts.start / tts.chunk_meta / tts.end": "her streamed reply. `tts.chunk_meta` is finally emitted here — a note is synthesised whole and has no chunks, and a fabricated one would have made the metering look live; a call really does stream.",
+      "entitlement.warning": "§32.9's 5- and 2-minute notices, once each.",
+      "handoff.to_text": "§25.3's degrade ladder and §32.9's exhaustion path, both landing in the same place: the thread continues in messages with the transcript intact.",
+      "resume.offer": "§32.11 — a network recovery inside five minutes offers the call back rather than resuming it silently. Metering restarts only if the user accepts."
+    },
+    "$never_stored": "Call audio is NEVER stored (§13, §33.1, §6.4's voice_sessions and call_sessions validators). Nothing on this socket writes bytes anywhere: the PCM is relayed to the recogniser and dropped, and the synthesised audio is streamed and dropped. The transcript is stored, because the transcript is the conversation.",
+    "$one_utterance_in_flight": "§7.3: 'one in-flight utterance max'. A second question arriving while the first is still being answered is not interleaved — the barge-in cancels the first reply and the second utterance becomes the turn."
   },
   "payload_shapes": {
     "SessionStartPayload": {
@@ -94,10 +116,10 @@
       ]
     },
     "TtsStartPayload": {
-      "$comment": "Server → client, on `tts.start`. §25.4: 'Tara's replies arrive as voice-note bubbles rendered from her TTS with transcript toggle'. Emitted after her `captions.final`, so the transcript the toggle shows is on screen before any audio plays — and is the same validated text the audio was rendered from, not a second generation.",
+      "$comment": "Server → client, on `tts.start`. §25.4: 'Tara's replies arrive as voice-note bubbles rendered from her TTS with transcript toggle'. Emitted after her `captions.final`, so the transcript the toggle shows is on screen before any audio plays — and is the same validated text the audio was rendered from, not a second generation.\n\n`tts_audio_asset_id` became OPTIONAL in M9-P10b, and the null is load-bearing rather than lax. A voice NOTE is synthesised whole and stored, so it has an asset and a bubble that can replay it. A live CALL is streamed and its audio is never stored at all (§13, §33.1) — so there is no asset, and there is nothing to replay. Null is the type saying exactly that. Carrying an invented id would have promised a playback control over audio that does not exist anywhere.",
       "fields": [
         { "name": "client_message_id", "type": "string" },
-        { "name": "tts_audio_asset_id", "type": "string" },
+        { "name": "tts_audio_asset_id", "type": "string?" },
         { "name": "sample_rate_hz", "type": "integer" },
         { "name": "voice_id", "type": "string?" }
       ]
@@ -115,6 +137,23 @@
       "fields": [
         { "name": "client_message_id", "type": "string" },
         { "name": "duration_ms", "type": "integer" }
+      ]
+    },
+    "BargeInPayload": {
+      "$comment": "Server → client (§25.3, §7.3). Typed in M9-P10b because M9-P10b is the first milestone that emits it — the rule this package keeps, and the reason it stayed untyped through M9.\n\n**It replaces `tts.end`, it does not precede it.** `tts.end` carries the total duration for the bubble's scrubber; an utterance that was cut has no total duration that was ever true, and sending one would put a scrubber on audio the user interrupted. So a synthesis stream ends in exactly one of two members and a client can rely on that.\n\n`cancelled_after_chunk_seq` is the last `tts.chunk_meta.seq` the server sent before it stopped. The client needs it because it is buffering ahead of playback: without it, dropping 'the rest' is a guess about what the server had already put on the wire, and audio kept playing after the interruption is exactly the thing §25.3's barge-in exists to prevent.",
+      "fields": [
+        { "name": "cancelled_client_message_id", "type": "string" },
+        { "name": "cancelled_after_chunk_seq", "type": "integer?" },
+        { "name": "reason", "type": "BargeInReason" }
+      ]
+    },
+    "EntitlementWarningPayload": {
+      "$comment": "Server → client (§7.3, §32.9). §32.9: warnings at 5 and 2 minutes, in-locale, in Tara's voice, ONCE EACH — the once-each is enforced by the session, not by the client ignoring repeats.\n\n`minutes_left` is the threshold that fired, not a live countdown: a per-second remaining-minutes feed would be §29.2's countdown, which this product does not build. `minutes_quota` is null for the unlimited fair-use tiers, which is also what makes the §25.3 plan chip render '⏳ unlimited' rather than a number.\n\n`message_key` and not a sentence: §2.4 puts every user-facing string in the catalogs, and a sentence on the wire is a sentence no §14 reviewer saw.",
+      "fields": [
+        { "name": "minutes_left", "type": "integer" },
+        { "name": "minutes_quota", "type": "integer?" },
+        { "name": "plan", "type": "string" },
+        { "name": "message_key", "type": "string" }
       ]
     },
     "TaraTurnPayload": {

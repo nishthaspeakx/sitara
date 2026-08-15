@@ -68,7 +68,11 @@
     "voice": {
       "session_not_found": "That conversation isn't open any more. Start a new one and Tara will pick things up.",
       "provider_unavailable": "Voice notes aren't working just now. Typing always works — Tara's right here.",
-      "note_expired": "That recording has been deleted. What you said is still here."
+      "note_expired": "That recording has been deleted. What you said is still here.",
+      "call_language_pending": "Calls with Tara aren't ready in this language yet — we're working on it. Voice notes work today, and she replies to those.",
+      "call_language_unavailable": "Calls aren't available in this language. Voice notes and typing both work.",
+      "calls_not_enabled": "Calls with Tara aren't switched on yet. Voice notes work today — hold the mic and she'll reply in her own voice.",
+      "minutes_exhausted": "You've used this month's call minutes. Messages and voice notes keep working, and your minutes come back next month."
     },
     "sys": {
       "validation": "Something in the request wasn't right. Please try again.",
@@ -79,6 +83,17 @@
       "reconfirm_wording": "Before I keep this, may I check the wording with you? I'd rather remember it the way you'd say it.",
       "medical_declined": "I don't keep notes about symptoms or diagnoses — that's for you and a doctor. I can remember how you're looking after yourself, if you'd like.",
       "not_found": "I can't find that memory — it may already be deleted."
+    },
+    "journal": {
+      "not_saveable": "That one can't be saved on its own — it's a moment I keep for you rather than a note you can hold.",
+      "save_not_found": "I can't find that saved item — it may already be removed from your journal."
+    },
+    "family": {
+      "not_found": "I can't find that person in your family list — they may already be removed."
+    },
+    "reflection": {
+      "bad_date": "I couldn't place that date. Let's try tonight's reflection again.",
+      "too_long": "That's a long thought — could you shorten it a little so I keep it well?"
     }
   },
   "numerology": {
@@ -112,6 +127,12 @@
     },
     "budget": {
       "daily_soft_cap": "We've talked a lot today — I'll keep going, just a little more briefly."
+    },
+    "delete": {
+      "title": "Delete this conversation?",
+      "deletes": "The messages in this conversation are removed.",
+      "keeps": "Tara still remembers what you asked her to — those notes stay, marked that their conversation is gone.",
+      "confirm": "Delete conversation"
     }
   },
   "terms": {
@@ -438,7 +459,34 @@
       "speaker_off": "Speaker off",
       "captions": "Captions",
       "minutes_left": "{minutes, plural, one {# minute left} other {# minutes left}}",
-      "privacy_line": "Calls are never recorded."
+      "privacy_line": "Calls are never recorded.",
+      "coming_soon_title": "Calls are coming",
+      "coming_soon_body": "Tara can't take calls in this language yet. Hold the mic to send her a voice note instead — she'll reply in her own voice.",
+      "connecting": "Connecting…",
+      "listening": "Listening",
+      "thinking": "Thinking",
+      "speaking": "Tara is speaking",
+      "reconnecting": "Reconnecting…",
+      "ended": "Call ended",
+      "minimise": "Minimise call",
+      "privacy_title": "How this call is handled",
+      "privacy_body": "What you say is processed so Tara can answer you, and it is never sold. The audio of a call is never recorded or stored — only the transcript is kept, in this conversation. This is not end-to-end encrypted.",
+      "plan_unlimited": "Unlimited",
+      "plan_minutes": "{minutes, plural, one {# minute left} other {# minutes left}}",
+      "fair_use_title": "About your call minutes",
+      "fair_use_body": "Your plan includes {minutes, plural, one {# minute} other {# minutes}} of calling each month. When they run low Tara will say so, and when they run out the conversation carries on in messages — nothing is lost.",
+      "warning_minutes": "{minutes, plural, one {About # minute of calling left} other {About # minutes of calling left}} — we'll move to messages after that.",
+      "handoff_title": "Let's carry on in messages",
+      "handoff_body": "Everything you both said is in this conversation.",
+      "handoff_open": "Open the conversation",
+      "resume_offer": "Back online — pick the call back up?",
+      "resume_accept": "Resume the call",
+      "resume_dismiss": "Stay in messages",
+      "captions_label": "Live captions",
+      "you": "You",
+      "tara": "Tara",
+      "summary_save": "Save this call to your journal?",
+      "start": "Call Tara"
     },
     "panchang": {
       "label": "Today's panchang",
@@ -568,8 +616,6 @@
       },
       "house": "House {house}",
       "lagna": "Lagna",
-      "pending": "The diagram arrives in the next release. Your placements are listed below, exactly as computed from your chart.",
-      "pending_label": "Kundli diagram, coming in the next release",
       "rashi": {
         "1": "Aries",
         "2": "Taurus",
@@ -594,7 +640,20 @@
         "saturn": "Saturn",
         "rahu": "Rahu",
         "ketu": "Ketu"
-      }
+      },
+      "graha_short": {
+        "sun": "Su",
+        "moon": "Mo",
+        "mars": "Ma",
+        "mercury": "Me",
+        "jupiter": "Ju",
+        "venus": "Ve",
+        "saturn": "Sa",
+        "rahu": "Ra",
+        "ketu": "Ke"
+      },
+      "diagram_north": "Your birth chart, drawn in the North Indian style: twelve houses around a diamond, with the grahas placed in each.",
+      "diagram_south": "Your birth chart, drawn in the South Indian style: twelve rashis in a fixed square, with the grahas placed in each."
     }
   },
   "launch": {
@@ -849,6 +908,150 @@
     "why": {
       "back": "Back to today",
       "missing": "That card isn't on today's brief."
+    }
+  },
+  "vault": {
+    "delete": {
+      "title": "Forget this?",
+      "deletes": "Tara stops knowing this, and the note is deleted along with what she learned from it.",
+      "keeps": "Anything already written in your journal stays exactly as it is — this doesn't rewrite your past.",
+      "confirm": "Forget this"
+    },
+    "title": "What Tara remembers",
+    "subtitle": "Only the notes you agreed to. Nothing else.",
+    "count": "{count, plural, =0 {Nothing yet} one {# note} other {# notes}}",
+    "filter_label": "Show only",
+    "filter_all": "All",
+    "muted": "Set aside",
+    "mute": "Set this aside",
+    "unmute": "Bring this back",
+    "mute_help": "Tara keeps the note and stops using it. You can undo this.",
+    "forget": "Forget this",
+    "consented": "You agreed on {date}",
+    "not_found": "This note is no longer in your vault.",
+    "back": "Back to what Tara remembers",
+    "source": {
+      "present": "From a conversation you had.",
+      "removed": "The conversation this came from has been deleted. The note is still yours."
+    }
+  },
+  "journal": {
+    "delete": {
+      "title": "Delete this entry?",
+      "deletes": "This entry is removed from your journal.",
+      "keeps": "Anything Tara remembers from it stays, unless you also tick the box below.",
+      "also_memories": "Also make Tara forget what she learned here",
+      "confirm": "Delete entry"
+    },
+    "title": "Journal",
+    "subtitle": "What happened, in the order it happened.",
+    "open_search": "Search",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "open_day": "Open this day",
+    "entry_delete": "Delete this entry",
+    "saved": "Saved",
+    "source_gone": "The original is no longer here.",
+    "back": "Back to the journal",
+    "type": {
+      "brief": "Morning brief",
+      "reflection": "Night reflection",
+      "call": "Call",
+      "guidance": "Saved guidance",
+      "milestone": "Milestone"
+    },
+    "day": {
+      "empty": "Nothing was written on this day.",
+      "count": "{count, plural, one {# entry} other {# entries}}"
+    },
+    "search": {
+      "title": "Search your journal",
+      "placeholder": "A word you remember",
+      "filter_label": "Show only",
+      "filter_all": "Everything",
+      "prompt": "Type a word you remember — a name, a place, a feeling.",
+      "results": "{count, plural, =0 {Nothing matched that} one {# result} other {# results}}"
+    }
+  },
+  "family": {
+    "delete": {
+      "title": "Remove {name}?",
+      "deletes": "Their birth details and chart are deleted for good.",
+      "keeps": "Your journal stays as written, and the notes Tara keeps about them stay unless you tick them below.",
+      "also_memories": "Also forget these notes about them",
+      "confirm": "Remove"
+    },
+    "memorial": {
+      "sheet_title": "What happens to {name}'s record",
+      "title": "Keep them in memory",
+      "body": "{name} stays in your family, with their birth details, their chart, and everything already written about them.",
+      "keeps": "Nothing is deleted. Not one detail, not one note, not one line of your journal.",
+      "reminders": "One thing changes: Tara stops bringing their birthday and anniversaries to you as dates coming up, and speaks about them in the past tense.",
+      "confirm": "Keep in memory",
+      "reversible": "You can change this back whenever you like.",
+      "badge": "In memory",
+      "revert_title": "Return {name} to your family list",
+      "revert_body": "Their birthday and anniversaries come back as dates ahead. Nothing else changes, because nothing was ever taken away.",
+      "revert": "Return to the family list",
+      "or": "Or, if you would rather the record itself did not stay:"
+    },
+    "title": "Your people",
+    "subtitle": "The dates and charts Tara holds for the people you love.",
+    "add": "Add someone",
+    "no_birth_details": "No birth details yet",
+    "birth_details": "Birth details on file",
+    "attested": "You confirmed you may hold these.",
+    "chart_title": "Their chart",
+    "chart_unavailable": "Without birth details there is no chart to draw, and Tara will not guess at one.",
+    "record_action": "Remove or remember",
+    "memories_about": "What Tara has noted about them",
+    "memories_none": "Nothing noted about them yet.",
+    "not_found": "That person is no longer in your family list.",
+    "back": "Back to your people",
+    "relation": {
+      "partner": "Partner",
+      "mother": "Mother",
+      "father": "Father",
+      "daughter": "Daughter",
+      "son": "Son",
+      "sister": "Sister",
+      "brother": "Brother",
+      "grandmother": "Grandmother",
+      "grandfather": "Grandfather",
+      "friend": "Friend",
+      "other": "Family"
+    }
+  },
+  "you": {
+    "title": "You",
+    "subtitle": "What Tara holds, and who it is about.",
+    "section_yours": "Yours",
+    "memories": "What Tara remembers",
+    "memories_detail": "{count, plural, =0 {Nothing yet} one {# note} other {# notes}}",
+    "family": "Your people",
+    "family_detail": "{count, plural, =0 {No one yet} one {# person} other {# people}}",
+    "later": "Subscription, settings and privacy arrive in a later release."
+  },
+  "reflection": {
+    "title": "Tonight",
+    "intro": "Let's close the day.",
+    "mood_title": "How did today sit?",
+    "mood_skip": "Rather not say",
+    "done": "Close the day",
+    "saved": "Kept.",
+    "back": "Back to today",
+    "gentle": "Write as little as you like. Nothing here is counted, and nothing is broken by a quiet night.",
+    "prompt": {
+      "gratitude": "What are you glad of today?",
+      "weight": "What sat heavy?",
+      "tomorrow": "What would you like tomorrow to hold?"
+    },
+    "mood": {
+      "heavy": "Heavy",
+      "tired": "Tired",
+      "steady": "Steady",
+      "light": "Light",
+      "joyful": "Joyful"
     }
   }
 }

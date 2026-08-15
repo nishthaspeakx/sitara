@@ -7,23 +7,25 @@ set over the actual §9 pipeline, reached through `sitara-api`. See `chat.py`
 for the mapping of a text conversation onto fifteen voice-shaped members, and
 for why `captions.partial` is never emitted for Tara.
 
-`WS /call/session` is still the M0 stub. Full voice behaviour (VAD, barge-in,
-TTS chunking, the degrade ladder) is M9; the closed event set was frozen here
-in M0 and the text chat has now exercised the transport, the heartbeat, the
-resume window and the handoff — which is most of what M9 would otherwise be
-discovering for the first time under a microphone.
+`WS /call/session` is M9-P10b's, and it is real: §25.3's live call, said in the same
+fifteen members. See `call.py` for the division of labour with `sitara-api` and
+for why every branch of the degrade ladder ends in `handoff.to_text`.
+
+Freezing the event set in M0 and building the text chat on it first paid for
+itself here — the transport, the heartbeat, the resume window and the handoff
+were all already exercised, so M9-P10b was not discovering them for the first time
+under a live microphone.
 
 **This service holds no database, no model client and no pipeline.** Every turn
 is `sitara-api`'s. A second copy of §9 would be a second set of validators to
 keep in step, and the one that drifts is the one nobody is looking at.
 """
 
-import time
 
 from fastapi import FastAPI, WebSocket
-from sitara_schemas import ControlEvent, ControlEventType
 
 from sitara_realtime import __version__
+from sitara_realtime.call import call_socket
 from sitara_realtime.chat import ResumeBuffer, chat_socket
 from sitara_realtime.config import Settings
 
@@ -48,23 +50,11 @@ async def chat_session(ws: WebSocket) -> None:
 
 @app.websocket("/call/session")
 async def call_session(ws: WebSocket) -> None:
-    """M0 stub: accept, emit a typed session.ready, close on client end.
+    """M9-P10b's socket — §25.3's live call, in the same fifteen members.
 
-    Left as a stub deliberately. §33.5 makes live calls a conditional release
-    gate, and M9 owns the audio path; a half-built duplex here would be the
-    kind of code that looks finished in a demo and has never carried a packet.
+    No longer the M0 stub. §33.5 still gates whether calls SHIP, and the gate is
+    evaluated where a call is granted rather than here: `POST /v1/call/session`
+    refuses on the flag, on CC-010's locale ruling and on an exhausted §7.3
+    pool, so a call that must not happen never reaches this handler.
     """
-    await ws.accept()
-    ready = ControlEvent(
-        type=ControlEventType.SESSION_READY,
-        seq=0,
-        ts=time.time() * 1000,
-        payload={},
-    )
-    await ws.send_text(ready.model_dump_json())
-    # Echo loop placeholder until M9 implements the full §34.6 audio path.
-    try:
-        while True:
-            await ws.receive_text()
-    except Exception:
-        return
+    await call_socket(ws, ws.app.state.settings, ws.app.state.resume_buffer)

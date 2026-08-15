@@ -120,8 +120,21 @@ def build_message(
     fact_snapshots: Sequence[FactSnapshot] = (),
     safety: SafetyAssessment | None = None,
     now: dt.datetime | None = None,
+    transcript_status: str = TRANSCRIPT_STATUS_TEXT,
+    playback_policy: str = TEXT_PLAYBACK_POLICY,
 ) -> dict[str, Any]:
-    """One `messages` document, §6.4-shaped and §34.2-complete."""
+    """One `messages` document, §6.4-shaped and §34.2-complete.
+
+    The two §33.1 fields are parameters, defaulting to the typed-message pair,
+    because M9-P10b's live call is the first caller for which the defaults are
+    WRONG in a way no validator would catch. A call turn was spoken, so
+    `not_applicable` ("this was never spoken") is false; and its audio was never
+    stored — §13/§33.1 forbid storing call audio at all — so `text_only`
+    ("there is no audio and no control") is false too. `transcript_only` is the
+    member voice.json defines for exactly this: audio that was never stored,
+    with the transcript as the honest content. Leaving the defaults in place
+    would have written a call into the thread as though the user had typed it.
+    """
     document: dict[str, Any] = {
         "conversation_id": to_object_id(conversation_id, field_name="conversation_id"),
         "role": role,
@@ -141,10 +154,10 @@ def build_message(
         # --- the six §33.1 fields, always present ------------------------
         "source_audio_asset_id": None,
         "tts_audio_asset_id": None,
-        "transcript_status": TRANSCRIPT_STATUS_TEXT,
+        "transcript_status": transcript_status,
         "source_audio_expires_at": None,
         "source_audio_deleted_at": None,
-        "playback_policy": TEXT_PLAYBACK_POLICY,
+        "playback_policy": playback_policy,
     }
     return stamp(document, now=now)
 

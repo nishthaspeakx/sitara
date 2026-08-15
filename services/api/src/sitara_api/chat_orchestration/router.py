@@ -37,6 +37,7 @@ from sitara_schemas import ErrorCode
 from sitara_schemas.chat import ChatTurn
 
 from sitara_api.auth.router import CurrentSession
+from sitara_api.chat_orchestration.birth import birth_profile_for
 from sitara_api.chat_orchestration.pipeline import ChatPipeline
 from sitara_api.chat_orchestration.presenter import present_turn
 from sitara_api.chat_orchestration.types import BirthProfile, Stage, TurnRequest
@@ -122,47 +123,10 @@ def _tickets(request: Request) -> WsTicketService:
 
 
 async def _birth_profile(request: Request, user_id: str) -> BirthProfile:
-    """What the pipeline knows about the subject (§5.3 step 2).
-
-    **This used to read `request.state.birth_profile`, which nothing ever
-    set.** Every live turn therefore ran with an all-False `BirthProfile()`,
-    `required_data` declined for a missing date of birth, and the chat could
-    not answer a single chart question against a real account — including
-    accounts whose birth row was on file. Every test passed a profile in
-    explicitly, so nothing caught it; the first live conversation did, on its
-    first question.
-
-    §13's single door to birth details is the astrology facade, so this asks
-    it rather than reading the collection. It narrows to the four booleans and
-    the zone the pipeline is allowed to see: §5.3 is explicit that the
-    orchestrator gets sufficiency, never values.
-
-    A facade failure degrades to "we do not know" rather than raising. That is
-    the honest direction — Tara asks for the birth date she cannot confirm she
-    has, which is a worse answer but never a wrong one.
-    """
-    facade = getattr(request.app.state, "astrology", None)
-    if facade is None:
-        return BirthProfile()
-    try:
-        birth = await facade.birth_input(user_id)
-    except Exception:
-        logger.warning("birth profile unavailable; answering without a chart")
-        return BirthProfile()
-    if birth is None:
-        return BirthProfile()
-
-    place = bool(birth.place_name) and bool(birth.tz)
-    return BirthProfile(
-        has_date=True,
-        has_exact_time=birth.has_exact_time,
-        # §10-6's four accuracies collapse to two questions here: do we have a
-        # usable instant, and failing that do we have a window? A row with no
-        # time at all is the Moon-chart path (§5.3), not a window.
-        has_time_window=not birth.has_exact_time,
-        has_place=place,
-        tz=birth.tz,
-    )
+    """§5.3 step 2, over the app state. The narrowing itself lives in
+    `chat_orchestration/birth.py` since M9-P10b, so the live call reaches the same
+    one — see that module for why a second copy is the defect worth avoiding."""
+    return await birth_profile_for(request.app.state, user_id)
 
 
 async def _run(
@@ -523,7 +487,7 @@ def _tts_frames(payload: WsVoiceNotePayload, result: Any) -> dict[str, Any]:
     """§34.6's `tts.start`/`tts.end` payloads.
 
     No `tts.chunk_meta`: a note is synthesised whole and stored, so there are
-    no chunks to meter. M10's streamed call audio is what that member is for,
+    no chunks to meter. M9-P10b's streamed call audio is what that member is for,
     and emitting a fabricated one here would make the metering look live.
     """
     return {

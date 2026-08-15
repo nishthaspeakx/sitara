@@ -95,8 +95,16 @@ function expand(template, decl) {
 // and `launch` (the S01–S13 stack); forgetting them would have hidden the
 // entire onboarding string set from this check, and the user-visible failure
 // mode is a raw dotted key on screen in Hindi.
+//
+// **It had happened.** S14–S17 shipped `today.*` and `festivals.*` and neither
+// namespace was ever added here, so every string on the app's home surface and
+// its three sub-routes was outside gate 2 for two milestones — parity kept them
+// consistent across locales, and nothing checked that a key a screen asks for
+// exists at all. M10 adds those two alongside its own five rather than only its
+// own, because a blind spot you have already walked past once is not a blind
+// spot any more.
 const LITERAL_KEY =
-  /"((?:ui|errors|auth|verify|dob|home|app|chat|panchang|numerology|terms|memory|start|launch|brief)\.[a-z0-9_.]+)"/g;
+  /"((?:ui|errors|auth|verify|dob|home|app|chat|panchang|numerology|terms|memory|start|launch|brief|today|festivals|journal|vault|family|you|reflection)\.[a-z0-9_.]+)"/g;
 const TEMPLATE_KEY = /`([a-z0-9_.]+\.\$\{[^`]+)`/g;
 
 const referenced = new Set();

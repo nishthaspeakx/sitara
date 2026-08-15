@@ -44,6 +44,7 @@ from sitara_schemas import (
 )
 
 from sitara_api.chat_orchestration.types import BirthProfile, TurnRequest, TurnResult
+from sitara_api.voice import pronunciation
 from sitara_api.voice.audio import duration_ms as pcm_duration_ms
 from sitara_api.voice.providers.base import (
     SttProvider,
@@ -108,12 +109,17 @@ class VoiceNoteService:
         pipeline: Any,
         asset_store: Any = None,
         voice_id: str | None = None,
+        environment: str = "dev",
     ) -> None:
         self._stt = stt
         self._tts = tts
         self._pipeline = pipeline
         self._assets = asset_store
         self._voice_id = voice_id
+        # §3.4: outside dev/test only REVIEWED overrides are served. Drafts are
+        # audible in dev on purpose — a dictionary nobody can hear is one
+        # nobody can review.
+        self._environment = environment
 
     async def handle(
         self,
@@ -232,10 +238,15 @@ class VoiceNoteService:
         """
         if self._assets is None:
             return None, None
+        # §3.4's overrides are applied HERE and nowhere else — on the way into
+        # the synthesiser, after `turn.text` has been stored and after it has
+        # crossed the wire as the transcript. A respelling that reached either
+        # would put "raahoo kaal" in the user's own thread.
+        spoken = pronunciation.apply(turn.text, request.locale, environment=self._environment)
         try:
             synthesis = await self._tts.synthesise(
                 SynthesisRequest(
-                    text=turn.text,
+                    text=spoken,
                     locale=request.locale,
                     voice_id=self._voice_id,
                 )

@@ -65,6 +65,21 @@ def _split_type(declared: str) -> tuple[str, bool, bool]:
 _CONST_PREFIX = "const:"
 
 
+def py_const(value: object) -> str:
+    """A JSON constant as Python source.
+
+    A list becomes a TUPLE. §32.9's `ENTITLEMENT_WARNING_MINUTES` is the first
+    constant here that is a sequence, and a mutable module-level list in a
+    package whose whole job is being the one declaration of a shared set is a
+    set anyone can quietly change at runtime. TypeScript already gets `as const`
+    on the same value; this is the Python half of the same guarantee.
+    """
+    if isinstance(value, list):
+        inner = ", ".join(py_const(v) for v in value)
+        return f"({inner},)" if len(value) == 1 else f"({inner})"
+    return repr(value)
+
+
 def py_type(declared: str) -> str:
     base, is_list, optional = _split_type(declared)
     if base.startswith(_CONST_PREFIX):
@@ -309,7 +324,7 @@ def gen_python(
             "",
         ]
     for name, const in voice["constants"].items():
-        lines += ["", f"#: {const['$comment']}", f"{name} = {const['value']}"]
+        lines += ["", f"#: {const['$comment']}", f"{name} = {py_const(const['value'])}"]
     lines.append("")
     (PY_OUT / "voice.py").write_text("\n".join(lines), encoding="utf-8")
 
@@ -399,7 +414,12 @@ def gen_python(
         "",
         "from sitara_schemas.chat import ChatRole, ChatTurn",
         "from sitara_schemas.presence import PresenceState",
-        "from sitara_schemas.voice import PlaybackPolicy, TranscriptStatus, VadState",
+        "from sitara_schemas.voice import (",
+        "    BargeInReason,",
+        "    PlaybackPolicy,",
+        "    TranscriptStatus,",
+        "    VadState,",
+        ")",
         "",
         "",
         "class ControlEventType(StrEnum):",
@@ -426,17 +446,20 @@ def gen_python(
     lines += [
         "",
         "# --------------------------------------------------------------------",
-        "# Payload shapes — the text chat (S18) and the voice notes (M9).",
+        "# Payload shapes — the text chat (S18), the voice notes (M9), the live",
+        "# call (M9-P10b). All fifteen members are now typed.",
         "#",
-        "# §34.6 says payloads are 'typed per event in M9'. S18 typed the text-chat",
-        "# members a milestone early because it sent them; M9 types vad.state and",
-        "# tts.* for the same reason, now that voice notes emit them.",
+        "# §34.6 says payloads are 'typed per event in M9'. The rule that actually",
+        "# held is narrower: a payload is typed by the milestone that starts",
+        "# EMITTING it, because typing an event nobody produces is a guess with a",
+        "# schema around it. S18 typed the text-chat members, M9 typed vad.state",
+        "# and tts.*, and M9-P10b types the last two — `barge_in` (§25.3's server-side",
+        "# VAD ducking) and `entitlement.warning` (§7.3's minute pool) — because",
+        "# M9-P10b is the milestone that sends them.",
         "#",
-        "# `barge_in` and `entitlement.warning` stay UNTYPED. They belong to live",
-        "# calls (§25.3's server-side VAD ducking, §7.3's minute pool), which §33.5",
-        "# gates behind a conditional release and M10 owns. The rule has not moved:",
-        "# a payload is typed by the milestone that emits it, because typing an",
-        "# event nobody produces is a guess with a schema around it.",
+        "# The set of MEMBERS has not moved and must not: fifteen, closed, §31.3",
+        "# change control. A live call speaking the same fifteen as a typed chat",
+        "# is what §34.6 claimed and what M9-P10b is the test of.",
         "# --------------------------------------------------------------------",
     ]
     for name, shape in ws["payload_shapes"].items():
@@ -555,11 +578,15 @@ def gen_python(
         "    PresenceState,",
         ")",
         "from sitara_schemas.voice import (",
+        "    BARGE_IN_REASONS,",
+        "    ENTITLEMENT_WARNING_MINUTES,",
+        "    HOLDING_PHRASE_AFTER_MS,",
         "    MAX_NOTE_DURATION_MS,",
         "    PLAYBACK_POLICIES,",
         "    SOURCE_AUDIO_RETENTION_DAYS,",
         "    TRANSCRIPT_STATUSES,",
         "    VAD_STATES,",
+        "    BargeInReason,",
         "    PlaybackPolicy,",
         "    TranscriptStatus,",
         "    VadState,",
@@ -574,8 +601,10 @@ def gen_python(
         "    HEARTBEAT_INTERVAL_S,",
         "    REAP_AFTER_SILENCE_S,",
         "    RESUME_WINDOW_S,",
+        "    BargeInPayload,",
         "    ControlEvent,",
         "    ControlEventType,",
+        "    EntitlementWarningPayload,",
         "    HandoffToTextPayload,",
         "    PartialCaptionPayload,",
         "    PresenceStatePayload,",
@@ -594,6 +623,7 @@ def gen_python(
     ]
     for name in sorted(
         [
+            "BARGE_IN_REASONS",
             "BINARY_AUDIO_FORMAT",
             "BINARY_CHANNELS",
             "BINARY_HEADER_BYTES",
@@ -601,7 +631,9 @@ def gen_python(
             "BINARY_HEADER_SEQ_BYTES",
             "BINARY_SAMPLE_RATE_HZ",
             "DEFAULT_RETRYABLE",
+            "ENTITLEMENT_WARNING_MINUTES",
             "HEARTBEAT_INTERVAL_S",
+            "HOLDING_PHRASE_AFTER_MS",
             "HTTP_STATUS",
             "MAX_NOTE_DURATION_MS",
             "MEMORY_TYPE_ORDER",
@@ -616,12 +648,15 @@ def gen_python(
             "SOURCE_AUDIO_RETENTION_DAYS",
             "TRANSCRIPT_STATUSES",
             "VAD_STATES",
+            "BargeInPayload",
+            "BargeInReason",
             "ChatCitation",
             "ChatRole",
             "ChatTrust",
             "ChatTurn",
             "ControlEvent",
             "ControlEventType",
+            "EntitlementWarningPayload",
             "ErrorCode",
             "ErrorEnvelope",
             "HandoffToTextPayload",
@@ -653,6 +688,52 @@ def gen_python(
         "",
     ]
     (PY_OUT / "__init__.py").write_text("\n".join(lines), encoding="utf-8")
+
+
+# ------------------------------------------------------------ call media
+#
+# Python only, deliberately. `apps/web` never speaks this protocol — it is the
+# socket BETWEEN two of our services, behind the §34.6 one the browser sees —
+# so a TypeScript mirror would be a set no consumer reads, which is how a
+# declared contract goes stale without anyone noticing. Same reasoning the
+# package already applies to `facts.py` and `cache_keys.py`: the mirror is
+# deferred until a frontend consumer exists, not omitted by accident.
+
+
+def gen_call_media(call_media: dict) -> None:
+    lines = [
+        f'"""{HEADER}',
+        "",
+        "SPEC §25.3 / §25.7 — the internal media socket between `sitara-realtime`",
+        "and `sitara-api`. Declared here because BOTH sides name the set, which is",
+        "this package's rule; see the source JSON for why it is not §34.6.",
+        '"""',
+        "",
+        "from enum import StrEnum",
+        "",
+        "__all__ = [",
+    ]
+    exports = [
+        *(e["enum_name"] for e in call_media["enums"].values()),
+        *(e["const_name"] for e in call_media["enums"].values()),
+        *call_media["constants"],
+    ]
+    for name in sorted(exports):
+        lines.append(f'    "{name}",')
+    lines += ["]", ""]
+    for enum in call_media["enums"].values():
+        lines += py_enum(enum)
+        lines += [
+            "",
+            f"{enum['const_name']}: tuple[{enum['enum_name']}, ...] = (",
+            *(f"    {enum['enum_name']}.{py_ident(m['id'])}," for m in enum["members"]),
+            ")",
+            "",
+        ]
+    for name, const in call_media["constants"].items():
+        lines += ["", f"#: {const['$comment']}", f"{name} = {py_const(const['value'])}"]
+    lines.append("")
+    (PY_OUT / "call_media.py").write_text("\n".join(lines), encoding="utf-8")
 
 
 # ------------------------------------------------------------ typescript
@@ -808,9 +889,9 @@ def gen_typescript(
         ]
     lines += [
         "// ---------------------------------------------------------------------------",
-        "// SPEC §34.6 — control-event payloads: the text chat (S18) and voice notes",
-        "// (M9). `barge_in` and `entitlement.warning` stay untyped — they belong to",
-        "// live calls, which §33.5 gates and M10 owns.",
+        "// SPEC §34.6 — control-event payloads: the text chat (S18), voice notes",
+        "// (M9) and the live call (M9-P10b). All fifteen members are typed now; the",
+        "// member SET is unchanged and stays closed at fifteen (§31.3).",
         "// ---------------------------------------------------------------------------",
     ]
     for name, shape in ws["payload_shapes"].items():
@@ -872,6 +953,7 @@ def main() -> None:
     memory_types = load("memory-types.json")
     chat = load("chat.json")
     voice = load("voice.json")
+    call_media = load("call-media.json")
 
     assert len(modules["members"]) == 17, "SPEC §34.3: exactly 17 morning modules"
     assert len(confidence["members"]) == 5, "SPEC §5.4: exactly 5 confidence states"
@@ -902,12 +984,14 @@ def main() -> None:
     )
 
     gen_python(modules, codes, envelope, ws, today, presence, memory_types, chat, voice)
+    gen_call_media(call_media)
     gen_typescript(
         modules, codes, envelope, ws, confidence, today, presence, memory_types, chat, voice
     )
     print(
         "generated: python/sitara_schemas/"
-        "{__init__,modules,errors,ws_events,today,presence,memory_types,chat,voice}.py"
+        "{__init__,modules,errors,ws_events,today,presence,memory_types,chat,voice,"
+        "call_media}.py"
     )
     print("generated: typescript/src/index.ts")
 

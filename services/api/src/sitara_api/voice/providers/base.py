@@ -26,6 +26,7 @@ A third rule belongs to STT alone, and it is the one that will actually bite:
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from enum import StrEnum
 from typing import Protocol
 
@@ -114,6 +115,88 @@ class TtsProvider(Protocol):
     name: VoiceProviderName
 
     async def synthesise(self, request: SynthesisRequest) -> SynthesisResult: ...
+
+
+# ---------------------------------------------------------------------------
+# Streaming (M9-P10b, §25.3, §7.3) — a SECOND pair of interfaces, deliberately
+# ---------------------------------------------------------------------------
+#
+# The batch pair above is not a special case of the streaming pair and must not
+# be collapsed into one. `routing.Modality` already carries the reason: for the
+# same vendor, the same model and the same language, batch and streaming have
+# different availability — Ink transcribes hi over `POST /stt` and refuses it
+# over the STT websocket. One interface would make that difference a runtime
+# surprise rather than a type-level one; two makes `resolve(STREAMING, "hi")`
+# returning nothing the only way to reach a live call at all.
+#
+# The other reason is §33.1. A batch transcription hands the caller BYTES, and
+# the caller decides whether to store them; a stream hands the caller
+# TRANSCRIPTS, and the bytes are gone by construction. Call audio is never
+# stored (§13/§33.1), and this is that rule expressed as a shape rather than as
+# a rule someone remembers: `SttStream` has no method that returns audio.
+
+
+class TranscriptEvent(BaseModel):
+    """One recogniser result. `is_final` is the only branch a caller needs.
+
+    An interim result is §25.3's live caption — advisory, replaceable, and
+    §34.6's `captions.partial`, whose `role` is the constant `user`. A final is
+    the user's turn and goes to §9. There is deliberately no confidence score:
+    nothing downstream is allowed to act on one (§5.3 has confidence mean
+    something specific about FACTS), and a number nobody may use is a number
+    someone eventually uses.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    text: str
+    is_final: bool
+
+
+class SttStream(Protocol):
+    """One live recogniser connection, for the length of one call.
+
+    `push` is fire-and-forget from the caller's point of view; results arrive on
+    the async iterator, which is why this is not a request/response shape. A
+    caller that awaited each chunk's transcript would have serialised the call.
+    """
+
+    async def push(self, pcm: bytes) -> None:
+        """Feed 16 kHz mono s16le. Raises `VoiceProviderUnavailable` if the
+        vendor connection has died — the caller's degrade ladder starts there."""
+        ...
+
+    def __aiter__(self) -> AsyncIterator[TranscriptEvent]: ...
+
+    async def aclose(self) -> None: ...
+
+
+class StreamingSttProvider(Protocol):
+    """Every streaming STT vendor implements exactly this."""
+
+    name: VoiceProviderName
+
+    async def open(self, request: TranscriptionRequest) -> SttStream:
+        """`request.audio` is ignored and must be empty — the audio arrives on
+        `push`. It shares `TranscriptionRequest` so the locale→language mapping
+        below is reached identically from both modalities; a second request type
+        would be a second place for `hi-Latn` to be resolved, and that mapping is
+        the one this file exists to keep in one place."""
+        ...
+
+
+class StreamingTtsProvider(Protocol):
+    """Every streaming TTS vendor implements exactly this.
+
+    The iterator is the cancellation handle: §25.3's barge-in closes it, and the
+    adapter must stop paying the vendor for audio nobody will hear. `aclose()`
+    on the generator is what carries that, which is why this returns an async
+    iterator rather than taking a callback.
+    """
+
+    name: VoiceProviderName
+
+    def stream(self, request: SynthesisRequest) -> AsyncIterator[bytes]: ...
 
 
 # ---------------------------------------------------------------------------

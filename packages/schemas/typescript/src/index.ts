@@ -230,9 +230,13 @@ export type TranscriptStatus = (typeof TRANSCRIPT_STATUSES)[number];
 export const PLAYBACK_POLICIES = ["text_only", "original_audio", "transcript_only", "synthesised"] as const;
 export type PlaybackPolicy = (typeof PLAYBACK_POLICIES)[number];
 
-/** §34.6's `vad.state` payload. In M9 this brackets a HELD recording rather than reporting server-side voice activity detection — §25.4's grammar is hold-to-record or tap-lock, so the client knows when speech starts and stops because the user's finger says so. M10's live calls add the server-VAD sense of the same member (§25.3's barge-in ducking); the members below are chosen so that addition is a widening, not a rename. */
+/** §34.6's `vad.state` payload. In M9 this brackets a HELD recording rather than reporting server-side voice activity detection — §25.4's grammar is hold-to-record or tap-lock, so the client knows when speech starts and stops because the user's finger says so. M9-P10b's live calls add the server-VAD sense of the same member (§25.3's barge-in ducking); the members below are chosen so that addition is a widening, not a rename. */
 export const VAD_STATES = ["speech_start", "speech_end", "cancelled"] as const;
 export type VadState = (typeof VAD_STATES)[number];
+
+/** §34.6's `barge_in` payload (M9-P10b). §25.3 gives exactly one way to interrupt Tara — 'barge-in = just speak' — so `user_speech` is the only member that describes a user's action, and it is deliberately not spelled `user_interrupt`: the user did not press anything, which is the whole feature. The other two members exist because the client's job is identical in all three cases (drop the buffer, expect no `tts.end`) while the reason it must SAY to the user is not: an utterance cut by a provider failure is §8's degrade ladder and an utterance cut by an exhausted minute pool is §32.9's, and a client that could not tell them apart would show 'she stopped speaking' for both. */
+export const BARGE_IN_REASONS = ["user_speech", "provider_failed", "entitlement_exhausted"] as const;
+export type BargeInReason = (typeof BARGE_IN_REASONS)[number];
 
 /** §33.1 — 'the original recording is stored encrypted for 30 days BY DEFAULT'. Default, so a user setting may shorten it; the expiry job reads the per-note `source_audio_expires_at` rather than this constant, which exists so both sides can render the same promise in the same words. */
 export const SOURCE_AUDIO_RETENTION_DAYS = 30 as const;
@@ -240,10 +244,16 @@ export const SOURCE_AUDIO_RETENTION_DAYS = 30 as const;
 /** A cap, not a spec value. §34.6's frame is 16kHz mono s16le = 32 kB/s, so two minutes is ~3.8 MB — comfortably inside MongoDB's 16 MB document limit, which is where §33.1's CSFLE key class puts the bytes. The client stops recording here rather than letting a pocket-dial write a document that cannot be stored. */
 export const MAX_NOTE_DURATION_MS = 120000 as const;
 
+/** §32.9 — 'warnings at 5 and 2 minutes (in-locale, in Tara's voice, once each)'. Descending, because that is the order they fire in and a reader should not have to work it out. Both sides need the same two numbers: the server decides when to send `entitlement.warning`, the client decides when the §25.3 plan chip stops saying 'unlimited' and starts counting, and a chip that appeared at a different number from the warning would be two implementations of one promise. */
+export const ENTITLEMENT_WARNING_MINUTES = [5, 2] as const;
+
+/** §25.3 — the thinking state is 'a brief shimmer on the waveform — max 1.8s before she speaks a holding phrase'. A ceiling on silence, not a delay to wait out: if §9 answers in 400ms she answers in 400ms. It lives here because the server decides to speak the phrase and the client decides how long to shimmer, and those two have to be the same 1.8 seconds or the shimmer either ends before she speaks or outlasts her. */
+export const HOLDING_PHRASE_AFTER_MS = 1800 as const;
+
 // ---------------------------------------------------------------------------
-// SPEC §34.6 — control-event payloads: the text chat (S18) and voice notes
-// (M9). `barge_in` and `entitlement.warning` stay untyped — they belong to
-// live calls, which §33.5 gates and M10 owns.
+// SPEC §34.6 — control-event payloads: the text chat (S18), voice notes
+// (M9) and the live call (M9-P10b). All fifteen members are typed now; the
+// member SET is unchanged and stays closed at fifteen (§31.3).
 // ---------------------------------------------------------------------------
 /** Client → server. The ticket is single-use and 60-second; §34.5's session cookies are httpOnly and first-party, and a WebSocket handshake to another origin does not carry them. */
 export interface SessionStartPayload {
@@ -287,10 +297,12 @@ export interface VadStatePayload {
   quoted_message_id: string | null;
 }
 
-/** Server → client, on `tts.start`. §25.4: 'Tara's replies arrive as voice-note bubbles rendered from her TTS with transcript toggle'. Emitted after her `captions.final`, so the transcript the toggle shows is on screen before any audio plays — and is the same validated text the audio was rendered from, not a second generation. */
+/** Server → client, on `tts.start`. §25.4: 'Tara's replies arrive as voice-note bubbles rendered from her TTS with transcript toggle'. Emitted after her `captions.final`, so the transcript the toggle shows is on screen before any audio plays — and is the same validated text the audio was rendered from, not a second generation.
+
+`tts_audio_asset_id` became OPTIONAL in M9-P10b, and the null is load-bearing rather than lax. A voice NOTE is synthesised whole and stored, so it has an asset and a bubble that can replay it. A live CALL is streamed and its audio is never stored at all (§13, §33.1) — so there is no asset, and there is nothing to replay. Null is the type saying exactly that. Carrying an invented id would have promised a playback control over audio that does not exist anywhere. */
 export interface TtsStartPayload {
   client_message_id: string;
-  tts_audio_asset_id: string;
+  tts_audio_asset_id: string | null;
   sample_rate_hz: number;
   voice_id: string | null;
 }
@@ -306,6 +318,29 @@ export interface TtsChunkMetaPayload {
 export interface TtsEndPayload {
   client_message_id: string;
   duration_ms: number;
+}
+
+/** Server → client (§25.3, §7.3). Typed in M9-P10b because M9-P10b is the first milestone that emits it — the rule this package keeps, and the reason it stayed untyped through M9.
+
+**It replaces `tts.end`, it does not precede it.** `tts.end` carries the total duration for the bubble's scrubber; an utterance that was cut has no total duration that was ever true, and sending one would put a scrubber on audio the user interrupted. So a synthesis stream ends in exactly one of two members and a client can rely on that.
+
+`cancelled_after_chunk_seq` is the last `tts.chunk_meta.seq` the server sent before it stopped. The client needs it because it is buffering ahead of playback: without it, dropping 'the rest' is a guess about what the server had already put on the wire, and audio kept playing after the interruption is exactly the thing §25.3's barge-in exists to prevent. */
+export interface BargeInPayload {
+  cancelled_client_message_id: string;
+  cancelled_after_chunk_seq: number | null;
+  reason: BargeInReason;
+}
+
+/** Server → client (§7.3, §32.9). §32.9: warnings at 5 and 2 minutes, in-locale, in Tara's voice, ONCE EACH — the once-each is enforced by the session, not by the client ignoring repeats.
+
+`minutes_left` is the threshold that fired, not a live countdown: a per-second remaining-minutes feed would be §29.2's countdown, which this product does not build. `minutes_quota` is null for the unlimited fair-use tiers, which is also what makes the §25.3 plan chip render '⏳ unlimited' rather than a number.
+
+`message_key` and not a sentence: §2.4 puts every user-facing string in the catalogs, and a sentence on the wire is a sentence no §14 reviewer saw. */
+export interface EntitlementWarningPayload {
+  minutes_left: number;
+  minutes_quota: number | null;
+  plan: string;
+  message_key: string;
 }
 
 /** Server → client, on `captions.final`. Carries the whole validated turn and nothing else — there is no field here for text that has not been through §9's validators. */

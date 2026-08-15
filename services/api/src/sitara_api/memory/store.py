@@ -42,6 +42,10 @@ from sitara_api.memory.taxonomy import (
 
 logger = logging.getLogger(__name__)
 
+#: §29.1's S25 — the Memory Vault. The surface a withdrawal was made from is
+#: part of the §13 ledger's record, the same way onboarding stamps "S05".
+WITHDRAWAL_SURFACE = "S25"
+
 
 class MemoryStore:
     def __init__(self, db: Any) -> None:
@@ -207,11 +211,73 @@ class MemoryStore:
         result = await self._db.memories.delete_one({"_id": memory_id, "user_id": user_id})
         return result.deleted_count == 1
 
+    async def record_withdrawal(
+        self,
+        *,
+        user_id: ObjectId,
+        memory_type: MemoryType,
+        granted_at: dt.datetime | None,
+        surface: str = WITHDRAWAL_SURFACE,
+        now: dt.datetime | None = None,
+    ) -> None:
+        """Write a memory withdrawal to the §13 consent ledger (CC-011 §44.5).
+
+        This is the one method here that writes to a collection other than
+        `memories`, and it exists because the two policies had no meeting
+        point. §13 requires a "consent ledger visible in-app"; §30.5's delete
+        is a hard delete; and a memory's consent history lives INSIDE the
+        deleted document — so withdrawing consent destroyed the only evidence
+        that consent had ever been withdrawn. A user could not prove her own
+        deletion, which is the one thing a vault is for.
+
+        The row is **content-free**: the §32.4 type, when consent was granted,
+        when it was withdrawn, and the surface. Not the content, and not the
+        memory's `_id` — an id is a handle on the deleted row and a ledger full
+        of them is a catalogue of what she chose to erase. §32.15 settled this
+        shape already for family members: "the attestation consent record is
+        retained (legal basis history), the data is not".
+
+        It APPENDS rather than upserting, unlike `onboarding.record_consent`.
+        Consenting twice to the same policy is one consent, so that one
+        upserts on (user_id, type); withdrawing two memories of the same type
+        is two withdrawals, and §6.4's `user_id+type` index is not unique.
+        """
+        moment = now or dt.datetime.now(dt.UTC)
+        await self._db.consents.insert_one(
+            stamp(
+                {
+                    "user_id": user_id,
+                    # Namespaced so a memory withdrawal can never be mistaken
+                    # for — or overwrite — an onboarding consent of the same name.
+                    "type": f"memory.{memory_type.value}",
+                    "granted_at": granted_at,
+                    "revoked_at": moment,
+                    "surface": surface,
+                },
+                now=moment,
+            )
+        )
+
     async def delete_all_for_user(self, user_id: ObjectId) -> int:
         """§13 user rights: deletion removes application records, embeddings
         included. Called by the account-deletion orchestration."""
         result = await self._db.memories.delete_many({"user_id": user_id})
         return int(result.deleted_count)
+
+    async def sourced_from_messages(
+        self, *, user_id: ObjectId, message_ids: Sequence[ObjectId]
+    ) -> list[Memory]:
+        """The rows a scoped deletion is about to touch.
+
+        Read before the delete, so the withdrawal ledger can record what type
+        each memory was. After the delete there is nothing left to ask.
+        """
+        if not message_ids:
+            return []
+        cursor = self._db.memories.find(
+            {"user_id": user_id, "source_message_id": {"$in": list(message_ids)}}
+        )
+        return [Memory.from_doc(doc) async for doc in cursor]
 
     async def delete_sourced_from_messages(
         self, *, user_id: ObjectId, message_ids: Sequence[ObjectId]

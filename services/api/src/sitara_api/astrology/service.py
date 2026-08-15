@@ -200,6 +200,34 @@ class AstrologyFacade:
             fold=doc.get("fold"),
         )
 
+    async def time_accuracy(self, user_id: str) -> str:
+        """The STORED accuracy of a subject's birth time (§30.2, §5.4).
+
+        On the facade rather than read from `BirthInput`, because `BirthInput`
+        is narrowed to the five fields the ENGINE needs and accuracy is not one
+        of them — the engine computes the same chart from a time whether or not
+        anyone is confident in it.
+
+        Inferring accuracy from whether a time exists would be wrong in the one
+        direction that matters: §30.2 stores a WINDOW for an approximate time,
+        so an approximate row HAS a time, and a chart built from it would be
+        labelled `verified` while resting on a guessed ascendant. §5.4 exists
+        to prevent exactly that.
+
+        `unknown` when there is no row, no stored accuracy, or a value nobody
+        declared — the honest direction, since every unknown lands in
+        Moon-chart mode rather than in a confident diamond.
+        """
+        from sitara_api.db.registry import BY_NAME
+
+        doc = await self._db.birth_details.find_one({"user_id": ObjectId(user_id)})
+        if doc is None:
+            return "unknown"
+        if self._crypto is not None:
+            doc = await self._crypto.decrypt_document(BY_NAME["birth_details"], doc)
+        accuracy = doc.get("time_accuracy")
+        return accuracy if accuracy in TIME_ACCURACY else "unknown"
+
     async def set_birth_details(self, user_id: str, details: BirthDetailsInput) -> None:
         """Write one user's birth row. The ONLY write path there is.
 

@@ -114,6 +114,14 @@ try {
 /** Where `POST /v1/chat/session` points the browser. Set by the runner. */
 const REALTIME_WS_URL = process.env.STUB_REALTIME_WS_URL ?? "ws://127.0.0.1:3102/chat/session";
 
+/**
+ * Where `POST /v1/call/session` points the browser (§25.3, M9-P10b). A SEPARATE
+ * path from the chat one, because the real config has two — §6.1 scales and
+ * sticky-routes a minutes-long duplex call independently of bursts of text.
+ */
+const REALTIME_CALL_WS_URL =
+  process.env.STUB_REALTIME_CALL_WS_URL ?? "ws://127.0.0.1:3102/call/session";
+
 /** @type {Map<string, {state: object, scenario: string}>} */
 const clients = new Map();
 
@@ -230,6 +238,407 @@ function reading(locale, scenario) {
   }
 }
 
+/**
+ * ── M10's records: §30.5's Journal, §32.4's Vault, §32.15's family ─────────
+ *
+ * **Seeded, not recorded, and the line between the two is not arbitrary.**
+ *
+ * The briefs and the chat turns above are replayed from the real pipeline
+ * because their CONTENT is an engine output — a hand-written brief is a brief
+ * nobody's ranking engine produced, and every baseline taken from it is a
+ * picture of fiction. A journal day, a vault row and a family member are the
+ * opposite: they are the user's own records, and their content is whatever she
+ * put there. Recording them would record a fixture author's imagination with
+ * extra steps.
+ *
+ * What has to be right about them is their SHAPE and their RELATIONSHIPS, so
+ * this is a state machine over linked records — the same thing the onboarding
+ * stub is over steps, and for the same reason: §30.5's deletions are defined by
+ * what they do to the links.
+ *
+ * The links are seeded deliberately, because they are what the §30.5 confirm
+ * tests act on:
+ *   · the `preference` memory was learned from the turn the saved-guidance
+ *     entry points at, so that entry's checkbox has something real to delete;
+ *   · the `anniversary` memory contains the mother's NAME, so §32.15's
+ *     candidate list is a real name match rather than a hard-coded row;
+ *   · the `practice` memory is sourced from nothing either deletion touches, so
+ *     "took only what it said it would" is provable rather than assumed.
+ *
+ * **Ids are ObjectId-shaped (24 hex chars).** §6.4 requires objectId and the
+ * real routers parse every path id through `ObjectId(...)`, refusing anything
+ * else. An M5 in-memory store took string ids where the real one would not, so
+ * every real write failed validation while the whole suite stayed green — the
+ * root CLAUDE.md rule, in the place it was broken. A stub that accepted
+ * `"m1"` here would be the same defect.
+ */
+
+const TODAY = "2026-08-15";
+
+/**
+ * Record content per locale.
+ *
+ * A journal preview and a memory are things a Hindi user reads in Hindi. A stub
+ * serving English here would put English inside every Devanagari baseline and
+ * §2.4's "no silent English fallback" would be violated by the fixture rather
+ * than by the app — which is worse, because it looks like data.
+ */
+const RECORDS_TEXT = {
+  en: {
+    brief: "Work themes rise today — the Moon moves through your tenth house.",
+    reflection: "You wrote about the week finally settling.",
+    guidance: "Keep the difficult conversation for Thursday morning.",
+    call: "Six minutes about the move, and what your mother would have said.",
+    milestone: "Your first reading with Tara.",
+    anniversary: "Sudha's birthday is 11 March",
+    mother_name: "Sudha",
+    son_name: "Arjun",
+    preference: "Prefers her brief at 6:30, before the house wakes",
+    practice: "Fasts on Tuesdays",
+  },
+  hi: {
+    brief: "आज कार्य के विषय उभरते हैं — चंद्रमा आपके दशम भाव से गुजर रहे हैं।",
+    reflection: "आपने लिखा कि सप्ताह आख़िरकार ठहर रहा है।",
+    guidance: "वह कठिन बातचीत गुरुवार सुबह के लिए रखें।",
+    call: "छह मिनट, उस बदलाव के बारे में — और उस पर जो आपकी माँ कहतीं।",
+    milestone: "तारा के साथ आपका पहला पाठ।",
+    anniversary: "सुधा का जन्मदिन 11 मार्च है",
+    mother_name: "सुधा",
+    son_name: "अर्जुन",
+    preference: "सुबह 6:30 पर ब्रीफ़ पसंद है, घर के जागने से पहले",
+    practice: "मंगलवार को व्रत रखती हैं",
+  },
+  "hi-Latn": {
+    brief: "Aaj kaam ke vishay ubharte hain — Chandrama aapke dasham bhaav se guzar rahe hain.",
+    reflection: "Aapne likha ki hafta aakhirkar thehar raha hai.",
+    guidance: "Woh mushkil baatcheet Guruvaar subah ke liye rakhein.",
+    call: "Chhah minute, us badlaav ke baare mein — aur us par jo aapki maa kehtin.",
+    milestone: "Tara ke saath aapka pehla paath.",
+    anniversary: "Sudha ka janmdin 11 March hai",
+    mother_name: "Sudha",
+    son_name: "Arjun",
+    preference: "Subah 6:30 par brief pasand hai, ghar ke jaagne se pehle",
+    practice: "Mangalvaar ko vrat rakhti hain",
+  },
+};
+
+function seedRecords(locale) {
+  const text = RECORDS_TEXT[locale] ?? RECORDS_TEXT.en;
+  const mother = "6f10000000000000000000f1";
+  const son = "6f10000000000000000000f2";
+  const msg = {
+    anniversary: "6c10000000000000000000b1",
+    preference: "6c10000000000000000000b2",
+    practice: "6c10000000000000000000b3",
+  };
+
+  return {
+    /** §32.4's vault rows. No embedding — that is derived data (§32.5). */
+    memories: [
+      {
+        memory_id: "6b10000000000000000000a1",
+        type: "date_anniversary",
+        content: text.anniversary,
+        consent_granted_at: "2026-06-02T09:14:00Z",
+        wording_reconfirmed: false,
+        muted: false,
+        source_state: "present",
+        decay_score: 1,
+        created_at: "2026-06-02T09:14:00Z",
+        source_message_id: msg.anniversary,
+      },
+      {
+        memory_id: "6b10000000000000000000a2",
+        type: "preference",
+        content: text.preference,
+        consent_granted_at: "2026-07-19T04:02:00Z",
+        wording_reconfirmed: false,
+        muted: false,
+        source_state: "present",
+        decay_score: 0.72,
+        created_at: "2026-07-19T04:02:00Z",
+        source_message_id: msg.preference,
+      },
+      {
+        memory_id: "6b10000000000000000000a3",
+        type: "spiritual_practice",
+        content: text.practice,
+        consent_granted_at: "2026-05-11T16:40:00Z",
+        wording_reconfirmed: false,
+        muted: false,
+        source_state: "present",
+        decay_score: 1,
+        created_at: "2026-05-11T16:40:00Z",
+        source_message_id: msg.practice,
+      },
+    ],
+
+    /**
+     * §30.5's timeline. A DAY is the unit and an entry points at an artefact
+     * that lives elsewhere — the Journal keeps no copy (§44.2), so `preview` is
+     * rendered from the source and `null` where the source is gone.
+     */
+    journal: [
+      {
+        local_date: TODAY,
+        entries: [
+          {
+            artefact_type: "brief",
+            ref: `brief:${TODAY}`,
+            local_date: TODAY,
+            saved: false,
+            save_id: null,
+            note: null,
+            preview: text.brief,
+            message_id: null,
+            conversation_id: null,
+            confidence: "verified",
+            occurred_at: `${TODAY}T01:30:00Z`,
+          },
+        ],
+      },
+      {
+        local_date: "2026-08-14",
+        entries: [
+          {
+            artefact_type: "reflection",
+            ref: "reflection:2026-08-14",
+            local_date: "2026-08-14",
+            saved: false,
+            save_id: null,
+            note: null,
+            preview: text.reflection,
+            message_id: null,
+            conversation_id: null,
+            confidence: null,
+            occurred_at: "2026-08-14T16:05:00Z",
+          },
+          {
+            artefact_type: "guidance",
+            ref: "guidance:6d10000000000000000000c1",
+            local_date: "2026-08-14",
+            saved: true,
+            save_id: "6d10000000000000000000c1",
+            note: null,
+            preview: text.guidance,
+            message_id: msg.preference,
+            conversation_id: "6a90000000000000000000e1",
+            confidence: "verified",
+            occurred_at: "2026-08-14T11:22:00Z",
+          },
+        ],
+      },
+      {
+        local_date: "2026-08-12",
+        entries: [
+          {
+            artefact_type: "call",
+            ref: "call:6e10000000000000000000d1",
+            local_date: "2026-08-12",
+            saved: false,
+            save_id: null,
+            note: null,
+            preview: text.call,
+            message_id: null,
+            conversation_id: "6a90000000000000000000e1",
+            confidence: null,
+            occurred_at: "2026-08-12T13:40:00Z",
+          },
+          {
+            artefact_type: "milestone",
+            ref: "milestone:first_reading",
+            local_date: "2026-08-12",
+            saved: false,
+            save_id: null,
+            note: null,
+            preview: text.milestone,
+            message_id: null,
+            conversation_id: null,
+            confidence: null,
+            occurred_at: "2026-08-12T06:02:00Z",
+          },
+        ],
+      },
+    ],
+
+    family: [
+      {
+        member_id: mother,
+        relation: "mother",
+        name: text.mother_name,
+        language_tag: "hi",
+        has_birth_details: true,
+        attested: true,
+        memorial_state: "living",
+        created_at: "2026-05-30T10:00:00Z",
+      },
+      {
+        member_id: son,
+        relation: "son",
+        name: text.son_name,
+        language_tag: "en",
+        has_birth_details: false,
+        attested: false,
+        memorial_state: "living",
+        created_at: "2026-06-14T10:00:00Z",
+      },
+    ],
+
+    /**
+     * The collections §32.15 hard-deletes, counted. Not served by any product
+     * route — they exist so a test can assert a chart is GONE rather than
+     * merely unreachable, and so the memorial conversion can be proved to have
+     * touched neither.
+     */
+    birth_details: { [mother]: 1, [son]: 0 },
+    charts: { [mother]: 3, [son]: 0 },
+    /**
+     * §32.15's DPDP clause: the attestation is REVOKED, never deleted. The
+     * consent is a fact about the account-holder; the birth details were a fact
+     * about someone else.
+     */
+    attestations: { [mother]: "granted", [son]: "none" },
+
+    /** §27 binds a reflection to the user's local calendar day at creation. */
+    reflections: {},
+  };
+}
+
+/** The same client with nothing in it — §24.6's designed empty states. */
+function emptyRecords() {
+  return {
+    memories: [],
+    journal: [],
+    family: [],
+    birth_details: {},
+    charts: {},
+    attestations: {},
+    reflections: {},
+  };
+}
+
+/**
+ * ── The views, and what they deliberately do NOT carry ────────────────────
+ *
+ * Each of these mirrors a Pydantic view model in `sitara_api`, and the fields
+ * they drop matter more than the ones they keep:
+ *
+ * · `memoryView` drops `source_message_id`. The real `MemoryView` has no such
+ *   field — §32.5's embedding and the provenance pointer are both internal —
+ *   so a client that used it would be built on data the real API never sends.
+ * · `entryView` drops nothing the real `EntryView` has, and adds nothing. In
+ *   particular there is no `message_ids` array: the real one carries a single
+ *   `message_id`, and §30.5's checkbox is the CLIENT deriving the source turns
+ *   from it. A stub that handed over a ready-made list would let a screen ship
+ *   that could never work against `sitara_api`.
+ */
+function memoryView(memory) {
+  return {
+    memory_id: memory.memory_id,
+    type: memory.type,
+    content: memory.content,
+    consent_granted_at: memory.consent_granted_at,
+    wording_reconfirmed: memory.wording_reconfirmed,
+    muted: memory.muted,
+    source_state: memory.source_state,
+    decay_score: memory.decay_score,
+    created_at: memory.created_at,
+  };
+}
+
+function entryView(entry) {
+  return {
+    artefact_type: entry.artefact_type,
+    ref: entry.ref,
+    local_date: entry.local_date,
+    saved: entry.saved,
+    save_id: entry.save_id,
+    note: entry.note,
+    preview: entry.preview,
+    message_id: entry.message_id,
+    conversation_id: entry.conversation_id,
+    confidence: entry.confidence,
+    occurred_at: entry.occurred_at,
+  };
+}
+
+function dayView(day) {
+  return { local_date: day.local_date, entries: day.entries.map(entryView) };
+}
+
+function memberView(member) {
+  return {
+    member_id: member.member_id,
+    relation: member.relation,
+    name: member.name,
+    language_tag: member.language_tag,
+    has_birth_details: member.has_birth_details,
+    // §13's attestation TIMESTAMP stays server-side; the client needs to know
+    // only whether the gate is open.
+    attested: member.attested,
+    memorial_state: member.memorial_state,
+    created_at: member.created_at,
+  };
+}
+
+/** §10-17's three, in §27's order — served rather than hard-coded client-side. */
+const PROMPT_ORDER = ["gratitude", "weight", "tomorrow"];
+
+function emptyReflection(date, locale) {
+  return {
+    date,
+    locale,
+    entries: [],
+    mood: null,
+    memory_chips: [],
+    prompt_order: PROMPT_ORDER,
+    started: false,
+  };
+}
+
+/**
+ * One natal chart, as `astrology/router.py` serves it.
+ *
+ * Every placement is by GRAHA IDENTITY — that is the M6 lesson and the reason
+ * `astrology/kundli.py` exists in the shape it does. The lagna is Simha, so
+ * house 1 holds Simha and the rashis walk forward from there; the grahas are
+ * spread so a positional client-side read would draw a visibly different chart
+ * rather than a subtly wrong one.
+ */
+const RASHIS = [
+  "mesha", "vrishabha", "mithuna", "karka", "simha", "kanya",
+  "tula", "vrishchika", "dhanu", "makara", "kumbha", "meena",
+];
+
+/**
+ * House → grahas. Rahu in 3 and Ketu in 9, because they are always opposite —
+ * a chart that lost that is wrong in a way every reader of a paper chart
+ * notices instantly, and it is the sort of thing a generated fixture gets
+ * wrong silently.
+ */
+const CHART_PLACEMENTS = {
+  1: ["sun", "mercury"],
+  3: ["rahu"],
+  4: ["moon"],
+  7: ["venus", "mars"],
+  9: ["jupiter", "ketu"],
+  10: ["saturn"],
+};
+
+const CHART = {
+  houses: Array.from({ length: 12 }, (_, i) => ({
+    house: i + 1,
+    // Lagna in Simha (index 4), wrapping past the end of the zodiac.
+    rashi: RASHIS[(4 + i) % 12],
+    grahas: CHART_PLACEMENTS[i + 1] ?? [],
+    is_lagna: i === 0,
+  })),
+  lagna_rashi: "simha",
+  confidence: "verified",
+  moon_chart: false,
+  unplaced: [],
+};
+
 /** §34.4 — the only error shape that may leave a Sitara service. */
 function envelope(code, messageKey, retryable) {
   return { code, message_key: messageKey, trace_id: "trace-stub", retryable };
@@ -244,6 +653,7 @@ function clientFor(req) {
       state: emptyState(),
       scenario: "ok",
       today: { variant: "normal_morning", locale: "en" },
+      records: seedRecords("en"),
     });
   }
   return clients.get(id);
@@ -295,12 +705,33 @@ const server = createServer(async (req, res) => {
         // recording per density is the property worth replaying.
         density: body.density ?? "med",
       },
+      // §30.5/§32.4/§32.15's records. `records_empty` is how §24.6's designed
+      // empty states are reached — the same client with nothing in it, rather
+      // than a second fixture that could drift from this one.
+      records:
+        (body.scenario ?? "ok") === "records_empty"
+          ? emptyRecords()
+          : seedRecords(body.locale ?? "en"),
     });
     return send(res, 200, { ok: true });
   }
   if (path === "/__control/state") {
     const id = url.searchParams.get("clientId") ?? "default";
     return send(res, 200, clients.get(id)?.state ?? null);
+  }
+  /**
+   * The record state, for asserting what SURVIVED a deletion.
+   *
+   * This is not a product route and never will be: `birth_details`, `charts`
+   * and `attestations` are counts of collections §32.15 acts on that no screen
+   * may read. A §30.5 test that asserted only the DOM would pass against a
+   * screen that hid a row it never deleted, and one that asserted only the
+   * product API could not tell a revoked attestation from a deleted one — which
+   * is the exact distinction §32.15's DPDP clause turns on.
+   */
+  if (path === "/__control/records") {
+    const id = url.searchParams.get("clientId") ?? "default";
+    return send(res, 200, clients.get(id)?.records ?? null);
   }
   if (path === "/healthz") return send(res, 200, { status: "ok", service: "stub-api" });
 
@@ -411,6 +842,53 @@ const server = createServer(async (req, res) => {
     });
   }
 
+  // ── §25.3 / §34.6 call (M9-P10b) ─────────────────────────────────────────────
+  if (path === "/v1/call/session" && req.method === "POST") {
+    // Every reason a call must not happen is evaluated HERE, exactly as the
+    // real API evaluates it — §33.5's flag, CC-010's locale ruling, §7.3's
+    // pool. A stub that granted every call would be a fake that accepts what
+    // the real system rejects, which is the root CLAUDE.md rule.
+    if (scenario === "calls_disabled") {
+      return send(
+        res,
+        503,
+        envelope("VOICE_PROVIDER_UNAVAILABLE", "errors.voice.calls_not_enabled", false),
+      );
+    }
+    const callBody = await readJson(req);
+    if (callBody.locale && callBody.locale !== "en") {
+      // CC-010: `hi`/`hi-Latn` streaming has no recogniser, and an English one
+      // fed Hindi audio produces fluent nonsense rather than failing.
+      return send(
+        res,
+        503,
+        envelope(
+          "VOICE_PROVIDER_UNAVAILABLE",
+          "errors.voice.call_language_unavailable",
+          false,
+        ),
+      );
+    }
+    if (scenario === "call_minutes_exhausted") {
+      return send(
+        res,
+        402,
+        envelope("VOICE_MINUTES_EXHAUSTED", "errors.voice.minutes_exhausted", false),
+      );
+    }
+    const callClientId = client.id ?? "default";
+    return send(res, 200, {
+      ticket: `call-ticket-${callClientId}`,
+      ws_url: `${REALTIME_CALL_WS_URL}?client=${encodeURIComponent(callClientId)}`,
+      resume_window_s: 300,
+      entitlement:
+        scenario === "call_unlimited"
+          ? { plan: "premium", unlimited: true, minutes_left: null, minutes_quota: null }
+          : { plan: "monthly", unlimited: false, minutes_left: 6, minutes_quota: 300 },
+      captions_default_on: scenario !== "call_returning",
+    });
+  }
+
   if (path === "/v1/chat/turn" && req.method === "POST") {
     // §32.11's handoff path. Deliberately the SAME recorded turn the socket
     // would have delivered: the whole point of one `ChatTurn` on both
@@ -467,6 +945,286 @@ const server = createServer(async (req, res) => {
       return; // never responds — the case a server-side deadline cannot rescue
     }
     return send(res, 200, reading(client.state.locale, scenario));
+  }
+
+  // ── M10: §30.5 Journal · §32.4 Vault · §32.15 family · §27 reflection ────
+  //
+  // Every route below is behind the §34.5 session, because every one of them is
+  // in the real API (`CurrentSession` on each router). A stub that served a
+  // stranger's vault would be a fake accepting what the real system rejects.
+  if (path.startsWith("/v1/journal") || path.startsWith("/v1/memories") ||
+      path.startsWith("/v1/family") || path.startsWith("/v1/reflection") ||
+      path === "/v1/chart") {
+    if (!authed) {
+      return send(res, 401, envelope("AUTH_INVALID_TOKEN", "errors.auth.invalid_token", false));
+    }
+    if (scenario === "records_unavailable") {
+      return send(res, 503, envelope("SYS_UNAVAILABLE", "errors.sys.unavailable", true));
+    }
+  }
+
+  const records = client.records ?? (client.records = seedRecords(client.state.locale ?? "en"));
+
+  /**
+   * The real routers parse every path id through `ObjectId(...)` and raise
+   * SYS_VALIDATION on anything else. Refusing the same thing here is what stops
+   * a screen from shipping a route that builds a malformed id and only fails in
+   * production — the M5 lesson, applied to ids rather than to writes.
+   */
+  const objectId = (value) => /^[0-9a-f]{24}$/i.test(value);
+
+  // ── §30.5 Journal (S21–S23) ──────────────────────────────────────────────
+
+  if (path === "/v1/journal" && req.method === "GET") {
+    const since = url.searchParams.get("since");
+    const until = url.searchParams.get("until");
+    const days = records.journal
+      .filter((d) => (!since || d.local_date >= since) && (!until || d.local_date <= until))
+      .sort((a, b) => b.local_date.localeCompare(a.local_date));
+    return send(res, 200, days.map(dayView));
+  }
+
+  // BEFORE `/v1/journal/{date}`, exactly as the real router declares it. A
+  // dynamic segment that swallowed `search` would make S23 a 400 on a date
+  // parse — and the app router has the same trap one layer up.
+  if (path === "/v1/journal/search" && req.method === "GET") {
+    const q = (url.searchParams.get("q") ?? "").trim();
+    if (!q) return send(res, 422, envelope("SYS_VALIDATION", "errors.sys.validation", false));
+    const types = url.searchParams.getAll("type");
+    const needle = q.toLowerCase();
+    const hits = records.journal
+      .slice()
+      // §30.5's P0 contract is keyword + filters, NEWEST FIRST — deliberately
+      // not a relevance score, because that is the contract an exact scan
+      // satisfies exactly and the Atlas half is not built.
+      .sort((a, b) => b.local_date.localeCompare(a.local_date))
+      .flatMap((d) => d.entries)
+      .filter((e) => (types.length === 0 || types.includes(e.artefact_type)))
+      .filter((e) => (e.preview ?? "").toLowerCase().includes(needle))
+      .map((e) => ({
+        artefact_type: e.artefact_type,
+        ref: e.ref,
+        local_date: e.local_date,
+        preview: e.preview,
+        message_id: e.message_id,
+        conversation_id: e.conversation_id,
+      }));
+    return send(res, 200, hits);
+  }
+
+  if (path.startsWith("/v1/journal/") && req.method === "GET") {
+    const date = path.slice("/v1/journal/".length);
+    const found = records.journal.find((d) => d.local_date === date);
+    // §24.6: an empty day is a DAY, never a 404. The Journal opens onto dates
+    // nothing happened on and a dead end there would blame the user for a
+    // quiet Tuesday.
+    return send(res, 200, dayView(found ?? { local_date: date, entries: [] }));
+  }
+
+  if (path === "/v1/journal/delete" && req.method === "POST") {
+    const body = await readJson(req);
+    let deleted = 0;
+    for (const d of records.journal) {
+      const before = d.entries.length;
+      d.entries = d.entries.filter((e) => e.ref !== body.artefact_ref);
+      deleted += before - d.entries.length;
+    }
+    // §30.5's checkbox. `delete_memories` absent means FALSE means keep, which
+    // is the promise the sheet made — the default is not a convenience.
+    let memoriesDeleted = 0;
+    if (body.delete_memories) {
+      const ids = new Set(body.message_ids ?? []);
+      const before = records.memories.length;
+      records.memories = records.memories.filter((m) => !ids.has(m.source_message_id));
+      memoriesDeleted = before - records.memories.length;
+    }
+    return send(res, 200, { deleted, memories_deleted: memoriesDeleted });
+  }
+
+  // ── §32.4 Vault (S25, S26) ───────────────────────────────────────────────
+
+  if (path === "/v1/memories" && req.method === "GET") {
+    const types = url.searchParams.getAll("type");
+    const rows = records.memories.filter((m) => types.length === 0 || types.includes(m.type));
+    return send(res, 200, rows.map(memoryView));
+  }
+
+  if (path.startsWith("/v1/memories/") && path.endsWith("/mute") && req.method === "POST") {
+    const id = path.slice("/v1/memories/".length, -"/mute".length);
+    const memory = records.memories.find((m) => m.memory_id === id);
+    if (!memory) {
+      return send(res, 422, envelope("SYS_VALIDATION", "errors.memory.not_found", false));
+    }
+    const body = await readJson(req);
+    memory.muted = Boolean(body.muted);
+    return send(res, 200, memoryView(memory));
+  }
+
+  if (path.startsWith("/v1/memories/") && req.method === "DELETE") {
+    const id = path.slice("/v1/memories/".length);
+    if (!objectId(id)) {
+      return send(res, 422, envelope("SYS_VALIDATION", "errors.sys.validation", false));
+    }
+    const before = records.memories.length;
+    records.memories = records.memories.filter((m) => m.memory_id !== id);
+    if (records.memories.length === before) {
+      return send(res, 422, envelope("SYS_VALIDATION", "errors.memory.not_found", false));
+    }
+    // §30.5's whole promise: the journal is not touched. There is deliberately
+    // no line here that could touch it.
+    return send(res, 204, null);
+  }
+
+  // ── §32.15 family (S27, S28) ─────────────────────────────────────────────
+
+  if (path === "/v1/family" && req.method === "GET") {
+    return send(res, 200, records.family.map(memberView));
+  }
+
+  if (path.startsWith("/v1/family/") && path.endsWith("/memories") && req.method === "GET") {
+    const id = path.slice("/v1/family/".length, -"/memories".length);
+    const member = records.family.find((m) => m.member_id === id);
+    if (!member) {
+      return send(res, 422, envelope("SYS_VALIDATION", "errors.family.not_found", false));
+    }
+    // §32.15's "listed": "about them" is a NAME MATCH and nothing more, which
+    // is exactly why the candidates are shown rather than acted on silently.
+    //
+    // **The match is script-sensitive, and the seed is coherent about it.** A
+    // member's name and her memories are both things the user typed, so in a
+    // Hindi account both are Devanagari. Seeding a Latin "Sudha" beside a
+    // Devanagari memory made every Hindi candidate list empty — which the
+    // hi baseline showed as a §32.15 sheet offering a single generic checkbox
+    // where English offered a listed note. That was a defect in the fixture,
+    // but the underlying sensitivity is real: a name stored in one script does
+    // not match content written in another, and §32.15's answer is precisely
+    // that the user sees and ticks the list rather than trusting the match.
+    const needle = member.name.toLowerCase();
+    return send(
+      res,
+      200,
+      records.memories
+        .filter((m) => m.content.toLowerCase().includes(needle))
+        .map((m) => ({ memory_id: m.memory_id, type: m.type, content: m.content })),
+    );
+  }
+
+  if (path.startsWith("/v1/family/") && path.endsWith("/memorial") && req.method === "POST") {
+    const id = path.slice("/v1/family/".length, -"/memorial".length);
+    const member = records.family.find((m) => m.member_id === id);
+    if (!member) {
+      return send(res, 422, envelope("SYS_VALIDATION", "errors.family.not_found", false));
+    }
+    const body = await readJson(req);
+    if (!["living", "in_memory"].includes(body.memorial_state)) {
+      return send(res, 422, envelope("SYS_VALIDATION", "errors.sys.validation", false));
+    }
+    // §45.2: ONE field. There is deliberately no other statement in this
+    // branch — not a cleanup, not a cascade, not a helpful tidy-up of the
+    // reminders. A conversion that quietly pruned would be a deletion wearing
+    // a gentler word, and this is the code that would have to grow to do it.
+    member.memorial_state = body.memorial_state;
+    return send(res, 200, memberView(member));
+  }
+
+  if (path.startsWith("/v1/family/") && path.endsWith("/delete") && req.method === "POST") {
+    const id = path.slice("/v1/family/".length, -"/delete".length);
+    const member = records.family.find((m) => m.member_id === id);
+    if (!member) {
+      return send(res, 422, envelope("SYS_VALIDATION", "errors.family.not_found", false));
+    }
+    const body = await readJson(req);
+    const ticked = new Set(body.delete_memory_ids ?? []);
+
+    // §32.15's ORDER, mirrored from `sitara_api.family.service`: birth details
+    // and charts before the member row, so a failure mid-way leaves a member
+    // pointing at nothing rather than orphaned crown jewels pointing at nobody.
+    const birthDetails = records.birth_details[id] ?? 0;
+    const charts = records.charts[id] ?? 0;
+    records.birth_details[id] = 0;
+    records.charts[id] = 0;
+
+    const beforeMemories = records.memories.length;
+    records.memories = records.memories.filter((m) => !ticked.has(m.memory_id));
+    const memoriesDeleted = beforeMemories - records.memories.length;
+
+    records.family = records.family.filter((m) => m.member_id !== id);
+    // §32.15's DPDP clause. The attestation is REVOKED and never deleted: the
+    // consent is a fact about the account-holder, the birth details were a fact
+    // about someone else. A well-meaning "delete everything" gets this exactly
+    // backwards.
+    records.attestations[id] = "revoked";
+
+    return send(res, 200, {
+      birth_details: birthDetails,
+      charts,
+      memories: memoriesDeleted,
+      member_removed: true,
+      attestation_retained: true,
+    });
+  }
+
+  if (path.startsWith("/v1/family/") && req.method === "GET") {
+    const id = path.slice("/v1/family/".length);
+    const member = records.family.find((m) => m.member_id === id);
+    if (!member) {
+      return send(res, 422, envelope("SYS_VALIDATION", "errors.family.not_found", false));
+    }
+    return send(res, 200, memberView(member));
+  }
+
+  // ── §27 night reflection (S24) ───────────────────────────────────────────
+
+  if (path.startsWith("/v1/reflection/") && req.method === "GET") {
+    const date = path.slice("/v1/reflection/".length);
+    const locale = url.searchParams.get("locale") ?? client.state.locale ?? "en";
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return send(res, 422, envelope("SYS_VALIDATION", "errors.reflection.bad_date", false));
+    }
+    // §24.6 again: a night not yet written is an EMPTY reflection, not a 404.
+    // The night takeover opens straight onto this surface, and a 404 on the
+    // first tap would be the app telling her she had not done something.
+    return send(res, 200, records.reflections[date] ?? emptyReflection(date, locale));
+  }
+
+  if (path.startsWith("/v1/reflection/") && req.method === "PUT") {
+    const date = path.slice("/v1/reflection/".length);
+    const body = await readJson(req);
+    const entries = Object.entries(body.entries ?? {}).map(([prompt, text]) => ({ prompt, text }));
+    const saved = {
+      date,
+      locale: body.locale ?? "en",
+      entries,
+      mood: body.mood ?? null,
+      memory_chips: body.memory_chips ?? [],
+      prompt_order: PROMPT_ORDER,
+      started: entries.length > 0 || Boolean(body.mood),
+    };
+    records.reflections[date] = saved;
+    return send(res, 200, saved);
+  }
+
+  // ── S28's chart (CC-007's diagram, drawn) ────────────────────────────────
+
+  if (path === "/v1/chart" && req.method === "GET") {
+    const subject = url.searchParams.get("subject_id");
+    if (subject) {
+      const member = records.family.find((m) => m.member_id === subject);
+      if (!member) {
+        return send(res, 422, envelope("SYS_VALIDATION", "errors.family.not_found", false));
+      }
+      if (!member.has_birth_details) {
+        // §5.3: the engine declines rather than guessing, and so does this.
+        // §28.2 has a designed variant for it; a chart nobody can compute is
+        // that variant's business, not a 500.
+        return send(
+          res,
+          422,
+          envelope("ASTRO_INSUFFICIENT_BIRTH_DATA", "errors.astro.insufficient_birth_data", false),
+        );
+      }
+    }
+    return send(res, 200, CHART);
   }
 
   console.error(`[stub-api] unhandled ${req.method} ${path}`);

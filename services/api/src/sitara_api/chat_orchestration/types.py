@@ -362,6 +362,22 @@ class TurnRequest:
     #: Rolling summary of everything older than `history` (§9 token budget).
     summary: str | None = None
     tokens_used_today: int = 0
+    #: M9-P10b (§25.3). Set when the user's turn is ALREADY on the record — the
+    #: pipeline then answers it and does not write it a second time.
+    #:
+    #: This exists because a call cannot be re-asked. `_persist` writes both
+    #: messages at the END of the turn, so a pipeline that dies mid-turn loses
+    #: the user's words along with the answer. A typed question survives that:
+    #: it is still in the composer, and the client resends. **Spoken words do
+    #: not.** Call audio is never stored (§13, §33.1), so the transcript is the
+    #: only record there will ever be, and a provider outage between "she heard
+    #: you" and "she answered" would erase what somebody said out loud.
+    #:
+    #: So the call service commits the transcript the moment STT finalises it
+    #: and passes the id here. Same ordering discipline as §28.3's
+    #: store-the-original-before-STT, one layer up: write the thing that cannot
+    #: be recreated before the thing that can fail.
+    user_message_id: str | None = None
 
 
 @dataclass(frozen=True)

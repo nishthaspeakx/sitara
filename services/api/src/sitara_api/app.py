@@ -3,6 +3,7 @@
 Modules: auth, numerology, panchang, chat-orchestration.
 """
 
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -10,8 +11,11 @@ from fastapi import FastAPI
 
 from sitara_api import __version__
 from sitara_api.astrology import AstroChartAdapter, AstrologyFacade
+from sitara_api.astrology.router import router as chart_router
 from sitara_api.auth.firebase import FirebaseAdminVerifier
 from sitara_api.auth.router import router as auth_router
+from sitara_api.calls.router import router as call_router
+from sitara_api.calls.service import CallTurnService
 from sitara_api.chat_orchestration import ChatSettings, build_pipeline
 from sitara_api.chat_orchestration.router import router as chat_router
 from sitara_api.chat_orchestration.types import LAUNCH_LOCALES
@@ -21,6 +25,13 @@ from sitara_api.daily_guidance.wiring import build_service as build_daily_guidan
 from sitara_api.db import ensure_indexes, make_mongo, make_redis
 from sitara_api.db.csfle import build_crypto
 from sitara_api.errors import install_error_handlers
+from sitara_api.family.router import router as family_router
+from sitara_api.family.service import FamilyService
+from sitara_api.family.store import FamilyStore
+from sitara_api.journal.router import router as journal_router
+from sitara_api.journal.search import ExactTextSearch
+from sitara_api.journal.service import JournalService
+from sitara_api.journal.store import JournalStore
 from sitara_api.localisation import verify_catalogs
 from sitara_api.memory import MemorySettings, build_memory_service
 from sitara_api.memory.router import router as memory_router
@@ -33,8 +44,12 @@ from sitara_api.panchang.places import default_resolver
 from sitara_api.panchang.registry import build_registry
 from sitara_api.panchang.router import router as panchang_router
 from sitara_api.panchang.service import PanchangService
+from sitara_api.reflection.router import router as reflection_router
+from sitara_api.reflection.service import ReflectionService
+from sitara_api.voice.call_metrics import CallMetrics, RedisMetricStore
 from sitara_api.voice.config import VoiceSettings
-from sitara_api.voice.providers.registry import build_voice_service
+from sitara_api.voice.entitlements import MinuteLedger
+from sitara_api.voice.providers.registry import build_streaming_tts, build_voice_service
 from sitara_api.voice.router import router as voice_router
 
 
@@ -86,6 +101,27 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             settings=app.state.memory_settings,
             environment=settings.environment,
         )
+        # §30.5's Journal (M10). Built after memory because §30.5's
+        # journal-entry deletion offers a checkbox that reaches `memories` —
+        # a checkbox offered and silently ineffective is worse than one not
+        # offered, so the service takes the memory service rather than
+        # discovering it later.
+        app.state.journal_service = JournalService(
+            store=JournalStore(db),
+            search=ExactTextSearch(db),
+            memory_service=app.state.memory_service,
+        )
+        # §29.1's S27/S28. After memory because §32.15's deletion offers a
+        # checkbox that reaches `memories` — the same reason the Journal takes
+        # it, and the same failure if it does not: a checkbox offered and
+        # silently ineffective.
+        app.state.family_service = FamilyService(
+            store=FamilyStore(db), memory_service=app.state.memory_service
+        )
+        # §24.4's S19. No dependencies beyond the database: §10-17's "no
+        # streaks, no guilt" means there is nothing to aggregate and nobody to
+        # compare her to.
+        app.state.reflection_service = ReflectionService(db)
         # §9 chat-orchestration. Built here because the transcript store, the
         # Trust-Sheet log and the safety queue all need the database.
         app.state.chat_pipeline = build_pipeline(
@@ -111,6 +147,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             crypto=app.state.field_crypto,
             pipeline=app.state.chat_pipeline,
         )
+        # §25.3's live call (M9-P10b). Built after the pipeline for the same
+        # reason voice notes are: a call RUNS §9 rather than reimplementing it.
+        # It is reachable only behind `settings.calls_enabled` (§33.5) and only
+        # in a locale `routing` admits (CC-010) — both checked at the door in
+        # `calls/router.py`, so this being wired is not the same as this being
+        # available.
+        app.state.call_turns = CallTurnService(
+            pipeline=app.state.chat_pipeline,
+            store=(
+                app.state.chat_pipeline.message_store if app.state.chat_pipeline else None
+            ),
+            tts=build_streaming_tts(app.state.voice_settings),
+            voice_id=app.state.voice_settings.tara_voice_id,
+            environment=settings.environment,
+        )
+        app.state.minute_ledger = MinuteLedger(db)
+        # §33.5's evidence, from the first call (§43.5). Redis and not Mongo
+        # because these are counters and a reservoir, and no TTL because a
+        # launch gate whose evidence expired would quietly reset the decision.
+        app.state.call_metrics = CallMetrics(RedisMetricStore(app.state.redis))
         # §7.1's pipeline, for the on-open path `GET /v1/today` needs (§28.2).
         # Built ONCE here rather than per request: it provisions a CSFLE codec
         # holding a key-vault connection, and Today is the app's busiest screen.
@@ -133,14 +189,33 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.chat_pipeline = None
     app.state.voice_notes = None
     app.state.memory_service = None
+    app.state.journal_service = None
+    app.state.family_service = None
+    app.state.reflection_service = None
+    app.state.call_turns = None
+    app.state.call_metrics = None
+    app.state.minute_ledger = None
     # §2.4: the service renders §9's safety and decline strings itself. A
     # missing catalog must surface here, not when an L4 turn needs the crisis
     # line.
     verify_catalogs(LAUNCH_LOCALES)
-    app.state.firebase_verifier = FirebaseAdminVerifier(
-        project_id=settings.firebase_project_id,
-        credentials_path=settings.google_application_credentials,
-    )
+    # §6.3's adapter rule, and `firebase.py`'s own "fakeable boundary". The
+    # dev verifier RAISES unless environment == "dev", so a mis-set env var in
+    # any other environment fails at boot — loudly, and before it can issue a
+    # single session.
+    if settings.auth_dev_bypass:
+        from sitara_api.auth.dev_verifier import DevPhoneVerifier, seeded_phone_book
+
+        app.state.firebase_verifier = DevPhoneVerifier(environment=settings.environment)
+        book = ", ".join(f"{phone} ({handle})" for phone, handle in seeded_phone_book())
+        logging.getLogger(__name__).warning(
+            "AUTH_DEV_BYPASS is ON — Firebase is not consulted. Seeded personas: %s", book
+        )
+    else:
+        app.state.firebase_verifier = FirebaseAdminVerifier(
+            project_id=settings.firebase_project_id,
+            credentials_path=settings.google_application_credentials,
+        )
     app.state.numerology_adapter = AstroNumerologyAdapter(
         settings.astro_base_url, settings.astro_timeout_seconds
     )
@@ -155,8 +230,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(numerology_router)
     app.include_router(panchang_router)
     app.include_router(chat_router)
+    app.include_router(call_router)
     app.include_router(voice_router)
     app.include_router(memory_router)
+    app.include_router(journal_router)
+    app.include_router(family_router)
+    app.include_router(reflection_router)
+    app.include_router(chart_router)
     app.include_router(onboarding_router)
     app.include_router(today_router)
     # §28.2's variant switcher runs the REAL service over fact fixtures, and

@@ -33,3 +33,41 @@ Run `node scripts/token-lint.mjs --explain` to print the full derivation ledger.
 ## Commands
 - Build: `pnpm --filter @sitara/tokens build`
 - Lint (all three gates): `pnpm token-lint` (root) · `--source-only` · `--contrast-only` · `--explain`
+
+## Colours carry `<alpha-value>` — and why that took three milestones (M9-P10b)
+
+Every colour is emitted twice: `--color-x: #RRGGBB` for anything reading the
+var directly, and `--color-x-rgb: R G B` for the Tailwind preset, which maps
+each utility to `rgb(var(--color-x-rgb) / <alpha-value>)`. Tailwind substitutes
+`1` when there is no modifier, so an unmodified `bg-x` is byte-for-byte the
+colour it always was.
+
+**Before this, an opacity modifier on a colour produced NO CSS RULE AT ALL.**
+Not a wrong colour, not a fallback — the class silently did not exist. So:
+
+- `Modal` and `Sheet` have asked for a 60% navy scrim since M7. Every modal,
+  sheet, paywall, TrustSheet and memory-consent prompt in the product rendered
+  with **no backdrop**, content behind them undimmed.
+- `BannerStack`'s §22.13 payment-grace tint (`bg-feedback-caution/10`) was flat.
+- §25.3's call screen could not express its mandated 25% dim.
+
+Nothing failed: not a typecheck, not a lint, not a behavioural test, and **not
+the screenshot suite** — the baselines simply recorded the missing scrim as
+correct. It surfaced only when a NEW surface asked for a dim and a human looked
+at the picture.
+
+Two guards now, because the two failures are different:
+
+- **`token-lint` gate 4** re-derives from the built preset which colours can
+  take an opacity, and fails any `x-<colour>/<n>` in app source naming one that
+  cannot. Verified by reverting a colour to a bare `var()` and watching it name
+  `Modal.tsx:66` and `Sheet.tsx:88`.
+- **A pixel diff cannot hold a faint overlay.** `maxDiffPixelRatio` is 0.001 —
+  tight on how MANY pixels move — but the per-pixel `threshold` is the default
+  0.2 in YIQ, so a uniform 25% (or 10%) wash moves every pixel by less than
+  that and all baselines pass. Demonstrated by cranking §25.3's dim to 95%,
+  which does move them, and back. **Faint overlays are therefore asserted from
+  the computed style**, not from the picture — see `call-screens.spec.ts`'s
+  "§25.3's 25% dim is really applied, at 25%" and `today-screens.spec.ts`'s
+  grace-tint check.
+

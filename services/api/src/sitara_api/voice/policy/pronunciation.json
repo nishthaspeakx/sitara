@@ -1,0 +1,178 @@
+{
+  "$comment": "SPEC §3.4's pronunciation-override system, seeded. Per-locale term → the spelling a TTS engine says correctly. §3.4 permits 'grapheme→phoneme OR vendor-native lexicon format'; this is the former, because a vendor-hosted lexicon is a resource that has to be created through the vendor's API and would make the dictionary un-reviewable from the admin surface §3.4 requires.",
+  "$scope": "NOT §3.4's full corpus. That is 200 astrology terms, 150 given names, 100 surnames, 80 cities, 60 festivals — authored by the localisation lead and signed off by the Jyotish lead, per §3.4's own ownership. These are the tradition terms M9's live run touched plus the day-division vocabulary a call will reach first. Every row is `status: draft` for exactly that reason: nothing here has been through §3.4's native panel, and a row that claimed otherwise would be the review being skipped rather than pending.",
+  "$why_these": "Cartesia Ink transcribed spoken 'rahu kaal' as the single token 'Rahukaal' (M9 live run, 13 Aug 2026). That is a compound-word join, not a mishearing, and it pointed at the same seam on the TTS side: a term the engine treats as one token is a term it stresses as one word. The claim lexicon's half of this is fixed separately (CL-015, `_separator_variants`); this is the spoken half.",
+  "$review": "§3.4: 'Every override records author + review status.' `reviewed_by` is null on every row below because nobody has reviewed them. The §14 native reviewer owns that, and `status` stays `draft` until they do.",
+  "locales": {
+    "hi": {
+      "$register": "aap-register, Devanagari. §3.3: 'Devanagari input to TTS always' for Hindi.",
+      "terms": [
+        {
+          "term": "राहु काल",
+          "phonetic": "राहु  काल",
+          "note": "Two words, and the space is load-bearing — joined it becomes RAA-hu-kaal with one stress instead of two. The double space is a pause hint, not a typo.",
+          "status": "draft",
+          "reviewed_by": null
+        },
+        {
+          "term": "राहुकाल",
+          "phonetic": "राहु  काल",
+          "note": "The joined spelling users and STT both produce; spoken the same as the spaced one.",
+          "status": "draft",
+          "reviewed_by": null
+        },
+        {
+          "term": "यमगण्ड",
+          "phonetic": "यम  गण्ड",
+          "status": "draft",
+          "reviewed_by": null
+        },
+        {
+          "term": "गुलिक काल",
+          "phonetic": "गुलिक  काल",
+          "status": "draft",
+          "reviewed_by": null
+        },
+        {
+          "term": "अभिजित मुहूर्त",
+          "phonetic": "अभिजित  मुहूर्त",
+          "status": "draft",
+          "reviewed_by": null
+        },
+        {
+          "term": "ब्रह्म मुहूर्त",
+          "phonetic": "ब्रह्म  मुहूर्त",
+          "status": "draft",
+          "reviewed_by": null
+        }
+      ]
+    },
+    "hi-Latn": {
+      "$register": "Hinglish, Latin script (§2.4). The respelling targets an engine reading Latin text with Hindi intonation (§3.3's tts language `hi`).",
+      "terms": [
+        {
+          "term": "rahu kaal",
+          "phonetic": "raahu  kaal",
+          "note": "Doubling the first vowel stops the clipped 'RA-hu'; the gap keeps two stresses.",
+          "status": "draft",
+          "reviewed_by": null
+        },
+        {
+          "term": "rahukaal",
+          "phonetic": "raahu  kaal",
+          "note": "What Ink returns for spoken 'rahu kaal'. Same sound, one token.",
+          "status": "draft",
+          "reviewed_by": null
+        },
+        {
+          "term": "rahu kalam",
+          "phonetic": "raahu  kaalam",
+          "status": "draft",
+          "reviewed_by": null
+        },
+        {
+          "term": "yamagandam",
+          "phonetic": "yama  gandam",
+          "status": "draft",
+          "reviewed_by": null
+        },
+        {
+          "term": "gulika kaal",
+          "phonetic": "gulika  kaal",
+          "status": "draft",
+          "reviewed_by": null
+        },
+        {
+          "term": "abhijit muhurat",
+          "phonetic": "abhijit  muhoorat",
+          "status": "draft",
+          "reviewed_by": null
+        },
+        {
+          "term": "brahma muhurat",
+          "phonetic": "brahma  muhoorat",
+          "status": "draft",
+          "reviewed_by": null
+        },
+        {
+          "term": "choghadiya",
+          "phonetic": "chogha  diya",
+          "status": "draft",
+          "reviewed_by": null
+        },
+        {
+          "term": "nakshatra",
+          "phonetic": "nakshatra",
+          "note": "Listed with no change so the review surface shows it was considered, not missed.",
+          "status": "draft",
+          "reviewed_by": null
+        }
+      ]
+    },
+    "en": {
+      "$register": "Warm Indian-neutral (§3.3). English readers mangle these hardest — an engine reading 'rahu kaal' as English gives 'RAY-hoo KAYL'.",
+      "terms": [
+        {
+          "term": "rahu kaal",
+          "phonetic": "raahoo  kaal",
+          "status": "draft",
+          "reviewed_by": null
+        },
+        {
+          "term": "rahukaal",
+          "phonetic": "raahoo  kaal",
+          "status": "draft",
+          "reviewed_by": null
+        },
+        {
+          "term": "rahu kalam",
+          "phonetic": "raahoo  kaalam",
+          "status": "draft",
+          "reviewed_by": null
+        },
+        {
+          "term": "yamaganda",
+          "phonetic": "yama  gunda",
+          "status": "draft",
+          "reviewed_by": null
+        },
+        {
+          "term": "gulika",
+          "phonetic": "gulika",
+          "status": "draft",
+          "reviewed_by": null
+        },
+        {
+          "term": "abhijit muhurat",
+          "phonetic": "abhijit  muhoorat",
+          "status": "draft",
+          "reviewed_by": null
+        },
+        {
+          "term": "choghadiya",
+          "phonetic": "chogha  deeya",
+          "status": "draft",
+          "reviewed_by": null
+        },
+        {
+          "term": "nakshatra",
+          "phonetic": "nuk  shatra",
+          "status": "draft",
+          "reviewed_by": null
+        },
+        {
+          "term": "tithi",
+          "phonetic": "tithee",
+          "status": "draft",
+          "reviewed_by": null
+        },
+        {
+          "term": "panchang",
+          "phonetic": "punchaang",
+          "status": "draft",
+          "reviewed_by": null
+        }
+      ]
+    }
+  }
+}

@@ -79,6 +79,9 @@ try {
 /** Per-test scenario, keyed by the `client` query param the page carries. */
 const scenarios = new Map();
 
+/** Mic bytes received per client, so a test can observe a real capture path. */
+const micBytesByClient = new Map();
+
 function scenarioFor(client) {
   return (
     scenarios.get(client) ?? {
@@ -163,6 +166,12 @@ const server = createServer((req, res) => {
     res.end(JSON.stringify({ status: "ok", service: "stub-realtime" }));
     return;
   }
+  if (req.method === "GET" && req.url?.startsWith("/__control/mic")) {
+    const id = new URL(req.url, "http://localhost").searchParams.get("client") ?? "default";
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(JSON.stringify({ bytes: micBytesByClient.get(id) ?? 0 }));
+    return;
+  }
   if (req.method === "POST" && req.url?.startsWith("/__control/scenario")) {
     let body = "";
     req.on("data", (chunk) => (body += chunk));
@@ -191,6 +200,7 @@ server.on("upgrade", (req, socket) => {
 
   const url = new URL(req.url ?? "/", "http://localhost");
   const client = url.searchParams.get("client") ?? "default";
+  const isCall = url.pathname.startsWith("/call");
   let seq = 0;
   let buffered = Buffer.alloc(0);
 
@@ -199,6 +209,13 @@ server.on("upgrade", (req, socket) => {
 
   /** The open §34.6 bracket, or null. One at a time, as the real service does. */
   let recording = null;
+  /**
+   * Mic bytes a CALL has received. Exposed on `/__control/mic` so a test can
+   * assert the browser really opened a capture path — stubbing `VoiceRecorder`
+   * instead would verify frames the test invented over a microphone that never
+   * opened, which is CL-013's failure mode one layer further in.
+   */
+  let micBytes = 0;
 
   socket.on("data", (chunk) => {
     buffered = Buffer.concat([buffered, chunk]);
@@ -212,6 +229,15 @@ server.on("upgrade", (req, socket) => {
         return;
       }
       if (frame.opcode === 0x2) {
+        if (isCall) {
+          // §25.3's call has NO bracket: the microphone is open for the whole
+          // call and §25.3's mute is client-hard, so silence on the wire is
+          // what a muted user sounds like. Counting the bytes is enough — a
+          // test asserts the browser really opened a capture path.
+          micBytes += frame.payload.length - 8;
+          micBytesByClient.set(client, micBytes);
+          continue;
+        }
         // §34.6's binary frame — real PCM over a real socket, which is the
         // whole point of this file existing. Accepted only inside a bracket,
         // exactly as `services/realtime` does, so a client that sends audio
@@ -252,6 +278,18 @@ server.on("upgrade", (req, socket) => {
         continue;
       }
       const scenario = scenarioFor(client);
+
+      if (isCall) {
+        if (event.type === "session.start") {
+          runCall(send, scenario, event.seq);
+          continue;
+        }
+        if (event.type === "session.end") {
+          socket.end();
+          return;
+        }
+        continue;
+      }
 
       if (event.type === "session.start") {
         // A resume token that names a pending turn gets it back, exactly as
@@ -424,6 +462,118 @@ server.on("upgrade", (req, socket) => {
 
   socket.on("error", () => socket.destroy());
 });
+
+/**
+ * §25.3's call, scripted (M9-P10b).
+ *
+ * The whole exchange is driven from `session.start` because a call is a
+ * SEQUENCE — a screen that renders `speaking` correctly and never renders the
+ * handoff is a screen that passes a frame-by-frame test and fails a call.
+ *
+ * `tts_kill` is the chaos scenario the milestone was built around: synthesis
+ * dies mid-utterance, and the socket must leave her words on screen, stop the
+ * audio with a REASON, and land in `handoff.to_text`. It mirrors, frame for
+ * frame, what `services/realtime/tests/test_call_degrade.py` asserts against
+ * the real service — the two would have to drift together to both be wrong.
+ */
+function runCall(send, scenario, ack) {
+  const behaviour = scenario.behaviour ?? "reply";
+  const turn = turns.get(`${scenario.turn ?? "grounded"}.${scenario.locale ?? "en"}`);
+  const cid = "u1";
+
+  // §25.3's `connecting` is a real state and the only way to observe it is a
+  // socket that has upgraded and not yet answered. A test that raced the
+  // handshake would capture it once in twenty runs.
+  if (behaviour === "hold_ready") return;
+
+  send("session.ready", {
+    resume_token: "call-resume-tok",
+    resume_window_s: 300,
+    conversation_id: "c1",
+  }, ack);
+
+  if (behaviour === "connecting") return; // stays on the connecting state
+
+  // The user speaks. Server-side VAD opens the bracket and mints the id.
+  send("vad.state", { state: "speech_start", client_message_id: cid });
+  send("captions.partial", { role: "user", text: "what is Saturn", client_message_id: cid });
+  send("captions.final", {
+    role: "user",
+    text: "what is Saturn doing today?",
+    client_message_id: cid,
+    quoted_message_id: null,
+    transcript_status: "ready",
+    // Spoken, and never stored (§13/§33.1). `text_only` would say they typed it.
+    playback_policy: "transcript_only",
+    source_audio_asset_id: null,
+    duration_ms: null,
+    source_audio_expires_at: null,
+  });
+
+  if (behaviour === "turn_failed") {
+    send("error", {
+      code: "SYS_UNAVAILABLE",
+      message_key: "errors.sys.unavailable",
+      trace_id: "",
+      retryable: true,
+    });
+    send("handoff.to_text", { conversation_id: "c1", reason: "turn_failed" });
+    return;
+  }
+
+  send("presence.state", { state: "thoughtful", stage: "fact_tools" });
+  if (behaviour === "thinking") return;
+
+  if (!turn) return;
+  // Her words FIRST, always — before a single byte of audio.
+  send("captions.final", { role: "tara", client_message_id: cid, turn });
+
+  send("tts.start", {
+    client_message_id: cid,
+    // Null: a call's audio is streamed and never stored, so there is no asset
+    // and nothing to replay (§33.1).
+    tts_audio_asset_id: null,
+    sample_rate_hz: 16000,
+    voice_id: null,
+  });
+  send("tts.chunk_meta", { client_message_id: cid, seq: 0, byte_length: 640 });
+
+  // Mid-utterance and STAYING there. §25.3's `speaking` is a state a person
+  // sits in for seconds; a script that reached `tts.end` in the same tick left
+  // it unobservable from a browser, and a test asserting it was asserting a
+  // frame that had already gone by.
+  if (behaviour === "speaking") return;
+
+  if (behaviour === "tts_kill") {
+    // §8's ladder. `barge_in` and NOT `tts.end`: a cut utterance has no total
+    // duration that was ever true, so a scrubber over it would be a lie.
+    send("barge_in", {
+      cancelled_client_message_id: cid,
+      cancelled_after_chunk_seq: 0,
+      reason: "provider_failed",
+    });
+    send("handoff.to_text", { conversation_id: "c1", reason: "tts_provider_failed" });
+    return;
+  }
+
+  if (behaviour === "warning") {
+    send("entitlement.warning", {
+      // §32.9 fires at 5 AND at 2, and the two render different sentences
+      // through the same ICU plural — the singular/plural split is exactly the
+      // kind of thing a single-threshold baseline would never show.
+      minutes_left: scenario.warningMinutes ?? 5,
+      minutes_quota: 300,
+      plan: "monthly",
+      message_key: "ui.call.warning_minutes",
+    });
+  }
+
+  send("tts.end", { client_message_id: cid, duration_ms: 3400 });
+
+  if (behaviour === "exhausted") {
+    send("handoff.to_text", { conversation_id: "c1", reason: "entitlement_exhausted" });
+  }
+}
 
 /** The same map the real service carries, kept in step by `ask-ws.spec.ts`. */
 function presenceFor(stage) {

@@ -70,6 +70,38 @@ class Settings(BaseSettings):
     # the pipeline for an arbitrary user id is an open door that looks shut.
     service_key: str | None = None
 
+    # --- local development sign-in ----------------------------------------
+    # A browser needs NEXT_PUBLIC_FIREBASE_* to reach Firebase, and a local
+    # checkout has none — so sign-in fails before an OTP is even sent and
+    # nobody can reach the app on their own machine. `auth/dev_verifier.py`
+    # replaces the Firebase round trip with a preset code for the SEEDED
+    # SYNTHETIC personas only.
+    #
+    # OFF by default, and `DevPhoneVerifier` additionally refuses to construct
+    # unless `environment == "dev"` — so setting this alone in staging or
+    # production raises at boot rather than opening a door. There is
+    # deliberately no "fall back to this when Firebase is unconfigured":
+    # a production build with a missing key must fail loudly at sign-in.
+    auth_dev_bypass: bool = False
+
+    # --- §25.3 the live call (M9-P10b) ---------------------------------------
+    # Where the browser opens the CALL socket. A separate URL from the chat
+    # one and not a path appended to it: §6.1 scales and sticky-routes the two
+    # independently, and a call session is minutes of duplex audio while a chat
+    # session is bursts of text.
+    realtime_call_ws_url: str = "ws://localhost:8002/call/session"
+    # **§33.5's conditional release gate, as a switch.** Calls ship only if six
+    # measures pass and they do not (`uv run python -m sitara_api.voice.call_gate`
+    # prints the table). §33.5's own instruction for that state is that launch
+    # proceeds with text, voice notes and Tara audio replies while calls roll
+    # out behind a flag — so the default is OFF, and turning it on is a
+    # deliberate act by someone who has read the gate.
+    #
+    # It is a flag over BUILT code, not over a hole: everything behind it is
+    # implemented and tested. That distinction is `apps/web/src/lib/features.ts`'s
+    # rule and it applies here identically.
+    calls_enabled: bool = False
+
     # --- §5.2 Layer B panchang providers ---------------------------------
     # Keys live in .env / Secrets Manager, never here and never in git.
     # A blank key is not an error: the provider then behaves as "down" and the

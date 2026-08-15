@@ -319,6 +319,13 @@ SPECS: tuple[CollectionSpec, ...] = (
             "has_birth_details": BOOL,
             # §13: adding a family member's birth details requires attestation.
             "attested_at": [DT, "null"],
+            # §45 (CC-012): `living` | `in_memory`. §32.15 offers "in memory
+            # of" as the alternative to deletion on the same sheet, and had no
+            # field to hold it — so the product's only answer to bereavement
+            # was "delete her". The conversion writes THIS FIELD AND NOTHING
+            # ELSE: a memorial state that quietly began pruning would be a
+            # deletion wearing a gentler word.
+            "memorial_state": STR,
         },
         required=("owner_user_id", "relation"),
         indexes=(IndexSpec(_asc("owner_user_id")),),
@@ -665,6 +672,47 @@ SPECS: tuple[CollectionSpec, ...] = (
             EncryptedField("entries", key_class="reflection"),
             EncryptedField("mood", key_class="reflection"),
         ),
+    ),
+    CollectionSpec(
+        name="journal_saves",
+        spec_ref="§6.4",
+        purpose=(
+            "§30.5's fifth Journal artefact: a POINTER at an artefact that lives "
+            "elsewhere, never a copy of it (CC-011 §44.2). A copy would leave the "
+            "text behind when the source is deleted, so §30.5's 'delete a journal "
+            "entry → artefact removed' would stop being true the moment anyone "
+            "had saved it."
+        ),
+        retention="with user",
+        shard_key="hashed(user_id)",
+        fields={
+            "user_id": OID,
+            # brief · reflection · call · guidance (§30.5's own filter labels).
+            "artefact_type": STR,
+            # The referenced artefact's own key: a `daily_briefings`/`night_reflections`
+            # local date, or a `call_sessions`/`messages` _id as a string. It is
+            # deliberately NOT an objectId — two of the four artefacts are keyed
+            # by local date, and a type that only fits half of them would push
+            # the other half into a second field nobody would keep in step.
+            "artefact_ref": STR,
+            #: §30.5's cross-link: "a journal call-summary links to its thread
+            #: position". Null for artefacts with no turn behind them.
+            "message_id": [OID, "null"],
+            "saved_at": DT,
+            #: The user's own prose about her own life — §6.4 encrypts message
+            #: content, and this is the same substance in a different place.
+            "note": [STR, BIN, "null"],
+        },
+        required=("user_id", "artefact_type", "artefact_ref", "saved_at"),
+        indexes=(
+            IndexSpec(_asc("user_id", "saved_at")),
+            IndexSpec(
+                _asc("user_id", "artefact_type", "artefact_ref"),
+                unique=True,
+                name="uniq_user_artefact",
+            ),
+        ),
+        encrypted=(EncryptedField("note", key_class="message"),),
     ),
     CollectionSpec(
         name="goals",

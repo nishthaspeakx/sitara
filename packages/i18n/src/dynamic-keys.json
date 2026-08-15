@@ -156,6 +156,20 @@
         "ketu"
       ]
     },
+    "ui.kundli.graha_short.${g}": {
+      "$spec": "§24.3/CC-007 — the glyph abbreviations inside the diagram's boxes",
+      "values": [
+        "sun",
+        "moon",
+        "mars",
+        "mercury",
+        "jupiter",
+        "venus",
+        "saturn",
+        "rahu",
+        "ketu"
+      ]
+    },
     "start.language.name.${code}": {
       "$spec": "§10-3 — the eight language cards, each labelled in its own script",
       "values": [
@@ -281,6 +295,57 @@
         "study",
         "spiritual",
         "peace"
+      ]
+    },
+    "journal.type.${type}": {
+      "$spec": "§30.5 — the five Journal artefact types; the closed set `journal/models.py` declares, so a sixth cannot be rendered without being added in both places",
+      "values": [
+        "brief",
+        "reflection",
+        "call",
+        "guidance",
+        "milestone"
+      ]
+    },
+    "family.relation.${relation}": {
+      "$spec": "§32.15 — the closed relation set. A typed relation is a label in three locales; a free-text one is an English word in a Hindi sentence, which is why `Relation` is an enum at all.",
+      "values": [
+        "partner",
+        "mother",
+        "father",
+        "daughter",
+        "son",
+        "sister",
+        "brother",
+        "grandmother",
+        "grandfather",
+        "friend",
+        "other"
+      ]
+    },
+    "reflection.prompt.${prompt}": {
+      "$spec": "§10-17 — three prompts as IDs, so Tara asks a Hindi user in Hindi rather than in a translated-at-render English question. The ORDER is served (`prompt_order`), never assumed from this list.",
+      "values": [
+        "gratitude",
+        "weight",
+        "tomorrow"
+      ]
+    },
+    "reflection.mood.${value}": {
+      "$spec": "§27 — five plain states and no numeric scale: a 1–10 slider on a bad night is a test she can fail",
+      "values": [
+        "heavy",
+        "tired",
+        "steady",
+        "light",
+        "joyful"
+      ]
+    },
+    "vault.source.${source}": {
+      "$spec": "§30.5 — deleting a conversation marks dependent memory sources \"source removed\"; the memory survives, its provenance does not",
+      "values": [
+        "present",
+        "removed"
       ]
     }
   }
