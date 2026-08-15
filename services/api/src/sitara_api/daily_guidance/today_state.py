@@ -118,6 +118,7 @@ async def build_state(
     local_date: str,
     brief_count: int,
     stories_enabled: bool,
+    festival_calendar_available: bool = False,
     now: dt.datetime | None = None,
 ) -> TodayState:
     """Assemble §28.2's variant inputs for this user, this morning.
@@ -158,6 +159,10 @@ async def build_state(
         # §30.6: the ring is hidden in P0. The component defaults `enabled` to
         # false for the same reason; this is the flag that would turn it on.
         story_ring_enabled=stories_enabled,
+        # §5.3: `festival=None` is not evidence that no festival falls today.
+        # S17 needs to know which absence it is looking at, and the default is
+        # False for the same reason the parameter defaults that way.
+        festival_calendar_available=festival_calendar_available,
     )
 
 

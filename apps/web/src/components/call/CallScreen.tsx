@@ -224,6 +224,31 @@ export function CallScreen({
             )}
           </Chip>
 
+          {/* CC-014's demo bridge, while it is running.
+
+              Permanent for the length of the call, beside the state chip and
+              never behind a tap — the whole risk of a demo bridge is that
+              somebody watches a Hindi call work and concludes Hindi calls
+              work. It is driven by the SERVER's `browser_stt_lang`, the same
+              field that permits the bridge at all, so the label cannot be on
+              while the bridge is off or off while it is on. */}
+          {model.browserSttActive ? (
+            // Carries its OWN scrim, like the caption block below and for the
+            // same reason this file already records twice: a portrait is not a
+            // background, its brightness varies frame to frame, and text laid
+            // straight onto it has no contrast guarantee in either theme. A
+            // disclosure that is only legible over the dark half of an image
+            // is not a disclosure. `text-on-brand` (light in BOTH themes) —
+            // never `text-inverse`, which inverts to navy on a fixed dark
+            // surface and vanishes.
+            <p
+              data-testid="call-browser-stt"
+              className="max-w-prose rounded-sheet bg-brand-navy-deep/85 px-3 py-2 text-center text-caption text-on-brand"
+            >
+              {t("ui.call.browser_stt_demo")}
+            </p>
+          ) : null}
+
           {model.captionsOn ? (
             <div
               data-testid="call-captions"

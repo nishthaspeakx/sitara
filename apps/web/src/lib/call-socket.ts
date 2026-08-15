@@ -30,6 +30,7 @@ import type { ControlEvent, ControlEventType } from "@sitara/schemas";
 import { BINARY_SAMPLE_RATE_HZ, RESUME_WINDOW_S } from "@sitara/schemas";
 
 import { apiCall } from "./api";
+import { startBrowserStt, type BrowserStt } from "./browser-stt";
 import { VoiceRecorder } from "./voice-recorder";
 
 export interface CallGrant {
@@ -43,6 +44,13 @@ export interface CallGrant {
     minutes_quota: number | null;
   };
   captions_default_on: boolean;
+  /**
+   * CC-014's demo bridge. Non-null ONLY when the server permits it — prototype
+   * mode, dev environment, and a locale CC-010 leaves without a recogniser.
+   * The client cannot set this and cannot infer it; if it is null there is no
+   * bridge and the call behaves exactly as it does today.
+   */
+  browser_stt_lang?: string | null;
 }
 
 export interface CallHandlers {
@@ -135,6 +143,8 @@ export class CallSocket {
   private resumeToken: string | null = null;
   /** §25.3: "mute is client-hard" — the frames never leave, not a server flag. */
   private muted = false;
+  /** CC-014's bridge, when the SERVER granted one. Null on every other path. */
+  private bridge: BrowserStt | null = null;
 
   constructor(
     private readonly conversationId: string,
@@ -195,6 +205,10 @@ export class CallSocket {
         const token = (event.payload as { resume_token?: unknown }).resume_token;
         if (typeof token === "string") this.resumeToken = token;
         void this.startMic();
+        // CC-014: only if the SERVER granted a bridge. `startBridge` is a
+        // no-op otherwise, so the ordinary path is unchanged — the mic still
+        // streams PCM to a real recogniser and this line does nothing.
+        this.startBridge(grant);
       }
       if (event.type === "barge_in") {
         // The server has already stopped synthesising; this drops what the
@@ -242,6 +256,74 @@ export class CallSocket {
     }
   }
 
+  /**
+   * CC-014's demo bridge, started only on the server's say-so.
+   *
+   * The finalised transcript goes up as `captions.final` — the SAME frame a
+   * typed turn uses and the same one Ink's finals take, so nothing downstream
+   * can tell the difference and nothing downstream had to change.
+   */
+  private startBridge(grant: CallGrant): void {
+    const lang = grant.browser_stt_lang;
+    if (!lang || this.bridge) return;
+
+    this.bridge = startBrowserStt(lang, {
+      onFinal: (text) => this.sendTranscript(text),
+      onPartial: (text) => {
+        // Screen only. An interim is replaceable by definition, so sending one
+        // up would hand §9 a sentence the speaker had not finished.
+        this.handlers.onEvent({
+          type: "captions.partial",
+          seq: -1,
+          ts: Date.now(),
+          ack: null,
+          payload: { role: "user", text },
+        } as unknown as ControlEvent);
+      },
+      onUnavailable: (reason) => {
+        // Never a silent degrade. The bridge stops and the screen is told —
+        // today's honest refusal, not an English recogniser fed Hindi.
+        this.bridge = null;
+        this.handlers.onRefused({
+          code: "VOICE_PROVIDER_UNAVAILABLE",
+          message_key: "errors.voice.call_language_unavailable",
+        });
+        console.warn(`[call] browser stt unavailable: ${reason}`);
+      },
+    });
+
+    if (!this.bridge) {
+      // Not Chrome. The grant said a bridge was permitted; this browser cannot
+      // provide one, so the call refuses rather than listening to nothing.
+      this.handlers.onRefused({
+        code: "VOICE_PROVIDER_UNAVAILABLE",
+        message_key: "errors.voice.call_language_unavailable",
+      });
+    }
+  }
+
+  /** §34.6's `captions.final`, client → server. The typed-turn shape. */
+  private sendTranscript(text: string): void {
+    if (this.muted) return;
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    this.ws.send(
+      frame("captions.final", {
+        role: "user",
+        text,
+        client_message_id: crypto.randomUUID(),
+        // §33.1's three fields. `transcript_only` and not `text_only`: this
+        // WAS spoken, and rendering it as a typed message would put a keyboard
+        // bubble in a call transcript. No audio is stored — call audio never
+        // is (§33.1) — so there is no asset id to carry.
+        transcript_status: "ready",
+        playback_policy: "transcript_only",
+        source_audio_asset_id: null,
+        duration_ms: null,
+        source_audio_expires_at: null,
+      }),
+    );
+  }
+
   private async stopMic(): Promise<void> {
     const recorder = this.recorder;
     this.recorder = null;
@@ -265,6 +347,8 @@ export class CallSocket {
 
   close(): void {
     this.closedByUs = true;
+    this.bridge?.stop();
+    this.bridge = null;
     this.ws?.send(frame("session.end", {}));
     this.ws?.close();
     this.ws = null;

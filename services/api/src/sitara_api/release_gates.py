@@ -141,6 +141,34 @@ def _live_rails_status() -> str:
     return f"declared, not implemented — {named}"
 
 
+def _whatsapp_channel_status() -> str:
+    """Read the answer off the NOTIFICATION CAPABILITY MATRIX, never a constant.
+
+    Third instance of the same discipline (`_indic_streaming_stt_status`,
+    `_live_rails_status`) and the same reason: an amber-forever gate is how a
+    real blocker gets tuned out. The day WhatsApp's cell goes IMPLEMENTED this
+    gate closes itself.
+    """
+    from sitara_api.notifications.providers.routing import unimplemented_channels
+
+    pending = unimplemented_channels()
+    if not pending:
+        return "reviewed — every §23.3 channel has an implemented adapter"
+    named = ", ".join(f"{provider.value}/{channel.value}" for provider, channel in pending)
+    return f"declared, not implemented — {named}"
+
+
+def _notification_copy_review_status() -> str:
+    """§23's copy. Same shape as `_brief_copy_review_status` — the strings live
+    in `packages/i18n/messages`, and this reads the manifest beside them."""
+    path = Path(__file__).parent / "notifications" / "policy" / "notification_copy.json"
+    if not path.exists():
+        return "missing — notification_copy.json not found"
+    return json.loads(path.read_text(encoding="utf-8")).get(
+        "review_status", "missing — no review_status field"
+    )
+
+
 def gates() -> tuple[Gate, ...]:
     """Every human-closed gate, with its status read from the artefact."""
     return (
@@ -203,6 +231,109 @@ def gates() -> tuple[Gate, ...]:
                 "about facts, pointed at money), and getting it wrong is a filing error "
                 "rather than a display bug. Closes when finance supplies the rate and the "
                 "HSN/SAC code, alongside the GST registration §22.1 schedules for W2."
+            ),
+        ),
+        Gate(
+            id="notifications.whatsapp_channel",
+            spec_ref="§23.3 / §23.6 / §6.2",
+            blocks=Stage.CLOSED_BETA,
+            status=_whatsapp_channel_status(),
+            detail=(
+                "§23.3 specifies three delivery channels and TWO of them are "
+                "implemented against the real protocol: web push (RFC 8291 + RFC "
+                "8292 over the browser's own Push API, against a self-generated "
+                "keypair — there is no vendor account to be missing) and email "
+                "(ordinary SMTP; Mailpit locally, SES in production). WhatsApp is "
+                "DECLARED and has no adapter.\n"
+                "\n"
+                "This blocks CLOSED BETA rather than public launch, and the reason "
+                "is §6.2's own sentence: 'WhatsApp opt-in is the reliability anchor "
+                "for morning notifications regardless'. Web push on iOS requires an "
+                "INSTALLED PWA on iOS 16.4+, so a beta tester who opens Sitara in "
+                "Safari without installing it has no push channel at all — and "
+                "§23.3's ladder then delivers her entire daily loop by email. That "
+                "is a materially different product to evaluate, and a beta whose "
+                "notification findings all come from email is a beta that has not "
+                "tested §23.\n"
+                "\n"
+                "What is missing is mostly NOT code, and the long pole is not the "
+                "account. Each locale needs message templates SUBMITTED TO AND "
+                "APPROVED BY META in two categories — utility for Classes D/T, "
+                "marketing for Class M (§23.3, and the billing differs: ₹0.35 vs "
+                "₹0.85 planning rate). §2.4 admits no English fallback, so a locale "
+                "whose template is rejected is a locale where this channel does not "
+                "exist rather than one that degrades, and the §14 named native "
+                "reviewer has to sign the copy before it is submitted. Meta's review "
+                "takes days and rejects for reasons that are not always legible. "
+                "Alongside that: a verified Meta Business account for the Indian "
+                "entity (§22.1 already has its paperwork in W2 procurement), Cloud "
+                "API credentials and a webhook verify-token in AWS Secrets Manager "
+                "(§13, never an env file), and §23.3's 24-hour customer-service "
+                "window for reply-driven flows.\n"
+                "\n"
+                "OUR side of the contract is built: `Recipient.reachable_on` refuses "
+                "a phone number with no recorded opt-in, the §23.5 matrix has its "
+                "WhatsApp column, and a user who has switched 'morning × whatsapp' "
+                "on today still receives her brief over push or email — the ladder "
+                "filters on IMPLEMENTED, so her preference is kept and honoured on "
+                "the day the cell flips. The CODE to close this is ONE cell in "
+                "`notifications.providers.routing.CAPABILITIES` plus an adapter "
+                "implementing the single `send` method; `notifications/service.py` "
+                "does not change, because it has never known which channel answered. "
+                "`whatsapp.py` holds the place and its constructor raises, so a "
+                "caller that builds one directly fails loudly rather than quietly "
+                "succeeding. The status above is READ from the matrix, so this gate "
+                "closes itself and cannot go stale."
+            ),
+        ),
+        Gate(
+            id="notifications.copy_review",
+            spec_ref="§23 / §2.4 / §0.2 / §14",
+            blocks=Stage.CLOSED_BETA,
+            status=_notification_copy_review_status(),
+            detail=(
+                "§23's notification and preference-centre copy, in three locales. "
+                "These are SERVER-rendered — a push payload reaches a service worker "
+                "with no catalog — so §2.4's no-English-fallback rule means a missing "
+                "or wrong string is an English system notification on a Hindi user's "
+                "lock screen, outside the app, where none of the in-app guards can "
+                "see it.\n"
+                "\n"
+                "The line that most needs a human is §23.2(6)'s re-engagement copy: "
+                "'warm not guilt-based', and the spec's own example carefully omits "
+                "how many days it has been. A mechanical lint cannot tell warmth from "
+                "its absence. Drafts until the §14 named native reviewer signs off, "
+                "same as the safety corpora and the brief templates."
+            ),
+        ),
+        Gate(
+            id="notifications.trigger_sample_floor",
+            spec_ref="§23.2 / §23.8",
+            blocks=Stage.CLOSED_BETA,
+            status="open — no minimum sample stated in §23.2; product owns it",
+            detail=(
+                "§23.2 auto-pauses any trigger whose open rate is below 15% over a "
+                "trailing 14 days, and states no MINIMUM SAMPLE. Implemented "
+                "literally — which is the right default, because inventing a "
+                "threshold in the file whose subject is a number the spec did state "
+                "is exactly what §5.3's rule about facts forbids one directory over.\n"
+                "\n"
+                "The consequence is concrete and is worst at BETA volumes, which is "
+                "why this blocks closed beta rather than scale: a trigger that sent "
+                "once and was not opened reads as 0% and pauses for a fortnight. With "
+                "fifty testers, several of the six triggers will fire once or twice "
+                "in a fortnight, so §23.2's own catalogue would quietly switch itself "
+                "off during the period it is being evaluated. §23.2 pairs the pause "
+                "with 'and flagged', and the admin dashboard that flag goes to does "
+                "not exist yet either.\n"
+                "\n"
+                "It is self-healing — a paused trigger sends nothing, so fourteen "
+                "days later its window is empty, its rate is undefined and it "
+                "resumes — which makes it survivable and also makes it invisible: the "
+                "symptom is a trigger that was quiet for two weeks and nobody "
+                "noticed. Closes when product states a minimum send count (or states "
+                "that there is none, deliberately), recorded in "
+                "`notifications/policy/notification_copy.json` beside the copy review."
             ),
         ),
         Gate(

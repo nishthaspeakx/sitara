@@ -116,6 +116,40 @@ class PurchaseResponse(BaseModel):
     provider_ref: str
 
 
+class GiftRequestBody(BaseModel):
+    """§30.3's S32. Note what is NOT here: a recipient.
+
+    §25/§27's gifting rules make a gift a bearer instrument — the buyer gets a
+    code and shares it however they like. Taking an email or a phone number
+    would make this an endpoint that MESSAGES a third party on a user's behalf,
+    which is a §23 notification with a §23.5 consent question attached, for a
+    person who has no account and never agreed to anything.
+    """
+
+    plan: PlanId
+    region: BillingRegion
+    idempotency_key: str = Field(min_length=8, max_length=128)
+
+
+class GiftResponse(BaseModel):
+    """The bought gift, as S32 renders it.
+
+    `value_minor`/`currency` are the gift's OWN money (§30.3: "gift credits are
+    denominated in their purchase currency"), formatted on the client beside
+    `Intl` like every other amount.
+    """
+
+    code: str
+    plan: str
+    region: str
+    value_minor: int
+    currency: str
+    term_days: int
+    expires_at: dt.datetime
+    #: §30.3's honesty line, carried the same way S30 carries it.
+    simulated: bool
+
+
 class RedeemRequestBody(BaseModel):
     code: str = Field(min_length=4, max_length=64)
 
@@ -212,6 +246,50 @@ async def purchase(
         checkout_url=handle.checkout_url,
         failure_reason=handle.failure_reason.value if handle.failure_reason else None,
         provider_ref=handle.provider_ref,
+    )
+
+
+@router.post("/gift")
+async def buy_gift(
+    body: GiftRequestBody, request: Request, session: CurrentSession
+) -> GiftResponse:
+    """§30.3's S32 — buy a term for somebody else.
+
+    The gift is a sale to the BUYER's region (§22.1), which fixes its currency
+    and its rail and has nothing to do with where it is redeemed. §10-20's NRI
+    case is exactly the two differing, and `lifecycle.extend` is what keeps
+    both §30.3 sentences true at once by granting DAYS rather than money.
+
+    A rail that cannot serve the buyer's region refuses here rather than
+    minting a code nobody paid for — the same check `/purchase` makes, for the
+    same reason.
+    """
+    user_id, _ = session
+    route = resolve(body.region)
+    if not route.available:
+        raise ApiError(ErrorCode.PAY_RAIL_UNAVAILABLE, route.reason_key or "errors.pay.rail")
+    try:
+        gift = await _service(request).purchase_gift(
+            buyer_user_id=str(user_id),
+            plan=body.plan,
+            region=body.region,
+            idempotency_key=body.idempotency_key,
+            now=_now(),
+        )
+    except NoSuchPrice as exc:
+        raise ApiError(ErrorCode.SYS_VALIDATION, "errors.pay.no_such_price") from exc
+    except PaymentProviderUnavailable as exc:
+        raise ApiError(ErrorCode.PAY_PROVIDER_ERROR, "errors.pay.provider") from exc
+
+    return GiftResponse(
+        code=gift.code,
+        plan=gift.plan.value,
+        region=gift.region.value,
+        value_minor=gift.value.minor,
+        currency=gift.value.currency.value,
+        term_days=gift.term_days,
+        expires_at=gift.expires_at,
+        simulated=_service(request).simulated,
     )
 
 

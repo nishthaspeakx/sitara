@@ -67,7 +67,6 @@ def build_tts(settings: VoiceSettings) -> TtsProvider | None:
     return CartesiaTtsProvider(
         settings.cartesia_api_key,
         model=settings.tts_model,
-        voice_id=settings.tara_voice_id,
         timeout_seconds=settings.timeout_seconds,
     )
 
@@ -131,7 +130,6 @@ def build_streaming_tts(settings: VoiceSettings) -> StreamingTtsProvider | None:
     return CartesiaStreamingTtsProvider(
         settings.cartesia_api_key,
         model=settings.tts_model,
-        voice_id=settings.tara_voice_id,
     )
 
 
@@ -172,5 +170,4 @@ def build_voice_service(
         tts=tts,
         pipeline=pipeline,
         asset_store=MongoVoiceAssetStore(db, crypto),
-        voice_id=settings.tara_voice_id,
     )

@@ -44,7 +44,8 @@
     "birth_time_missing": false,
     "trial_day": null,
     "plan": "premium",
-    "story_ring_enabled": false
+    "story_ring_enabled": false,
+    "festival_calendar_available": false
   },
   "timings": [],
   "place_label": "Bengaluru"

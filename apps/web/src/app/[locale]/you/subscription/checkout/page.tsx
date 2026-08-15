@@ -128,7 +128,12 @@ export default function CheckoutPage() {
           valueRecap={recapLines(view.subscription, t)}
           onContinue={() => void onContinue()}
           busy={busy}
-          onOpenGift={undefined}
+          // §29.1's "gift entry" on the paywall. S32 exists now, so the entry
+          // is wired; `PaywallPanel` hides the control when this is undefined,
+          // which is why it was never a dead affordance in the meantime.
+          onOpenGift={() => router.push("/you/gift")}
+          // Restore-purchase belongs to store billing (§30.3's M+2 wrapper),
+          // which is unbuilt. Undefined so the control does not render at all.
           onRestorePurchase={undefined}
         >
           {view.subscription.prices.map((p) => {

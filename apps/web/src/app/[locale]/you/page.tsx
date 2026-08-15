@@ -28,7 +28,7 @@
  * "Memories" with no number would make her open it to learn nothing.
  */
 
-import { CreditCard, Sparkles, Users } from "lucide-react";
+import { Bell, CreditCard, Sparkles, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
@@ -107,6 +107,18 @@ export default function YouPage() {
                 detailKey="you.subscription_detail"
                 leading={<CreditCard strokeWidth={ICON_STROKE} />}
                 onClick={() => router.push("/you/subscription")}
+              />
+            </li>
+            {/* M12. §23.5's preference centre (S41). `you.later` dropped
+                "settings" in the same commit, for the reason M11's comment
+                above states — and it now names only privacy, which is the one
+                §24.1 destination still without a route. */}
+            <li>
+              <ListRow
+                labelKey="you.notifications"
+                detailKey="you.notifications_detail"
+                leading={<Bell strokeWidth={ICON_STROKE} />}
+                onClick={() => router.push("/you/settings/notifications")}
               />
             </li>
           </ul>

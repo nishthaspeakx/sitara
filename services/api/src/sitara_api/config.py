@@ -129,6 +129,37 @@ class Settings(BaseSettings):
     # rule and it applies here identically.
     calls_enabled: bool = False
 
+    # --- §23 notifications (M12) ------------------------------------------
+    # Web push needs NO vendor account: the push service is whichever one the
+    # user's own browser chose (its URL arrives inside the subscription) and
+    # VAPID authenticates us with a keypair we generate ourselves. This is the
+    # path to that keypair — generated once by
+    # `uv run python -m sitara_api.notifications.vapid --generate`, never at
+    # boot. A keypair that changed on restart would silently invalidate every
+    # browser subscription in the database, because a subscription is bound to
+    # the `applicationServerKey` it was created with.
+    #
+    # Unset means push is UNCONFIGURED, not broken: §23.3's ladder carries the
+    # message on email instead, and `notifications.providers.registry` says so
+    # in a log rather than refusing to boot. A dev checkout with no key still
+    # runs the whole product.
+    vapid_key_path: str | None = None
+    #: RFC 8292 §2.1's `sub` — a contact for the push service operator. Ours,
+    #: never a user's address.
+    vapid_subject: str = "mailto:notifications@sitara.app"
+
+    # §23.3's email rung. Mailpit locally (a real SMTP server in a container,
+    # inbox at http://localhost:8025), SES in production — the adapter does not
+    # change, only the host does. Credentials stay in Secrets Manager (§13).
+    notifications_smtp_host: str = "localhost"
+    notifications_smtp_port: int = 1025
+    notifications_smtp_from: str = "tara@sitara.localhost"
+    notifications_smtp_from_name: str = "Tara"
+    notifications_smtp_username: str | None = None
+    notifications_smtp_password: str | None = None
+    notifications_smtp_starttls: bool = False
+    notifications_smtp_timeout_seconds: float = 10.0
+
     # --- §5.2 Layer B panchang providers ---------------------------------
     # Keys live in .env / Secrets Manager, never here and never in git.
     # A blank key is not an error: the provider then behaves as "down" and the

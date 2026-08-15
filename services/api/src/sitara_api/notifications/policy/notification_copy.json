@@ -1,0 +1,24 @@
+{
+  "$comment": "SPEC §23 / §2.4 / §0.2 — the review status of the notification copy. The strings themselves live in packages/i18n/messages/{locale}.json under `notifications.*` and `notifsettings.*`, which is where every user-facing string lives (root CLAUDE.md). This file exists so `release_gates` has an artefact to read a review status off, in the same shape as the §9 safety corpora, glossary.json and brief_copy.json.",
+  "review_status": "draft — awaiting §14 named native reviewer",
+  "covers": {
+    "notifications.morning.*": "§23.5's morning category — the Class-D brief announcement",
+    "notifications.night.*": "§23.5's night nudge, Class D, expires 23:30 local (§23.4)",
+    "notifications.contextual.*": "§23.5's contextual toggle, Class C",
+    "notifications.festival.*": "§23.5's festival toggle, Class C",
+    "notifications.marketing.*": "§23.5's marketing toggle, Class M — default OFF, separately consented",
+    "notifications.trigger.*": "§23.2's six triggers, one title+body each",
+    "notifications.held_by_quiet_hours | all_channels_off | channel_unavailable | channel_pending | no_reachable_address": "the reasons a message did not go, shown on S41",
+    "notifsettings.*": "S41 `/you/settings/notifications` — §23.5's matrix, quiet hours, brief time, pause, travel toggle, and §32.6's overlap notice"
+  },
+  "reviewer_notes": [
+    "READ THE LOCK SCREEN FIRST. Every `notifications.*` string is rendered by the SERVER into a system notification or an email — outside the app, in a font we do not control, next to messages from people the reader knows. It is the one surface where a slightly-off register reads as a stranger rather than as Tara.",
+    "§0.2's banned words bind here explicitly ('UI copy, notifications, error states, legal summaries'): no warning, danger, doomed, guaranteed, unlock now, last chance, and no manufactured urgency of any kind. §29.2 forbids countdowns and guilt copy outright. `tests/notifications/test_copy.py` runs every string through the §9 fear-selling lint — that is a mechanical floor, not this review.",
+    "THE RE-ENGAGEMENT LINE IS THE ONE TO SCRUTINISE. §23.2(6) requires it to be 'warm not guilt-based' and gives its own example ('Tara has your Thursday brief ready when you want it'). What that example carefully does NOT say is how many days it has been. Any edit that reintroduces a day count, a 'we miss you', or a streak is the exact copy §10-17 and §29.2 exist to forbid, and it will look harmless.",
+    "notifsettings.pause_detail states that security messages still arrive during a pause. §23.5 asks for this to be 'stated plainly'. It must stay a plain statement of fact and must not be softened into something that sounds like an upsell for staying subscribed to notifications.",
+    "notifsettings.overlap_notice is §32.6's sentence and the spec quotes it: 'your brief arrives inside your quiet hours — that's fine, just checking'. The register is the whole point — it is a courtesy, not a warning, and it must not read as an error the user has to fix. §32.6 also forbids silently suppressing the brief, so the copy must never imply that we might.",
+    "Devanagari and Hinglish were written by the implementer, not by a native speaker. The honorific register (§2.3) is the highest-risk part: these strings address the user directly and repeatedly, and the Hindi uses the feminine verb agreement Tara uses elsewhere ('चाहती थीं', 'समझ गई') — please check that against how the rest of the product addresses her.",
+    "Slots are filled from plain data only — a festival name, a time, a topic she typed. NO notification interpolates an astrological claim, and none may: §5.3's cite-or-die validator does not run on a push payload, so a claim on a lock screen would be the one uncited sentence in the product. Adding a slot that carries one is a change to the sender, not to this file.",
+    "hi-Latn is Hinglish in LATIN script (§2.4, CC-013). A reviewer must not 'correct' it into Devanagari — that is a different locale, and the map that routes them differs at exactly this point."
+  ]
+}

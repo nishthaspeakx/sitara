@@ -56,29 +56,90 @@ function parseLocalDate(isoDate: string): Date {
   return new Date(year ?? 1970, (month ?? 1) - 1, day ?? 1);
 }
 
+/**
+ * Whether a string is a local ISO date this module can format.
+ *
+ * Exported because a ROUTE needs to answer it before it renders: `[date]` is a
+ * path segment and a path segment is user input.
+ */
+export function isLocalDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = parseLocalDate(value);
+  if (Number.isNaN(parsed.getTime())) return false;
+  // Round-trips: rejects 2026-02-31, which `Date` silently rolls to 3 March.
+  const [year, month, day] = value.split("-").map(Number);
+  return (
+    parsed.getFullYear() === year &&
+    parsed.getMonth() === (month ?? 1) - 1 &&
+    parsed.getDate() === day
+  );
+}
+
+/**
+ * Every formatter below is TOTAL — an unformattable input comes back
+ * unchanged rather than throwing.
+ *
+ * `Intl.DateTimeFormat.format(new Date(NaN))` throws `RangeError: Invalid time
+ * value`, and these run inside render. So `/journal/not-a-date` — a path
+ * segment, which is to say user input — took the whole route down with a **500
+ * in the browser**, found by hand on 16 Aug 2026. It was reachable by editing
+ * the URL, by a stale link, and by anything that ever put a non-date in a date
+ * slot.
+ *
+ * A formatter that throws inside render is a formatter that can only fail as a
+ * blank screen, and these are called from the Journal, the vault's consent
+ * stamps, the family screens and every subscription date. Making them total is
+ * a smaller and more reliable fix than auditing every caller for input it
+ * cannot vouch for — and the route ALSO checks (`isLocalDate`), because
+ * rendering the slug as a heading would be honest but useless.
+ */
+function safely(iso: string, format: (date: Date) => string): string {
+  const parsed = parseLocalDate(iso);
+  if (Number.isNaN(parsed.getTime())) return iso;
+  try {
+    return format(parsed);
+  } catch {
+    return iso;
+  }
+}
+
 /** "14 August 2026" — a journal day's heading. */
 export function formatLongDate(isoDate: string, locale: string): string {
-  return new Intl.DateTimeFormat(intlLocale(locale), {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(parseLocalDate(isoDate));
+  return safely(isoDate, (date) =>
+    new Intl.DateTimeFormat(intlLocale(locale), {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }).format(date),
+  );
 }
 
 /** "Thu, 14 Aug" — a row in the timeline, where the year is the section. */
 export function formatShortDate(isoDate: string, locale: string): string {
-  return new Intl.DateTimeFormat(intlLocale(locale), {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  }).format(parseLocalDate(isoDate));
+  return safely(isoDate, (date) =>
+    new Intl.DateTimeFormat(intlLocale(locale), {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+    }).format(date),
+  );
 }
 
-/** A consent stamp: "2 June 2026". Never a raw ISO string on a screen (§32.4). */
+/** A consent stamp: "2 June 2026". Never a raw ISO string on a screen (§32.4).
+ *
+ *  Takes a TIMESTAMP rather than a local date, so it parses with `Date` and
+ *  gets its own total wrapper — a consent row whose stamp is unreadable must
+ *  still render the consent. */
 export function formatStamp(isoTimestamp: string, locale: string): string {
-  return new Intl.DateTimeFormat(intlLocale(locale), {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(new Date(isoTimestamp));
+  const parsed = new Date(isoTimestamp);
+  if (Number.isNaN(parsed.getTime())) return isoTimestamp;
+  try {
+    return new Intl.DateTimeFormat(intlLocale(locale), {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }).format(parsed);
+  } catch {
+    return isoTimestamp;
+  }
 }

@@ -227,6 +227,7 @@ test.describe("§32.9's minute warnings and §25.3's plan chip", () => {
       type: "grant",
       plan: { plan: "monthly", unlimited: false, minutesLeft: 12, minutesQuota: 300 },
       captionsOn: true,
+      browserSttActive: false,
     });
     model = apply(
       model,
@@ -248,6 +249,7 @@ test.describe("§32.9's minute warnings and §25.3's plan chip", () => {
       type: "grant",
       plan: { plan: "monthly", unlimited: false, minutesLeft: 5, minutesQuota: 300 },
       captionsOn: false,
+      browserSttActive: false,
     });
     model = callReducer(model, { type: "dismiss_warning" });
     expect(model.warningKey).toBeNull();
@@ -262,6 +264,7 @@ test.describe("§32.9's minute warnings and §25.3's plan chip", () => {
       type: "grant",
       plan: { plan: "trial", unlimited: false, minutesLeft: 60, minutesQuota: 60 },
       captionsOn: true,
+      browserSttActive: false,
     });
     expect(first.captionsOn).toBe(true);
 
@@ -269,6 +272,7 @@ test.describe("§32.9's minute warnings and §25.3's plan chip", () => {
       type: "grant",
       plan: { plan: "monthly", unlimited: false, minutesLeft: 220, minutesQuota: 300 },
       captionsOn: false,
+      browserSttActive: false,
     });
     expect(later.captionsOn).toBe(false);
   });

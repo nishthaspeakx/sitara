@@ -74,13 +74,11 @@ class CallTurnService:
         pipeline: Any,
         store: Any,
         tts: StreamingTtsProvider | None,
-        voice_id: str | None = None,
         environment: str = "dev",
     ) -> None:
         self._pipeline = pipeline
         self._store = store
         self._tts = tts
-        self._voice_id = voice_id
         # §3.4: outside dev/test only REVIEWED pronunciation overrides are
         # served. Same rule and same single call site as the voice-note path.
         self._environment = environment
@@ -173,7 +171,7 @@ class CallTurnService:
             raise VoiceProviderUnavailable("no streaming TTS configured (§3.2)")
         spoken = pronunciation.apply(turn.text, locale, environment=self._environment)
         async for chunk in self._tts.stream(
-            SynthesisRequest(text=spoken, locale=locale, voice_id=self._voice_id)
+            SynthesisRequest(text=spoken, locale=locale)
         ):
             yield chunk
 
@@ -216,6 +214,6 @@ class CallTurnService:
         phrase = resolve(key, locale)
         spoken = pronunciation.apply(phrase, locale, environment=self._environment)
         async for chunk in self._tts.stream(
-            SynthesisRequest(text=spoken, locale=locale, voice_id=self._voice_id)
+            SynthesisRequest(text=spoken, locale=locale)
         ):
             yield chunk

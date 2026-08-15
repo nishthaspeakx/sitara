@@ -140,3 +140,31 @@ def lifts_entitlement_ceiling(settings: Any) -> bool:
     by setting a real quota.
     """
     return is_active(settings)
+
+
+def access_ttl_seconds(settings: Any) -> int:
+    """§34.5's access-cookie lifetime, widened for a demo (dev only).
+
+    The shipped default is 900 seconds and is CORRECT — a short access token
+    with a long rotating refresh is the whole point of §6.2's cookie posture,
+    and `apiCall` already recovers from an expired one with a single-flight
+    refresh (the M10 walkthrough's own finding).
+
+    So this does not fix a bug. It removes a demo hazard: a laptop left open
+    between the rehearsal and the room crosses fifteen minutes, and the first
+    tap of the real demo then spends a round trip on a refresh. That recovery
+    is invisible when it works and is one more thing that can be mid-flight
+    when someone is watching.
+
+    Widening only, only in dev, and only through `is_active` — a deployment
+    that never sets the switch gets 900 exactly as before. The REFRESH ttl is
+    deliberately untouched: it is already thirty days, and lengthening the half
+    of the pair that rotates would be changing the security posture rather than
+    removing a demo hazard.
+    """
+    declared = int(getattr(settings, "access_ttl_seconds", 900))
+    if not is_active(settings):
+        return declared
+    # Twelve hours: longer than any demo, shorter than the refresh cookie, and
+    # obviously a demo number rather than a plausible production one.
+    return max(declared, 12 * 3600)

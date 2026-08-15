@@ -258,7 +258,7 @@ async def test_synthesis_reads_the_presented_turn_and_never_a_draft() -> None:
             return _chunks()
 
     service = CallTurnService(
-        pipeline=env.pipeline, store=env.store, tts=RecordingTts(), voice_id="v1"
+        pipeline=env.pipeline, store=env.store, tts=RecordingTts()
     )
     spoken = await service.answer(_request())
     assert spoken.turn is not None
@@ -337,7 +337,7 @@ async def test_the_holding_phrase_is_a_catalog_string_and_never_a_draft() -> Non
 
     env = build_env()
     service = CallTurnService(
-        pipeline=env.pipeline, store=env.store, tts=RecordingTts(), voice_id="v1"
+        pipeline=env.pipeline, store=env.store, tts=RecordingTts()
     )
     async for _ in service.speak_holding_phrase(locale="en", turn_index=0):
         pass
@@ -384,7 +384,7 @@ async def test_the_phrases_rotate_so_they_do_not_become_a_tic() -> None:
 
     env = build_env()
     service = CallTurnService(
-        pipeline=env.pipeline, store=env.store, tts=RecordingTts(), voice_id="v1"
+        pipeline=env.pipeline, store=env.store, tts=RecordingTts()
     )
     for index in range(len(HOLDING_PHRASE_KEYS) + 1):
         async for _ in service.speak_holding_phrase(locale="en", turn_index=index):
@@ -432,7 +432,7 @@ async def test_the_phrase_writes_no_message() -> None:
 
     env = build_env()
     service = CallTurnService(
-        pipeline=env.pipeline, store=env.store, tts=RecordingTts(), voice_id="v1"
+        pipeline=env.pipeline, store=env.store, tts=RecordingTts()
     )
     before = len(env.store.messages)
     async for _ in service.speak_holding_phrase(locale="en", turn_index=0):

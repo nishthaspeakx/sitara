@@ -33,3 +33,9 @@ dist/
 storybook-static/
 test-results/
 playwright-report/
+
+# `scripts/compare_voices.py` output — rendered audio for a human to play.
+# Never committed: it is vendor output for a listening session, not a fixture,
+# and re-rendering it is one command.
+voice-compare/
+voice-compare-*/

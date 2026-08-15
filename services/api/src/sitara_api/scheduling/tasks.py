@@ -24,6 +24,7 @@ from sitara_api.daily_guidance.types import Tier
 from sitara_api.scheduling.celery_app import (
     QUEUE_BRIEF_PAYING,
     QUEUE_BRIEF_TRIAL,
+    QUEUE_DAILY,
     QUEUE_MAINTENANCE,
     app,
 )
@@ -236,6 +237,120 @@ def panchang_prejob(now_iso: str | None = None) -> dict[str, Any]:
             report = await PanchangPrejob(service).warm(cells)
             warmed += report.warmed
         return {"zones": len(due), "warmed": warmed}
+
+    return _run(_with_db(work))
+
+
+# ---------------------------------------------------------------------------
+# §23.4 / §23.7 — the delivery worker
+# ---------------------------------------------------------------------------
+
+
+@app.task(name="sitara.notifications.expire_sweep", queue=QUEUE_MAINTENANCE)
+def expire_sweep(now_iso: str | None = None) -> dict[str, Any]:
+    """§23.4: "undelivered → dropped, not late-delivered".
+
+    The rule that most needs a JOB rather than a query filter. `store.due`
+    already excludes expired rows, so nothing stale is ever delivered — but a
+    row that merely stops being selected sits at `queued` forever, and §23.8's
+    delivery rate would then be computed against a denominator that quietly
+    grows all day. This retires them explicitly, which is also what makes
+    "how many morning pushes expired today" answerable.
+
+    A status change and never a delete: §6.4 gives `notifications` a 180-day
+    TTL, and a deleted row would make a morning where every push expired look
+    identical to a morning with no pushes at all.
+
+    Safe to run twice — the second pass matches nothing, because the first
+    moved the rows out of `queued`.
+    """
+
+    async def work(db, _settings, _client) -> dict[str, Any]:  # noqa: ANN001
+        from sitara_api.notifications.store import NotificationStore
+
+        now = dt.datetime.fromisoformat(now_iso) if now_iso else dt.datetime.now(dt.UTC)
+        expired = await NotificationStore(db).expire_stale(now=now)
+        if expired:
+            logger.info("expired %d undelivered notifications (§23.4)", expired)
+        return {"expired": expired}
+
+    return _run(_with_db(work))
+
+
+@app.task(name="sitara.notifications.dispatch_due", queue=QUEUE_DAILY)
+def dispatch_due(now_iso: str | None = None, limit: int = 500) -> dict[str, Any]:
+    """Deliver every queued notification whose time has come (§23.3, §23.7).
+
+    Deliberately does NOT re-run §23's gates. The row was written by
+    `NotificationService.send`, which ran quiet hours, the caps and the ladder
+    at the moment the message was composed — and a second evaluation here would
+    ask the same questions against a LATER clock, so a brief queued at 06:55 for
+    07:00 could be refused at 07:00 by quiet hours that had not applied when it
+    was admitted. The gates belong at admission; this is the transport.
+
+    What it does re-check is §23.4's expiry (in the query) and §23.7's
+    emergency stop (per row) — the two things that are allowed to change
+    between admission and delivery, which is precisely why they are the two an
+    operator reaches for during an incident.
+    """
+
+    async def work(db, settings, _client) -> dict[str, Any]:  # noqa: ANN001
+        from sitara_api.db import make_redis
+        from sitara_api.notifications.wiring import build_service
+        from sitara_api.notifications.worker import DeliveryWorker
+
+        now = dt.datetime.fromisoformat(now_iso) if now_iso else dt.datetime.now(dt.UTC)
+        redis = make_redis(settings)
+        try:
+            service = build_service(db, redis, settings)
+            report = await DeliveryWorker(db, service).run(now=now, limit=limit)
+        finally:
+            await redis.aclose()
+        logger.info("notification dispatch", extra={"report": report.as_dict()})
+        return report.as_dict()
+
+    return _run(_with_db(work))
+
+
+# ---------------------------------------------------------------------------
+# §23.2 — the trailing-window auto-pause
+# ---------------------------------------------------------------------------
+
+
+@app.task(name="sitara.notifications.review_triggers", queue=QUEUE_MAINTENANCE)
+def review_triggers(now_iso: str | None = None) -> dict[str, Any]:
+    """§23.2: "<15% trailing 14 days is auto-paused and flagged".
+
+    Computes and REPORTS; it stores no pause flag. `catalogue.auto_paused` is
+    read live at selection time from the same observations, which is the
+    discipline `release_gates` uses on the capability matrices — a stored flag
+    stays set after the copy that earned it has been fixed, and §23.2's pause
+    is meant to be a fortnight's pause rather than a permanent one.
+
+    This task exists for the "and flagged" half: it is what a human reads.
+    """
+
+    async def work(db, _settings, _client) -> dict[str, Any]:  # noqa: ANN001
+        from sitara_api.notifications.catalogue import auto_paused, autopause_window
+        from sitara_api.notifications.store import NotificationStore
+
+        now = dt.datetime.fromisoformat(now_iso) if now_iso else dt.datetime.now(dt.UTC)
+        observations = await NotificationStore(db).trigger_observations(
+            since=autopause_window(now), until=now
+        )
+        paused = auto_paused(observations)
+        if paused:
+            logger.warning(
+                "§23.2 auto-paused triggers below 15%% open rate",
+                extra={"triggers": sorted(t.value for t in paused)},
+            )
+        return {
+            "paused": sorted(t.value for t in paused),
+            "mix": {
+                o.trigger.value: {"sent": o.sent, "opened": o.opened}
+                for o in observations
+            },
+        }
 
     return _run(_with_db(work))
 

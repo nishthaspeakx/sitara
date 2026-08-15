@@ -386,6 +386,26 @@
         "pending",
         "failed"
       ]
+    },
+    "notifsettings.category.${category}": {
+      "$spec": "§23.5 — the five per-category toggles",
+      "values": [
+        "morning",
+        "night",
+        "contextual",
+        "festival",
+        "marketing"
+      ]
+    },
+    "notifsettings.category_detail.${category}": {
+      "$spec": "§23.5 — each toggle's honest description",
+      "values": [
+        "morning",
+        "night",
+        "contextual",
+        "festival",
+        "marketing"
+      ]
     }
   }
 }

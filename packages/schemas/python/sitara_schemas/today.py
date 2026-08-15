@@ -190,6 +190,7 @@ class TodayState(BaseModel):
     trial_day: int | None = None
     plan: PlanState
     story_ring_enabled: bool
+    festival_calendar_available: bool
 
 
 class TodayTiming(BaseModel):

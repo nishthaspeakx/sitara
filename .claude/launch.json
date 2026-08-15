@@ -28,6 +28,20 @@
       "port": 8001
     },
     {
+      "name": "realtime",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": [
+        "run",
+        "--directory",
+        "services/realtime",
+        "uvicorn",
+        "sitara_realtime.main:app",
+        "--port",
+        "8002"
+      ],
+      "port": 8002
+    },
+    {
       "name": "astro",
       "runtimeExecutable": "uv",
       "runtimeArgs": [

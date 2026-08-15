@@ -27,7 +27,7 @@ import { ConfirmDeleteSheet } from "@/components/deletion/ConfirmDeleteSheet";
 import { EntryRow } from "@/components/journal/EntryRow";
 import { EmptyState, ErrorState, Header, Skeleton } from "@/components/ui";
 import { useRouter } from "@/i18n/navigation";
-import { formatLongDate } from "@/lib/dates";
+import { formatLongDate, isLocalDate } from "@/lib/dates";
 import {
   deleteArtefact,
   loadDay,
@@ -56,6 +56,23 @@ export default function JournalDayPage({
   const [deleteError, setDeleteError] = useState<ErrorEnvelope | null>(null);
 
   const refresh = useCallback(async () => {
+    // A path segment is user input. An EMPTY day is a day (see the header) —
+    // but a string that is not a date at all is not an empty day, and asking
+    // the API about it would spend a round trip to be told so. `/journal/
+    // not-a-date` used to reach `formatLongDate`, throw `RangeError` inside
+    // render, and take the route down with a 500 in the browser.
+    if (!isLocalDate(date)) {
+      setView({
+        kind: "error",
+        error: {
+          code: "SYS_VALIDATION",
+          message_key: "errors.journal.bad_date",
+          trace_id: "client-invalid-date",
+          retryable: false,
+        } as ErrorEnvelope,
+      });
+      return;
+    }
     const result = await loadDay(date);
     setView(result.ok ? { kind: "ready", day: result.data } : { kind: "error", error: result.error });
   }, [date]);

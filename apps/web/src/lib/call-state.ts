@@ -46,6 +46,12 @@ export interface CallModel {
   startedAt: number | null;
   captions: CaptionLine[];
   captionsOn: boolean;
+  /**
+   * CC-014's demo bridge is transcribing in the browser, not through our
+   * recogniser. Drives a permanent on-screen label: a demo aid that looked
+   * like the shipped path is the one thing this bridge must never be.
+   */
+  browserSttActive: boolean;
   muted: boolean;
   speakerOn: boolean;
   plan: PlanChip | null;
@@ -78,6 +84,7 @@ export const IDLE_CALL: CallModel = {
   startedAt: null,
   captions: [],
   captionsOn: false,
+  browserSttActive: false,
   muted: false,
   speakerOn: true,
   plan: null,
@@ -93,7 +100,7 @@ export const IDLE_CALL: CallModel = {
 
 export type CallAction =
   | { type: "event"; event: ControlEvent; at: number }
-  | { type: "grant"; plan: PlanChip; captionsOn: boolean }
+  | { type: "grant"; plan: PlanChip; captionsOn: boolean; browserSttActive: boolean }
   | { type: "toggle"; control: "muted" | "speakerOn" | "captionsOn" }
   | { type: "dismiss_warning" }
   | { type: "socket_lost"; at: number }
@@ -118,7 +125,12 @@ function upsertCaption(captions: CaptionLine[], line: CaptionLine): CaptionLine[
 export function callReducer(model: CallModel, action: CallAction): CallModel {
   switch (action.type) {
     case "grant":
-      return { ...model, plan: action.plan, captionsOn: action.captionsOn };
+      return {
+        ...model,
+        plan: action.plan,
+        captionsOn: action.captionsOn,
+        browserSttActive: action.browserSttActive,
+      };
 
     case "toggle":
       return { ...model, [action.control]: !model[action.control] };

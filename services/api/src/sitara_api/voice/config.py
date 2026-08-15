@@ -41,11 +41,17 @@ class VoiceSettings(BaseSettings):
     #: so rather than pretending, on the DivineAPI-unverified precedent.
     sarvam_api_key: str | None = Field(default=None, validation_alias="SARVAM_API_KEY")
 
-    #: §3.2's anchor artist is a contracted clone that does not exist yet, and
-    #: CC-008 governs her likeness. Unset means Tara has no voice configured and
-    #: the TTS half declines — which is honest, and leaves the user's own notes
-    #: working, since those need only STT.
-    tara_voice_id: str | None = None
+    # NOTE: there is deliberately no `tara_voice_id` here any more.
+    #
+    # Her voice is per-LOCALE and is declared once, in
+    # `voice/providers/voices.py`, where the adapter resolves it from the
+    # request. One id cannot be right for three locales, and a setting beside
+    # the map is a setting that silently overrides it: `services/api/.env`
+    # still carried `VOICE_TARA_VOICE_ID=87748186-…`, an instrument voice from
+    # M9's live-call run whose own comment said "remove after the run". With
+    # `extra="ignore"` that variable is now simply unread, which is the
+    # outcome we want — but it would have won over the map, on the exact
+    # machine the demo runs on, if the field had survived.
 
     stt_model: str = "ink-whisper"
     tts_model: str = "sonic-3.5"

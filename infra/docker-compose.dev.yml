@@ -27,6 +27,34 @@ services:
       timeout: 5s
       retries: 5
 
+  # §23.3's email rung, locally. A REAL SMTP server — Mailpit accepts on 1025
+  # and shows the inbox at http://localhost:8025 — so the adapter speaks the
+  # same protocol it will speak to SES, and "did the brief go out" is a
+  # question you answer by looking at a message rather than at a log line.
+  #
+  # No account, no verified sender, no sandbox to be let out of. Swapping in
+  # SES is three environment variables (`NOTIFICATIONS_SMTP_HOST`, the
+  # credentials) and no code — which is the whole reason `email` is IMPLEMENTED
+  # in the capability matrix while `whatsapp` is DECLARED.
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      # 1025 SMTP (the API talks to this), 8025 the web inbox (you look at this).
+      - "1025:1025"
+      - "8025:8025"
+    environment:
+      # Kept in memory: a dev inbox that survives a restart is a dev inbox full
+      # of yesterday's demo, and the §23.9 acceptance harness asserts against
+      # what it just sent.
+      MP_MAX_MESSAGES: "500"
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api:
     build:
       context: ..
@@ -36,6 +64,10 @@ services:
     environment:
       MONGODB_URI: mongodb://mongo:27017/sitara
       REDIS_URL: redis://redis:6379/0
+      # §23.3's email rung. The container name is the host inside the network;
+      # from the host machine it is localhost:1025 (the default in `config.py`).
+      NOTIFICATIONS_SMTP_HOST: mailpit
+      NOTIFICATIONS_SMTP_PORT: "1025"
       # §34.5 Admin-SDK verification — key stays out of the image (.dockerignore)
       # and is mounted read-only below.
       GOOGLE_APPLICATION_CREDENTIALS: .secrets/firebase-service-account.json
@@ -46,6 +78,8 @@ services:
       mongo:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      mailpit:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/healthz')"]
@@ -119,6 +153,42 @@ services:
       redis:
         condition: service_healthy
       mongo:
+        condition: service_healthy
+
+  # §23.7's delivery queues, in T > D > C > M order. The `-Q` ordering is what
+  # enforces the priority operationally; `celery_app.TASK_QUEUES` states the
+  # same intent numerically, and both are written down so neither can drift
+  # alone.
+  #
+  # Separate from worker-brief on purpose (§7.1's last box): a slow channel must
+  # not back up brief COMPOSITION behind it. The wave writes rows; this drains
+  # them.
+  worker-notify:
+    build:
+      context: ..
+      dockerfile: services/api/Dockerfile
+    command:
+      [
+        "celery", "-A", "sitara_api.scheduling.celery_app:app", "worker",
+        "-Q", "notify.t,notify.d,notify.c,notify.m", "--concurrency=2",
+        "--loglevel=info",
+      ]
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/sitara
+      REDIS_URL: redis://redis:6379/0
+      NOTIFICATIONS_SMTP_HOST: mailpit
+      NOTIFICATIONS_SMTP_PORT: "1025"
+    volumes:
+      # The VAPID keypair (§6.2). Read-only, and generated on the host by
+      # `uv run python -m sitara_api.notifications.vapid --generate` — absent
+      # is a valid state, and §23.3's ladder then delivers on email.
+      - ../services/api/.secrets:/app/services/api/.secrets:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      mailpit:
         condition: service_healthy
 
   # The tick itself, the panchang pre-job and the nightly memory consolidation.

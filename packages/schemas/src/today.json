@@ -273,6 +273,11 @@
         {
           "name": "story_ring_enabled",
           "type": "boolean"
+        },
+        {
+          "name": "festival_calendar_available",
+          "type": "boolean",
+          "$comment": "Whether §5.2 Layer B's CALENDAR half answered when last asked. `festival: null` alone cannot tell S17 whether no observance falls today or whether nothing was able to check — and §5.3 forbids fabricating festival dates, which an unsourced 'no observance falls today' equally is. Layer A is authoritative for the astronomy and knows nothing of the calendar: a tithi does not tell you it is Raksha Bandhan. False when the layer is down AND when it has not been consulted, because optimism about a question nobody put is the false negative getting back in."
         }
       ]
     },

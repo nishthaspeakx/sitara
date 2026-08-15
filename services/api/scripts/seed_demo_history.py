@@ -45,8 +45,7 @@ from typing import Any
 from bson import ObjectId
 
 from sitara_api.config import Settings
-from sitara_api.daily_guidance.repository import density_from
-from sitara_api.daily_guidance.types import BriefSubject, Tier, WaveMember
+from sitara_api.daily_guidance.types import BriefSubject, WaveMember
 from sitara_api.daily_guidance.wiring import build_service as build_daily_guidance
 from sitara_api.db import make_mongo
 from sitara_api.db.documents import stamp
@@ -95,25 +94,31 @@ def _persona_user_ids(db: Any, handles: list[str]) -> Any:
 
 
 async def _subject_for(db: Any, user_id: ObjectId) -> BriefSubject | None:
-    """The same shape the wave repository assembles, read from the same rows."""
-    user = await db.users.find_one({"_id": user_id})
-    profile = await db.profiles.find_one({"user_id": user_id})
-    if user is None or profile is None:
-        return None
-    place = (profile.get("brief_place") or {}) if isinstance(profile, dict) else {}
-    subscription = await db.subscriptions.find_one({"user_id": user_id})
-    status = (subscription or {}).get("status", "none")
-    tier = Tier.PAYING if status in {"active", "trialing", "grace"} else Tier.FREE
-    return BriefSubject(
-        user_id=str(user_id),
-        locale=user.get("locale", "en"),
-        timezone=profile.get("timezone") or "Asia/Kolkata",
-        brief_time=profile.get("brief_time") or "07:00",
-        density=density_from(profile.get("interest")),
-        tier=tier,
-        lat=place.get("lat"),
-        lon=place.get("lon"),
-    )
+    """The subject the wave itself would assemble — `wiring.load_subject`.
+
+    This used to rebuild it by hand, and every one of the three fields it
+    derived was wrong in a different way:
+
+      · `Tier.FREE` **does not exist**. §7.1's queues are PAYING/TRIAL/DORMANT
+        (CL-008 §2: dormancy is the residual, never orthogonal to payment), so
+        the moment a persona was neither active nor trialing the whole seeder
+        died with `AttributeError` — and the Journal, which is what it exists
+        to fill, stayed empty. `priority.tier_for` is the one derivation, and
+        it also knows the thing this could not: a trial whose end has passed is
+        not a trial any more, whatever the row still says.
+      · `timezone` was read from the PROFILE. It lives on the user (§33.2), so
+        it always fell back to `Asia/Kolkata` — six days of a New York
+        persona's history generated against IST, with correct-looking timings
+        for a city she does not live in.
+      · `density` was read as `profile["interest"]`; the field is `density`.
+
+    None of that is a bug worth fixing three times. A history seeded through a
+    different subject than the wave builds is a history the wave would not have
+    produced, which defeats the point of running the real pipeline over it.
+    """
+    from sitara_api.daily_guidance import wiring
+
+    return await wiring.load_subject(db, str(user_id))
 
 
 async def _run(argv: list[str] | None = None) -> int:

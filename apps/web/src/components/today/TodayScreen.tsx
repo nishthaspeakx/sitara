@@ -41,6 +41,7 @@ import { NightTakeover } from "./NightTakeover";
 import { PanchangRow } from "./PanchangRow";
 import { PracticalStrip } from "./PracticalStrip";
 import { SkyHeader } from "./SkyHeader";
+import { BriefAudio } from "./BriefAudio";
 import { TarasLine } from "./TarasLine";
 import { TrustSheetHost } from "./TrustSheetHost";
 
@@ -131,6 +132,14 @@ export function TodayScreen({
       <main className="flex flex-1 flex-col gap-5 px-5 pb-24 pt-2">
         {/* (2) — always present, in every variant, with or without a brief. */}
         <TarasLine payload={payload} chrome={chrome} />
+
+        {/* §27's listen-to-your-brief. Only where there is composed text to
+            read: a player over a first-session or failed brief would offer
+            twenty seconds of nothing. The written brief below is its PEER,
+            not its fallback — §S14's a11y line. */}
+        {payload.modules.length > 0 ? (
+          <BriefAudio localDate={payload.local_date} />
+        ) : null}
 
         {chrome.night ? (
           /* (7) §28.2: "the whole tab transforms after 20:00 — dusk tokens,
