@@ -373,6 +373,78 @@ What to point at:
 - Devanagari sets taller and wider at the same nominal size, which is why §24.2
   gives each script its own size factor and line height.
 
+
+### 2.9 Payments — every §30.3 state, on demand (M11)
+
+**Nothing here moves money.** Razorpay and Stripe are declared and unbuilt
+(`payments.live_rails`); the whole flow runs against a simulator that
+implements the same adapter interface a real rail will. Say this at the top —
+S30 says it too, on every screen, in a line that reads "Demo mode — no money
+moves."
+
+The control surface is `POST /v1/dev/payments/*`, dev-only, and every call
+drives the REAL service through the REAL state machine. Sign in as the persona
+first; every call below acts on the signed-in account.
+
+```bash
+# where you are
+curl -s -b cookies.txt :8001/v1/dev/payments/state | jq
+```
+
+**Buy a subscription.** `/you/subscription` → *Continue* → S31's paywall.
+Annual is pre-selected, the saving is stated plainly ("Save ₹1,989 a year"),
+the total including tax is above the button, and the close control never
+leaves. There is no countdown anywhere and no prop that could add one.
+
+**"Fail the next renewal."** §22.13's grace begins — and the point of the
+screen is what does NOT change:
+
+```bash
+curl -s -b cookies.txt -X POST :8001/v1/dev/payments/renewal-failed \
+  -H 'Content-Type: application/json' -d '{"fault":"fail_renewal","reason":"insufficient_funds"}'
+```
+
+S30 now says *"Nothing has changed — you have everything until 20 August, and
+one tap fixes it."* Full access, for seven days. Show the Today tab: the amber
+grace banner is there and every card still works.
+
+**"Expire the grace period."** Eight days later she is read-only:
+
+```bash
+curl -s -b cookies.txt -X POST :8001/v1/dev/payments/advance \
+  -H 'Content-Type: application/json' -d '{"days":8}'
+```
+
+*"Your memories are safe."* Her journal, her vault and her past guidance are
+all readable; new guidance pauses. Twenty-one more days and it downgrades —
+and even then nothing is deleted, which the screen says in its own sentence.
+`advance` shifts the row's own timestamps rather than the process clock, so
+§7.1's brief scheduler and §32.13's date binding are untouched.
+
+**Recover.** *"Try the payment again"* returns her to active — and the renewal
+date does not move, because the billing anchor is the original period end
+rather than the day the retry landed.
+
+**"Gift to an existing subscriber."** The interesting branch, and §10-20's NRI
+case: bought in USD, redeemed by someone who already subscribes in ₹.
+
+```bash
+curl -s -b cookies.txt -X POST :8001/v1/dev/payments/gift \
+  -H 'Content-Type: application/json' -d '{"plan":"annual","region":"international"}' | jq
+```
+
+The response shows `outcome: "credit_converted"`, the gift's value in **USD**,
+and `subscription_currency: "INR"`. The period EXTENDS by a year; the plan, the
+region and the currency do not move. §30.3 forbids mid-cycle conversion in four
+separate sentences, and the way both stay true at once is that what crosses
+between them is *time*, which has no currency.
+
+**The other states**, each one call: `arm` with `hold_pending` for §30.3's UPI
+five-minute wait (not an error, and not drawn as one), `decline` for a mapped
+failure reason in plain language, `mandate-rejected` for the case where the
+money arrived and only the standing instruction did not — the subscription
+stays active on the period she paid for.
+
 ---
 
 ## 3. If something goes wrong
@@ -412,6 +484,26 @@ Three, and none of them blocks the path above.
    return 200, and quietly corrupt the provenance of memories she kept. It is
    recorded in code as `CONVERSATION_DELETE_IS_UNBUILT` with a test that fails
    on the commit that builds it. Its home is S36 `/you/privacy`.
+
+4. **No payment rail is wired.** §30.3 specifies Razorpay for India (₹,
+   GST-invoiced) and Stripe India for the diaspora (USD, zero-rated export
+   under LUT); neither has an account, a key or an adapter. Everything demoed
+   in §2.9 runs against `payments.providers.simulator`, which moves no money,
+   and `payments.live_rails` is an open closed-beta blocker that names both.
+   What is missing is mostly not code: accounts with KYC for the Indian
+   entity, keys in Secrets Manager, price catalogues matching
+   `payments.money.PRICES`, the UPI Autopay cap checked against RBI limits,
+   and SCA handling on the Stripe side. The code is one capability-matrix cell
+   per rail plus an adapter — `payments/service.py` does not change, because it
+   has never known which rail answered.
+
+   Two smaller things ride with it. The GST invoice SPLIT needs a rate finance
+   has not supplied (`payments.gst_invoice_rate`); prices display correctly
+   without one, because §22.1 makes international billing zero-rated and the ₹
+   prices are declared tax-inclusive. And **gifting has no screen** — S32 and
+   S33 are unbuilt, so a gift is demonstrated through the dev surface above.
+   The redemption LOGIC is complete and tested, including the credit
+   conversion; what is missing is the buy-and-share flow and the redeem page.
 
 Also worth knowing, though not visible: **live calls are gated by §33.5** and
 four of its six measures are not passing (two are *blocked* — with no Indic

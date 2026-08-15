@@ -107,6 +107,24 @@
       "retryable": true
     },
     {
+      "code": "PAY_GIFT_UNREDEEMABLE",
+      "http_status": 422,
+      "retryable": false,
+      "$comment": "§30.3's S33 — expired, already redeemed, or no such code. ONE code for all three on purpose: a caller that could tell 'expired' from 'never existed' is an oracle for guessing gift codes, and §30.3 gives all three the same warm error and support link anyway."
+    },
+    {
+      "code": "PAY_RAIL_UNAVAILABLE",
+      "http_status": 503,
+      "retryable": true,
+      "$comment": "No payment provider is IMPLEMENTED for this billing region. Distinct from PAY_PROVIDER_ERROR, which means a wired rail answered badly: this means none is wired. Today it is what a real Razorpay/Stripe region returns while `payments.providers.routing` still has them DECLARED — the gap made a runtime state rather than a silent fallback to the simulator."
+    },
+    {
+      "code": "PAY_REFUND_WINDOW_CLOSED",
+      "http_status": 422,
+      "retryable": false,
+      "$comment": "§22.16 — the 7-day no-questions window is annual-only and has passed. Not a 403: the caller is entitled to ask, and the answer is about the policy rather than about them."
+    },
+    {
       "code": "SAFE_CONTENT_BLOCKED",
       "http_status": 422,
       "retryable": false

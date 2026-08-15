@@ -66,7 +66,29 @@ export type Scenario =
   | "records_unavailable"
   /* §34.5: the access cookie is spent once, so the client must refresh and
      retry rather than render a fatal error. */
-  | "session_expires_once";
+  | "session_expires_once"
+  /* M11 — §30.3's subscription states and §22.13's ladder. Each is a state of
+     the user's own account, seeded like M10's records rather than recorded:
+     what has to be right is the SHAPE and the relationship between the dates,
+     and §22.13's dates are server-computed so the stub supplies them (a stub
+     that made the SCREEN derive them would let a client-side reimplementation
+     of §22.13 pass every baseline). */
+  | "sub_active"
+  | "sub_none"
+  | "sub_unavailable"
+  | "sub_trialing"
+  | "sub_grace"
+  | "sub_read_only"
+  | "sub_downgraded"
+  | "sub_cancelled"
+  | "sub_mandate"
+  | "sub_region_switch"
+  | "sub_founding"
+  | "sub_international"
+  /* §30.3's S34 — one screen, three states. `pending` is the UPI hold and is
+     emphatically not an error. */
+  | "pay_pending"
+  | "pay_failed";
 
 /**
  * §28.2's sixteen. The ids are the recorded fixtures' filenames, so a variant

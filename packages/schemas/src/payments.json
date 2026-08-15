@@ -1,0 +1,114 @@
+{
+  "$comment": "SPEC §30.3 / §22.13 / §22.1 — the vocabulary of a subscription. It lands here for the reason every other set in this package landed here, stated one milestone EARLIER than the four that taught the rule: both sides of the wire name these. S30 renders a `subscription_status`, S34 renders a `payment_state` and a `payment_failure_reason`, and `sitara_api.payments` writes all three onto `subscriptions` and `payments` rows. The confidence states, the presence states, the memory types and the voice vocabulary each drifted invisibly because no screen consumed them yet; this set has a screen in the same milestone that declares it, so there is no window in which two versions could exist. NOTE the deliberate absence: there is no `provider` enum here. Which rail took the money is `payments.providers.base.PaymentProviderName`, it never crosses to the client, and a client that knew the rail would be a client that could branch on it — §30.3 puts the rail behind a hosted surface precisely so nothing upstream of it has to.",
+  "$spec": "§30.3, §22.13, §22.1, §22.16, §10-20",
+  "enums": {
+    "plan_id": {
+      "$comment": "What a person may BUY, plus the trial that precedes it. §30.3 names monthly and annual in both regions and §10-20 makes the trial 7 days. Deliberately NOT the same set as `voice.entitlements.CallPlan`, which is a POOL LOOKUP and carries `premium` (§7.3's unlimited fair-use tier, which nothing sells) and `none` (an account with no subscription at all, which is a state rather than a plan). The two are kept in step by a test rather than by being one enum: every purchasable plan must resolve to a minute pool, and `CallPlan` must keep the two members this set has no business naming.",
+      "enum_name": "PlanId",
+      "const_name": "PLAN_IDS",
+      "members": [
+        { "id": "trial", "note": "§10-20 — 7 days, full-featured, 60 voice minutes TOTAL (§32.16)" },
+        { "id": "monthly", "note": "₹499 India · $12.99 international" },
+        { "id": "annual", "note": "₹3,999 India · $99 international; §22.16's 7-day no-questions refund applies to this one only" }
+      ]
+    },
+    "billing_region": {
+      "$comment": "§30.3's two rails, named for the BILLING relationship rather than for geography — which is the distinction the migration policy turns on. A subscriber who moves to Dubai stays `india` until renewal because their subscription is billed in ₹ through Razorpay; where they are standing is §30.2's Travel Mode and has nothing to do with this field. §22.1: the Indian entity bills India in INR with GST, and bills the diaspora through Stripe India as a zero-rated export of services under LUT.",
+      "enum_name": "BillingRegion",
+      "const_name": "BILLING_REGIONS",
+      "members": [
+        { "id": "india", "note": "Razorpay · INR · GST-invoiced (§22.1)" },
+        { "id": "international", "note": "Stripe · USD · zero-rated export under LUT (§22.1)" }
+      ]
+    },
+    "currency": {
+      "$comment": "The currencies the price book actually declares. §22.1 says Stripe bills 'USD/GBP/etc.' and §30.3's worked case offers a departing subscriber 'USD/AED-equivalent' — neither is a price this milestone can state, so neither is a member. A currency with no declared price is a currency something would eventually have to convert into, and §30.3 forbids conversion outright.",
+      "enum_name": "Currency",
+      "const_name": "CURRENCIES",
+      "members": [
+        { "id": "INR", "note": "minor unit: paise (÷100)" },
+        { "id": "USD", "note": "minor unit: cents (÷100)" }
+      ]
+    },
+    "subscription_status": {
+      "$comment": "§22.13's ladder, as states rather than as flags. The two that carry the whole section are `grace` and `read_only`: both are FAILED renewals, and the difference between them is exactly what a user may still do — grace keeps everything and shows a banner, read-only keeps her memories and stops new guidance. Collapsing them into one 'past due' would erase §22.13's central promise, which is that nothing is taken away at the moment the money fails. `cancelled` GRANTS ACCESS: §30.3 says 'access till period end stated', so the subscription is over and the entitlement is not, and modelling that as a flag on `active` put the same fact in two fields.",
+      "enum_name": "SubscriptionStatus",
+      "const_name": "SUBSCRIPTION_STATUSES",
+      "members": [
+        { "id": "pending", "note": "§30.3 — the UPI 5-minute hold. Nothing is granted yet; this is not access." },
+        { "id": "trialing", "note": "§10-20's 7 days. Full access." },
+        { "id": "active", "note": "Paid and renewing. Full access." },
+        { "id": "grace", "note": "§22.13 — renewal failed, 7 days, FULL ACCESS plus a banner and the day 0/2/5 nudges." },
+        { "id": "read_only", "note": "§22.13 — 21 days of 'your memories are safe'. Reading her own past works; new guidance does not. No hard deletion, ever." },
+        { "id": "cancelled", "note": "§30.3 — she cancelled; access runs to period end and the screen says so. Still LIVE." },
+        { "id": "downgraded", "note": "§22.13's end state and §28.2's free variant. Terminal, and not a deletion." },
+        { "id": "expired", "note": "A cancelled subscription whose period ended. Terminal." }
+      ]
+    },
+    "payment_state": {
+      "$comment": "S34's three states plus the one a receipt row needs afterwards. `pending` is §30.3's UPI wait and is emphatically NOT an error — it borrows no error colour on S34 and no error colour in `ReceiptRow`, which had this right before there was a payments module behind it.",
+      "enum_name": "PaymentState",
+      "const_name": "PAYMENT_STATES",
+      "members": [
+        { "id": "pending", "note": "§30.3 — UPI mandate approval, 5-minute hold, poll + webhook race-safe" },
+        { "id": "succeeded", "note": "receipt in-locale, invoice email" },
+        { "id": "failed", "note": "carries a `payment_failure_reason`, never a provider code" },
+        { "id": "refunded", "note": "§22.16's 7-day annual window, or §30.3's automatic duplicate refund" }
+      ]
+    },
+    "payment_failure_reason": {
+      "$comment": "§30.3: 'mapped reasons in plain language: insufficient funds / mandate declined / bank timeout'. The mapping happens in the ADAPTER, so a vendor's own failure string never reaches a screen — §2.4 would render it in the wrong language even if §13 permitted it, which it does not. `unknown` is a real member and not a gap: a rail that returns something unmapped must still produce a screen, and the honest screen says the payment did not go through without inventing a cause.",
+      "enum_name": "PaymentFailureReason",
+      "const_name": "PAYMENT_FAILURE_REASONS",
+      "members": [
+        { "id": "insufficient_funds", "note": "§30.3, named" },
+        { "id": "mandate_declined", "note": "§30.3, named — also the post-purchase case, where the SUBSCRIPTION survives" },
+        { "id": "bank_timeout", "note": "§30.3, named" },
+        { "id": "instrument_expired", "note": "a tokenized card past its date; the alternate-rail suggestion is the same one" },
+        { "id": "unknown", "note": "unmapped. The screen states the outcome and never guesses the cause." }
+      ]
+    },
+    "gift_redemption_outcome": {
+      "$comment": "§30.3's S33 branches, as an enum because the middle one is a MONEY MOVEMENT and not a message: 'already-subscribed → credit conversion'. A redemption that found an existing subscriber must EXTEND it — the giver bought time and the receiver already had time, so the two add. Replacing would silently destroy whatever the receiver had already paid for, which is the one outcome nobody would notice until the month they expected to still be subscribed.",
+      "enum_name": "GiftRedemptionOutcome",
+      "const_name": "GIFT_REDEMPTION_OUTCOMES",
+      "members": [
+        { "id": "activated", "note": "§30.3 — no existing subscription; onboarding with a gift banner" },
+        { "id": "credit_converted", "note": "§30.3 — already subscribed; the gifted period EXTENDS the existing one" },
+        { "id": "expired", "note": "warm error + support link" },
+        { "id": "already_redeemed", "note": "warm error + support link" },
+        { "id": "invalid", "note": "no such code. Same warm error — a distinguishing message would be a code oracle." }
+      ]
+    }
+  },
+  "constants": {
+    "GRACE_PERIOD_DAYS": {
+      "$comment": "§22.13 — 'a 7-day grace with in-locale WhatsApp/push nudges'. Access is UNCHANGED throughout it.",
+      "value": 7
+    },
+    "READ_ONLY_PERIOD_DAYS": {
+      "$comment": "§22.13 — 'then a 21-day read-only \"your memories are safe\" state before downgrade'.",
+      "value": 21
+    },
+    "DUNNING_NUDGE_DAYS": {
+      "$comment": "§22.13 — 'nudges (day 0, 2, 5)', counted from the failed renewal. Three, inside a seven-day grace, and no fourth: §29.2 forbids the escalating drumbeat that the fourth would be.",
+      "value": [0, 2, 5]
+    },
+    "TRIAL_DAYS": {
+      "$comment": "§10-20 — 'trial 7 days full-featured'.",
+      "value": 7
+    },
+    "ANNUAL_REFUND_WINDOW_DAYS": {
+      "$comment": "§22.16 / §30.3 — '7-day no-questions on annual plans'. Monthly is deliberately absent from this constant: the spec grants the window to annual, and a helpful extension to monthly would be a policy decision made in a constants file.",
+      "value": 7
+    },
+    "UPI_PENDING_HOLD_MINUTES": {
+      "$comment": "§30.3 — the pending screen's hold: 'UPI waiting: 5-min hold screen with \"approve in your UPI app\"'. After it the purchase is abandoned, not failed: nothing was taken.",
+      "value": 5
+    },
+    "WIN_BACK_DAY": {
+      "$comment": "§30.3 — 'single email/WhatsApp at +30d (Class M, consented) with nothing manipulative'. SINGLE. The number is here so the notification job and the screen copy cannot disagree about when, and the word 'single' is enforced where the job is written.",
+      "value": 30
+    }
+  }
+}

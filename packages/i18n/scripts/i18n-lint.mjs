@@ -104,7 +104,7 @@ function expand(template, decl) {
 // own, because a blind spot you have already walked past once is not a blind
 // spot any more.
 const LITERAL_KEY =
-  /"((?:ui|errors|auth|verify|dob|home|app|chat|panchang|numerology|terms|memory|start|launch|brief|today|festivals|journal|vault|family|you|reflection)\.[a-z0-9_.]+)"/g;
+  /"((?:ui|errors|auth|verify|dob|home|app|chat|panchang|numerology|terms|memory|start|launch|brief|today|festivals|journal|vault|family|you|reflection|call|subscription|payresult)\.[a-z0-9_.]+)"/g;
 const TEMPLATE_KEY = /`([a-z0-9_.]+\.\$\{[^`]+)`/g;
 
 const referenced = new Set();

@@ -44,6 +44,9 @@ from sitara_api.panchang.places import default_resolver
 from sitara_api.panchang.registry import build_registry
 from sitara_api.panchang.router import router as panchang_router
 from sitara_api.panchang.service import PanchangService
+from sitara_api.payments.providers.registry import build_rail
+from sitara_api.payments.router import router as subscription_router
+from sitara_api.payments.service import PaymentService
 from sitara_api.prototype import assert_safe as assert_prototype_safe
 from sitara_api.reflection.router import router as reflection_router
 from sitara_api.reflection.service import ReflectionService
@@ -164,6 +167,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             environment=settings.environment,
         )
         app.state.minute_ledger = MinuteLedger(db, settings)
+        # §30.3's rail. `resolve()` picks it from the capability matrix rather
+        # than from an `if` here — which is what makes landing Razorpay one
+        # cell plus an adapter (`payments/providers/routing.py`). The rail is
+        # held on `app.state` so the dev control surface and the service share
+        # ONE instance: an armed fault has to be visible to the request that
+        # trips it.
+        app.state.payment_rail = build_rail()
+        app.state.payments = PaymentService(db, app.state.payment_rail)
         # §33.5's evidence, from the first call (§43.5). Redis and not Mongo
         # because these are counters and a reservoir, and no TTL because a
         # launch gate whose evidence expired would quietly reset the decision.
@@ -196,6 +207,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.call_turns = None
     app.state.call_metrics = None
     app.state.minute_ledger = None
+    app.state.payments = None
+    app.state.payment_rail = None
     # §2.4: the service renders §9's safety and decline strings itself. A
     # missing catalog must surface here, not when an L4 turn needs the crisis
     # line.
@@ -244,13 +257,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(chart_router)
     app.include_router(onboarding_router)
     app.include_router(today_router)
+    app.include_router(subscription_router)
     # §28.2's variant switcher runs the REAL service over fact fixtures, and
     # it exists ONLY in dev — `db.seed` refuses a non-dev host for the same
     # reason: a convenience that can reach production data is not one.
     if settings.environment == "dev":
         from sitara_api.daily_guidance.dev_router import router as today_dev_router
+        from sitara_api.payments.dev_router import router as payments_dev_router
 
         app.include_router(today_dev_router)
+        # §30.3's simulator driver — "fail the next renewal", "expire the
+        # grace period", "gift to an existing subscriber". Dev only, for the
+        # obvious reason: it can grant paid access.
+        app.include_router(payments_dev_router)
 
     @app.get("/healthz")
     def healthz() -> dict[str, str]:

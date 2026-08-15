@@ -141,6 +141,74 @@ Nine surfaces: S21 `/journal` · S22 `/journal/[date]` · S23 `/journal/search` 
 - **`EmptyState id="saved_guidance"` is not a general "nothing here" state.** It renders "Nothing saved yet." S16 and S17 both used it for "the panchang cell was cold" and "no observance today", and both had carried their own correct sentence (`today.timings.empty`, `today.festival.empty`) in the catalogs since M8 without rendering it. §24.6 fixes the designed empty states at NINE; a screen that is not one of them says its own line.
 - **`KundliChart` renders its North/South switch only when `onStyleChange` is passed.** S28 shipped without it, so CC-007's "user-switchable" was not. The choice is per-view and deliberately not persisted: it is how this reader reads a chart, not a fact about the chart.
 
+## M11 — the payment surfaces (S30, S31, S34)
+
+Three surfaces: S30 `/you/subscription` · S31 `/you/subscription/checkout` ·
+S34 `/you/subscription/result`. **M11 added zero components** — §24.3 stays at
+49, and these compose `Card`, `PriceCard`, `PaywallPanel`, `ReceiptRow`,
+`Sheet`, `Chip`, `ListRow`, `EmptyState`, `Button` and `TaraPresence`.
+
+- **§2.3's grouping follows the CURRENCY, not the locale, and `Intl` does the
+  opposite.** `Intl.NumberFormat("en-IN")` renders a USD amount as
+  `$14,50,000` — Indian grouping on a dollar price, which is exactly what §2.3
+  forbids. §30.3 makes the mismatch ordinary rather than exotic: a subscriber
+  who moves abroad keeps billing in ₹ until renewal, and an NRI gift is bought
+  in USD and redeemed in India. So `lib/money.ts` picks the formatting locale
+  from the CURRENCY (`en-IN` for INR, `en-US` for USD) and the user's locale
+  chooses nothing — safe only because CC-013 already fixed digits as Latin
+  everywhere. `s30-international-hi-light.png` is the baseline that watches it.
+- **CC-013 again: the thing to preserve is the ABSENCE of `-u-nu-deva`**, same
+  as `dates.ts`. A helpful addition renders ₹३,९९९ and passes every other gate.
+- **The client never decides what access she has.** `SubscriptionStatus`
+  crosses the wire; the access LEVEL does not, and `lib/subscription.ts` maps
+  no status to a permission. Same reasoning as §32.1's `variant` being absent
+  from the Today payload, pointed the other way: the variant is a display rule
+  the client owns, and access is an authorization decision the server owns.
+- **§22.13's dates come from the server.** `grace_ends_at` and `downgrades_at`
+  are computed by `lifecycle.project`; a client deriving them from a failure
+  timestamp would be a second implementation of §22.13, disagreeing on exactly
+  the day it mattered.
+- **Idempotency keys belong to the TAP, not the request.** `newIdempotencyKey`
+  is called once when the user acts and reused across retries of that act
+  (§6.3, §30.3). A key minted per HTTP request would make a retried request a
+  second charge — which is the thing it exists to prevent.
+- **The never-subscribed state is a `Card`, not a tenth `EmptyState`.** §24.6
+  fixes the designed empty states at NINE and `EMPTY_STATES` is closed; adding
+  one needs the §24.3 review this milestone did not have. `receipts` IS one of
+  the nine and is used as one.
+- **A region with no rail renders NO purchase control**, not a disabled one —
+  `ErrorState`'s `retryable: false` rule applied to an affordance. §30.3's gap
+  is a sentence, because a greyed button still asserts it is nearly there.
+- **Every payment screen discloses the simulator.** `simulated` reaches the
+  client as one boolean and S30 says "Demo mode — no money moves" from it. Same
+  instinct as CC-008's permanent disclosure: where a thing is not what it
+  appears to be, the screen says so. A prototype whose receipts look real is a
+  prototype somebody eventually shows a customer.
+- **S29's `you.later` SHRANK in the same commit that added the subscription
+  row.** The honest-absence sentence has a second half that is easy to forget:
+  it has to stop naming things that now exist. "Subscription … arrives in a
+  later release" sitting beside a working link to it is worse than never
+  having had the sentence.
+- **`i18n-lint` needs a BARE identifier in a template AND a dot before `${`.**
+  `subscription.plan_${plan}` matched the scanner's regex not at all, so four
+  declared templates were silently unverified; renamed to
+  `subscription.plan.${plan}` and the identifiers lifted into locals, which is
+  the convention `ui.module.${module}` already follows. The namespace list in
+  `LITERAL_KEY` gained `subscription`, `payresult` **and `call`** — `call` had
+  been missing since M9, and the file's own comment says a blind spot walked
+  past once is not a blind spot any more.
+
+**The baselines: 30.** 3 surfaces × 3 locales × 2 themes (18), the five §22.13
+ladder states in en and hi (10), the cancel sheet, and the no-rail state.
+**They earned their place on the first run**, catching three defects nothing
+else could see: S30 rendered "renews on 1 August 2027" directly above "this
+month's payment didn't go through" — both true of different periods and
+together unreadable, and the stub fixture that produced it was a state the real
+service cannot reach; the "savings stated plainly" label was a bare "₹1,989"
+with no sentence attached; and the price cards' period label repeated the plan
+name ("Monthly … monthly") instead of naming a period. A fourth came from
+looking at S34: Tara's portrait with no "Tara · AI guide" beneath it.
+
 ## Onboarding — the pre-auth screen (S02)
 
 **§29.1 runs language (S02) BEFORE auth (S03), so S02 has no session** — and every `/v1/onboarding` route is behind one (`CurrentSession`, §33.2/§34.5). S02 called it anyway: every language tap 401'd, `useStepCommit` correctly refused to advance a step it could not persist, and the first screen of onboarding was a dead end in a real browser. Same language or different made no difference.

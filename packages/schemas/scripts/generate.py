@@ -170,6 +170,7 @@ def gen_python(
     memory_types: dict,
     chat: dict,
     voice: dict,
+    payments: dict,
 ) -> None:
     PY_OUT.mkdir(parents=True, exist_ok=True)
 
@@ -327,6 +328,50 @@ def gen_python(
         lines += ["", f"#: {const['$comment']}", f"{name} = {py_const(const['value'])}"]
     lines.append("")
     (PY_OUT / "voice.py").write_text("\n".join(lines), encoding="utf-8")
+
+    # payments.py
+    lines = [
+        f'"""{HEADER}',
+        "",
+        "SPEC §30.3 / §22.13 / §22.1 — the vocabulary of a subscription.",
+        "",
+        "`sitara_api.payments` writes these onto `subscriptions` and `payments`",
+        "rows; S30, S31 and S34 render them. Declared here in the SAME milestone",
+        "that builds both sides, rather than after they had already disagreed —",
+        "which is what happened to the confidence states, the presence states,",
+        "the memory types and the voice vocabulary in turn.",
+        "",
+        "The RULES over these states — which grant access, which are terminal,",
+        "what §22.13's clock does to them — belong to `payments.lifecycle`,",
+        "exactly as §32.4's consent and decay rules stay in `memory.taxonomy`.",
+        "This file is the closed set of IDs and nothing else.",
+        '"""',
+        "",
+        "from enum import StrEnum",
+        "",
+        "__all__ = [",
+    ]
+    payment_exports = [
+        *(e["enum_name"] for e in payments["enums"].values()),
+        *(e["const_name"] for e in payments["enums"].values()),
+        *payments["constants"],
+    ]
+    for name in sorted(payment_exports):
+        lines.append(f'    "{name}",')
+    lines += ["]", ""]
+    for enum in payments["enums"].values():
+        lines += py_enum(enum)
+        lines += [
+            "",
+            f"{enum['const_name']}: tuple[{enum['enum_name']}, ...] = (",
+            *(f"    {enum['enum_name']}.{py_ident(m['id'])}," for m in enum["members"]),
+            ")",
+            "",
+        ]
+    for name, const in payments["constants"].items():
+        lines += ["", f"#: {const['$comment']}", f"{name} = {py_const(const['value'])}"]
+    lines.append("")
+    (PY_OUT / "payments.py").write_text("\n".join(lines), encoding="utf-8")
 
     # modules.py
     lines = [
@@ -572,6 +617,29 @@ def gen_python(
         ")",
         "from sitara_schemas.memory_types import MEMORY_TYPE_ORDER, MemoryType",
         "from sitara_schemas.modules import MORNING_MODULE_ORDER, MorningModule",
+        "from sitara_schemas.payments import (",
+        "    ANNUAL_REFUND_WINDOW_DAYS,",
+        "    BILLING_REGIONS,",
+        "    CURRENCIES,",
+        "    DUNNING_NUDGE_DAYS,",
+        "    GIFT_REDEMPTION_OUTCOMES,",
+        "    GRACE_PERIOD_DAYS,",
+        "    PAYMENT_FAILURE_REASONS,",
+        "    PAYMENT_STATES,",
+        "    PLAN_IDS,",
+        "    READ_ONLY_PERIOD_DAYS,",
+        "    SUBSCRIPTION_STATUSES,",
+        "    TRIAL_DAYS,",
+        "    UPI_PENDING_HOLD_MINUTES,",
+        "    WIN_BACK_DAY,",
+        "    BillingRegion,",
+        "    Currency,",
+        "    GiftRedemptionOutcome,",
+        "    PaymentFailureReason,",
+        "    PaymentState,",
+        "    PlanId,",
+        "    SubscriptionStatus,",
+        ")",
         "from sitara_schemas.presence import (",
         "    PRESENCE_CINEMAGRAPH,",
         "    PRESENCE_ORDINAL,",
@@ -624,6 +692,27 @@ def gen_python(
     for name in sorted(
         [
             "BARGE_IN_REASONS",
+            "ANNUAL_REFUND_WINDOW_DAYS",
+            "BILLING_REGIONS",
+            "CURRENCIES",
+            "DUNNING_NUDGE_DAYS",
+            "GIFT_REDEMPTION_OUTCOMES",
+            "GRACE_PERIOD_DAYS",
+            "PAYMENT_FAILURE_REASONS",
+            "PAYMENT_STATES",
+            "PLAN_IDS",
+            "READ_ONLY_PERIOD_DAYS",
+            "SUBSCRIPTION_STATUSES",
+            "TRIAL_DAYS",
+            "UPI_PENDING_HOLD_MINUTES",
+            "WIN_BACK_DAY",
+            "BillingRegion",
+            "Currency",
+            "GiftRedemptionOutcome",
+            "PaymentFailureReason",
+            "PaymentState",
+            "PlanId",
+            "SubscriptionStatus",
             "BINARY_AUDIO_FORMAT",
             "BINARY_CHANNELS",
             "BINARY_HEADER_BYTES",
@@ -749,6 +838,7 @@ def gen_typescript(
     memory_types: dict,
     chat: dict,
     voice: dict,
+    payments: dict,
 ) -> None:
     TS_OUT.mkdir(parents=True, exist_ok=True)
     bf = ws["binary_frame"]
@@ -889,6 +979,22 @@ def gen_typescript(
         ]
     lines += [
         "// ---------------------------------------------------------------------------",
+        "// SPEC §30.3 / §22.13 / §22.1 — the vocabulary of a subscription.",
+        "// `grace` and `read_only` are BOTH failed renewals and are not one state:",
+        "// §22.13's promise is that nothing is taken away at the moment the money",
+        "// fails, and the difference between them is what she may still do.",
+        "// ---------------------------------------------------------------------------",
+    ]
+    for enum in payments["enums"].values():
+        lines += ts_enum(enum)
+    for name, const in payments["constants"].items():
+        lines += [
+            f"/** {const['$comment']} */",
+            f"export const {name} = {json.dumps(const['value'])} as const;",
+            "",
+        ]
+    lines += [
+        "// ---------------------------------------------------------------------------",
         "// SPEC §34.6 — control-event payloads: the text chat (S18), voice notes",
         "// (M9) and the live call (M9-P10b). All fifteen members are typed now; the",
         "// member SET is unchanged and stays closed at fifteen (§31.3).",
@@ -954,6 +1060,7 @@ def main() -> None:
     chat = load("chat.json")
     voice = load("voice.json")
     call_media = load("call-media.json")
+    payments = load("payments.json")
 
     assert len(modules["members"]) == 17, "SPEC §34.3: exactly 17 morning modules"
     assert len(confidence["members"]) == 5, "SPEC §5.4: exactly 5 confidence states"
@@ -983,15 +1090,37 @@ def main() -> None:
         "recording from a TTS reconstruction — that distinction IS the promise"
     )
 
-    gen_python(modules, codes, envelope, ws, today, presence, memory_types, chat, voice)
+    # §22.13's whole point is that a failed renewal takes nothing away at the
+    # moment it fails. That promise lives in the DIFFERENCE between these two
+    # members: grace keeps everything, read-only keeps her memories. A future
+    # tidy-up that collapsed them into one "past due" would leave every guard
+    # compiling and would simply stop distinguishing the two — the same shape
+    # as `playback_policy` above.
+    statuses = {m["id"] for m in payments["enums"]["subscription_status"]["members"]}
+    assert {"grace", "read_only"} <= statuses, (
+        "SPEC §22.13: a failed renewal has a 7-day grace AND a 21-day read-only "
+        "state, and the difference between them is what the user may still do"
+    )
+
+    gen_python(modules, codes, envelope, ws, today, presence, memory_types, chat, voice, payments)
     gen_call_media(call_media)
     gen_typescript(
-        modules, codes, envelope, ws, confidence, today, presence, memory_types, chat, voice
+        modules,
+        codes,
+        envelope,
+        ws,
+        confidence,
+        today,
+        presence,
+        memory_types,
+        chat,
+        voice,
+        payments,
     )
     print(
         "generated: python/sitara_schemas/"
         "{__init__,modules,errors,ws_events,today,presence,memory_types,chat,voice,"
-        "call_media}.py"
+        "call_media,payments}.py"
     )
     print("generated: typescript/src/index.ts")
 
