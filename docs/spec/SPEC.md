@@ -1166,4 +1166,27 @@ This was not visible from the spec alone. It became visible from the code: `Mess
 
 **45.4 Consequential (recorded, no decision required).** §6.4's table gains the field; `attested_at` was already stored and undeclared in the table's field list and is left as-is, since it is not what this entry is about. The M10 test suite covers the conversion with the same discipline as the deletions: what survives asserted as hard as what dies.
 
-**Freeze statement (updated):** the specification is **FROZEN as v3.12 — Implementation Ready**. Cumulative audit trail: six audit rounds plus twelve change-control entries, 82 findings raised, 82 resolved, **one baseline decision changed** (CC-008, Tara's production method). The §31.3 door remains the only door.
+**Freeze statement (superseded by §46):** the specification was **FROZEN as v3.12 — Implementation Ready** at this entry. Cumulative audit trail: six audit rounds plus twelve change-control entries, 82 findings raised, 82 resolved, **one baseline decision changed** (CC-008, Tara's production method). The §31.3 door remains the only door.
+
+---
+
+# 46. Change-Control Entry 013 (v3.13) — Numeral Rendering per Locale (M10)
+**Date: 15 August 2026 · Approved: Founder (Nishtha Agarwal) · Raised by: Implementation (M10).**
+
+Per §31.3 this section is the change-control record. **No baseline decision changes.**
+
+**46.1 The gap.** Two clauses ask for numerals to follow the locale and neither says what that means for Devanagari. §29.2's S14 template reads "language: 100% locale incl. numerals"; §29.4's dataviz rules read "numerals per locale, tabular-lining figures". Devanagari has its own digit set (०१२३४५६७८९), so "per locale" admits two readings, and the two produce visibly different products: `१५ अगस्त २०२६` or `15 अगस्त 2026`.
+
+The ambiguity surfaced in M10 rather than earlier because the Journal is the first surface that is mostly dates. `Intl.DateTimeFormat("hi-IN")` renders Latin digits by default and Devanagari digits only under the `-u-nu-deva` extension, so the implementation had silently taken one of the two readings — correctly, as it turns out, but by default rather than by decision.
+
+**46.2 Final: LATIN numerals in every locale, including `hi`.** Modern Hindi readers expect Latin digits for dates, times and quantities. Devanagari numerals read as ceremonial — they belong to a wedding invitation, a temple notice or a school primer — and rendering an app's clock and calendar in them makes the product feel archaic rather than authentic. §0.9 assigns "orientation, a settled start" to the morning brief; a date a reader has to decode is the opposite of settled.
+
+This is a decision about REGISTER, not about capability, and it is the same class of judgement §2.4 already makes when it ships `hi-Latn` as a first-class locale: what Indian users actually read is the standard, never what a locale table would derive.
+
+**46.3 Scope, and the one exception.** The ruling covers dates, times, counts, durations, prices and every numeric value in product chrome, in all three launch locales and in the wave-2/3 locales as they ship. **Tithi, nakshatra and muhurat VALUES are unaffected** and remain as §5 and the panchang templates render them — those are astrological terms rather than quantities, and where a tradition writes one in Devanagari it stays in Devanagari.
+
+§29.2's "100% locale incl. numerals" and §29.4's "numerals per locale" are both to be read as **"the numeral system that locale's readers actually use"**, which this entry fixes as Latin for `hi`. The phrase "tabular-lining figures" in §29.4 is unchanged and still binds — it is about figure WIDTH in tables, not about which digits.
+
+**46.4 Consequential (recorded, no decision required).** `apps/web/src/lib/dates.ts` already formats through `en-IN`/`hi-IN` without a numbering-system extension, which is this ruling; the file carries the reasoning and the separate, unrelated note that `hi-Latn` must never be resolved to `hi` by `Intl`, since that would fill a Hinglish surface with Devanagari. The 65 M10 baselines were recorded under this behaviour and need no re-recording. No locale catalog changes: ICU number formatting follows the locale tag, and the tags are unchanged.
+
+**Freeze statement (updated):** the specification is **FROZEN as v3.13 — Implementation Ready**. Cumulative audit trail: six audit rounds plus thirteen change-control entries, 83 findings raised, 83 resolved, **one baseline decision changed** (CC-008, Tara's production method). The §31.3 door remains the only door.

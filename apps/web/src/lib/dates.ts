@@ -7,6 +7,21 @@
  * would render the SERVER's or the browser's, which for a Hindi user in Chrome
  * set to English is English inside a Devanagari page.
  *
+ * ── The digits are LATIN in every locale, by ruling (§46, CC-013) ──────────
+ *
+ * Devanagari has its own digit set, so §29.2's "100% locale incl. numerals"
+ * admitted two readings. §46 fixes it: Latin, including in `hi`. Modern Hindi
+ * readers expect Latin digits for dates and times, and Devanagari numerals read
+ * as ceremonial — they belong to a wedding invitation, not to an app's calendar
+ * — so rendering the clock in them makes the product feel archaic rather than
+ * authentic. Tithi and nakshatra VALUES are unaffected; those are terms, not
+ * quantities.
+ *
+ * There is nothing to do to get this: `Intl` renders Latin digits for `hi-IN`
+ * unless asked for `-u-nu-deva`. **So the thing to preserve is the ABSENCE of
+ * that extension** — a well-meant `hi-IN-u-nu-deva` here would silently
+ * implement the reading §46 rejected.
+ *
  * ── `hi-Latn` is Hinglish, and Intl has never heard of it ──────────────────
  *
  * `Intl` resolves `hi-Latn` to Hindi and formats in Devanagari — which is
