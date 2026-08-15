@@ -135,3 +135,59 @@ class TestFixedSites:
     def test_script_check_still_flags_an_english_reply_to_a_hindi_user(self) -> None:
         assert contains_wrong_script("Today is a calm day for finishing things.", "hi")
         assert not contains_wrong_script("आज का दिन शांत है।", "hi")
+
+
+class TestEveryCelestialBodyHasASurfaceInEveryLocale:
+    """The claim lexicon must be able to NAME every body the engine can emit.
+
+    Found by hand on 16 Aug 2026: `terms.rashi.*` did not exist in any catalog,
+    so `_celestial_map` fell back to the bare enum value and the twelve rashis
+    had no English surface beyond their Sanskrit id. A reply saying "your Moon
+    is in Libra" named a rashi the entity check could not identify — so the
+    (d) check (a sentence about a different BODY from the fact it cites) was
+    blind for rashis in English.
+
+    It surfaced only as a `brief term missing` log line during seeding, which
+    is exactly how CL-015 hid too: the validator does not fail when a surface
+    is absent, it simply stops recognising the claim.
+    """
+
+    LOCALES = ("en", "hi", "hi-Latn")
+
+    @pytest.mark.parametrize("locale", LOCALES)
+    def test_every_enum_member_resolves_from_its_own_locale_rendering(
+        self, locale: str
+    ) -> None:
+        from sitara_schemas.facts import Graha, Nakshatra, Rashi
+
+        from sitara_api.chat_orchestration.grounding import GroundingValidator
+        from sitara_api.localisation import MissingString, resolve
+
+        surfaces = GroundingValidator()._celestial_map(locale).surfaces
+        for enum, kind in ((Graha, "graha"), (Rashi, "rashi"), (Nakshatra, "nakshatra")):
+            for member in enum:
+                try:
+                    rendered = resolve(f"terms.{kind}.{member.value}", locale)
+                except MissingString:  # pragma: no cover - the failure being guarded
+                    raise AssertionError(
+                        f"terms.{kind}.{member.value} missing in {locale} — the claim "
+                        "lexicon cannot name it, so a sentence about it is not a claim"
+                    ) from None
+                assert surfaces.get(rendered.lower()) == member.value, (
+                    f"{locale}: {rendered!r} does not resolve to {member.value!r}"
+                )
+
+    @pytest.mark.parametrize("locale", LOCALES)
+    def test_the_western_sign_names_resolve_too(self, locale: str) -> None:
+        """§2.3 keeps English loanwords in every locale, and a reply may say
+        "Libra" rather than "Tula" — in English, and in a Hinglish sentence."""
+        from sitara_api.chat_orchestration.grounding import GroundingValidator
+
+        surfaces = GroundingValidator()._celestial_map(locale).surfaces
+        for western, canonical in (
+            ("libra", "tula"),
+            ("taurus", "vrishabha"),
+            ("capricorn", "makara"),
+            ("pisces", "meena"),
+        ):
+            assert surfaces.get(western) == canonical, f"{locale}: {western} unmapped"

@@ -220,6 +220,20 @@
     "tradition": {
       "amanta": "अमांत",
       "purnimanta": "पूर्णिमांत"
+    },
+    "rashi": {
+      "mesha": "मेष",
+      "vrishabha": "वृषभ",
+      "mithuna": "मिथुन",
+      "karka": "कर्क",
+      "simha": "सिंह",
+      "kanya": "कन्या",
+      "tula": "तुला",
+      "vrishchika": "वृश्चिक",
+      "dhanu": "धनु",
+      "makara": "मकर",
+      "kumbha": "कुंभ",
+      "meena": "मीन"
     }
   },
   "brief": {

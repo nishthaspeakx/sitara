@@ -279,6 +279,44 @@
       "meena": [
         "meen"
       ]
+    },
+    "en": {
+      "mesha": [
+        "aries"
+      ],
+      "vrishabha": [
+        "taurus"
+      ],
+      "mithuna": [
+        "gemini"
+      ],
+      "karka": [
+        "cancer"
+      ],
+      "simha": [
+        "leo"
+      ],
+      "kanya": [
+        "virgo"
+      ],
+      "tula": [
+        "libra"
+      ],
+      "vrishchika": [
+        "scorpio"
+      ],
+      "dhanu": [
+        "sagittarius"
+      ],
+      "makara": [
+        "capricorn"
+      ],
+      "kumbha": [
+        "aquarius"
+      ],
+      "meena": [
+        "pisces"
+      ]
     }
   },
   "state_motion": {

@@ -220,6 +220,20 @@
     "tradition": {
       "amanta": "Amanta",
       "purnimanta": "Purnimanta"
+    },
+    "rashi": {
+      "mesha": "Mesh",
+      "vrishabha": "Vrishabh",
+      "mithuna": "Mithun",
+      "karka": "Kark",
+      "simha": "Simha",
+      "kanya": "Kanya",
+      "tula": "Tula",
+      "vrishchika": "Vrishchik",
+      "dhanu": "Dhanu",
+      "makara": "Makar",
+      "kumbha": "Kumbh",
+      "meena": "Meen"
     }
   },
   "brief": {
