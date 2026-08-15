@@ -58,7 +58,12 @@ export type Scenario =
   | "calls_disabled"
   | "call_minutes_exhausted"
   | "call_unlimited"
-  | "call_returning";
+  | "call_returning"
+  /* M10 — §30.5's Journal, §32.4's vault, §32.15's family. Each is a state of
+     the user's OWN records rather than a pipeline output, so the stub is a
+     state machine over them (see `scripts/stub-api.mjs`). */
+  | "records_empty"
+  | "records_unavailable";
 
 /**
  * §28.2's sixteen. The ids are the recorded fixtures' filenames, so a variant
@@ -293,6 +298,103 @@ export async function setupToday(
     scenario: options.scenario ?? "ok",
     variant: options.variant ?? "normal_morning",
     density: options.density ?? "med",
+    state: {
+      completed_steps: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
+      has_birth_details: true,
+      has_city: true,
+      time_accuracy: "exact",
+      brief_time: "07:00",
+    },
+  });
+}
+
+/**
+ * ── M10's records: the Journal, the Vault, the family ──────────────────────
+ *
+ * A client who finished onboarding and has a history — the state S21–S29 are
+ * views over.
+ *
+ * **These are seeded, not recorded, and the distinction is the point.** Today's
+ * briefs and the chat turns are replayed from the real pipeline because their
+ * CONTENT is an engine output: a hand-written brief is a brief nobody's ranking
+ * engine produced. A journal day, a vault row and a family member are the
+ * opposite — they are the user's own records, and their content is whatever she
+ * put there. What has to be right about them is their SHAPE and their
+ * relationships, so the stub is a state machine over linked records, exactly as
+ * the onboarding stub is over steps.
+ *
+ * The links are what the §30.5 tests need and are seeded deliberately:
+ * `SEED.memories.preference` was learned from the turn the saved-guidance entry
+ * points at, so the checkbox on that entry's delete sheet has something real to
+ * act on; `SEED.memories.anniversary` names `SEED.family.mother`, so §32.15's
+ * "about them" candidate list is a real name match rather than a fixed list.
+ */
+export const SEED = {
+  today: "2026-08-15",
+  memories: {
+    /** Names the mother — §32.15's candidate list finds this one. */
+    anniversary: "6b10000000000000000000a1",
+    /** Sourced from the turn the saved-guidance entry points at. */
+    preference: "6b10000000000000000000a2",
+    /** Sourced from nothing either deletion touches — the control. */
+    practice: "6b10000000000000000000a3",
+  },
+  messages: {
+    anniversary: "6c10000000000000000000b1",
+    preference: "6c10000000000000000000b2",
+    practice: "6c10000000000000000000b3",
+  },
+  journal: {
+    brief: "brief:2026-08-15",
+    reflection: "reflection:2026-08-14",
+    /** The saved guidance whose delete sheet carries §30.5's checkbox. */
+    guidance: "guidance:6d10000000000000000000c1",
+    call: "call:6e10000000000000000000d1",
+  },
+  family: {
+    mother: "6f10000000000000000000f1",
+    son: "6f10000000000000000000f2",
+  },
+} as const;
+
+/** The stub's whole record state, for asserting what SURVIVED server-side. */
+export interface RecordsState {
+  memories: { memory_id: string; content: string; source_state: string; muted: boolean }[];
+  journal: { local_date: string; entries: { artefact_type: string; ref: string; preview: string | null }[] }[];
+  family: { member_id: string; name: string; memorial_state: string; has_birth_details: boolean }[];
+  /** Per-member counts §32.15 hard-deletes. Not served by any product route. */
+  birth_details: Record<string, number>;
+  charts: Record<string, number>;
+  attestations: Record<string, string>;
+}
+
+/**
+ * The stub's own view of the records.
+ *
+ * Read out-of-band on the stub's port, never through the app — the same
+ * control-plane rule the onboarding state uses. A deletion test that asserted
+ * only the DOM would pass against a screen that hid a row it never deleted.
+ */
+export async function records(clientId: string): Promise<RecordsState> {
+  const response = await fetch(`${STUB}/__control/records?clientId=${encodeURIComponent(clientId)}`);
+  if (!response.ok) throw new Error(`stub-api records failed: ${response.status}`);
+  return (await response.json()) as RecordsState;
+}
+
+/**
+ * A client with a history: S21–S29's populated state.
+ *
+ * `scenario: "records_empty"` gives the same client no records at all, which is
+ * how §24.6's designed empty states are reached without a second fixture.
+ */
+export async function setupRecords(
+  page: Page,
+  options: { locale?: string; scenario?: Scenario } = {},
+): Promise<string> {
+  return setupApi(page, {
+    locale: options.locale ?? "en",
+    scenario: options.scenario ?? "ok",
+    variant: "normal_morning",
     state: {
       completed_steps: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
       has_birth_details: true,

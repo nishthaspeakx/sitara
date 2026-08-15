@@ -238,6 +238,273 @@ function reading(locale, scenario) {
   }
 }
 
+/**
+ * ── M10's records: §30.5's Journal, §32.4's Vault, §32.15's family ─────────
+ *
+ * **Seeded, not recorded, and the line between the two is not arbitrary.**
+ *
+ * The briefs and the chat turns above are replayed from the real pipeline
+ * because their CONTENT is an engine output — a hand-written brief is a brief
+ * nobody's ranking engine produced, and every baseline taken from it is a
+ * picture of fiction. A journal day, a vault row and a family member are the
+ * opposite: they are the user's own records, and their content is whatever she
+ * put there. Recording them would record a fixture author's imagination with
+ * extra steps.
+ *
+ * What has to be right about them is their SHAPE and their RELATIONSHIPS, so
+ * this is a state machine over linked records — the same thing the onboarding
+ * stub is over steps, and for the same reason: §30.5's deletions are defined by
+ * what they do to the links.
+ *
+ * The links are seeded deliberately, because they are what the §30.5 confirm
+ * tests act on:
+ *   · the `preference` memory was learned from the turn the saved-guidance
+ *     entry points at, so that entry's checkbox has something real to delete;
+ *   · the `anniversary` memory contains the mother's NAME, so §32.15's
+ *     candidate list is a real name match rather than a hard-coded row;
+ *   · the `practice` memory is sourced from nothing either deletion touches, so
+ *     "took only what it said it would" is provable rather than assumed.
+ *
+ * **Ids are ObjectId-shaped (24 hex chars).** §6.4 requires objectId and the
+ * real routers parse every path id through `ObjectId(...)`, refusing anything
+ * else. An M5 in-memory store took string ids where the real one would not, so
+ * every real write failed validation while the whole suite stayed green — the
+ * root CLAUDE.md rule, in the place it was broken. A stub that accepted
+ * `"m1"` here would be the same defect.
+ */
+
+const TODAY = "2026-08-15";
+
+/**
+ * Record content per locale.
+ *
+ * A journal preview and a memory are things a Hindi user reads in Hindi. A stub
+ * serving English here would put English inside every Devanagari baseline and
+ * §2.4's "no silent English fallback" would be violated by the fixture rather
+ * than by the app — which is worse, because it looks like data.
+ */
+const RECORDS_TEXT = {
+  en: {
+    brief: "Work themes rise today — the Moon moves through your tenth house.",
+    reflection: "You wrote about the week finally settling.",
+    guidance: "Keep the difficult conversation for Thursday morning.",
+    call: "Six minutes about the move, and what your mother would have said.",
+    milestone: "Your first reading with Tara.",
+    anniversary: "Sudha's birthday is 11 March",
+    preference: "Prefers her brief at 6:30, before the house wakes",
+    practice: "Fasts on Tuesdays",
+  },
+  hi: {
+    brief: "आज कार्य के विषय उभरते हैं — चंद्रमा आपके दशम भाव से गुजर रहे हैं।",
+    reflection: "आपने लिखा कि सप्ताह आख़िरकार ठहर रहा है।",
+    guidance: "वह कठिन बातचीत गुरुवार सुबह के लिए रखें।",
+    call: "छह मिनट, उस बदलाव के बारे में — और उस पर जो आपकी माँ कहतीं।",
+    milestone: "तारा के साथ आपका पहला पाठ।",
+    anniversary: "सुधा का जन्मदिन 11 मार्च है",
+    preference: "सुबह 6:30 पर ब्रीफ़ पसंद है, घर के जागने से पहले",
+    practice: "मंगलवार को व्रत रखती हैं",
+  },
+  "hi-Latn": {
+    brief: "Aaj kaam ke vishay ubharte hain — Chandrama aapke dasham bhaav se guzar rahe hain.",
+    reflection: "Aapne likha ki hafta aakhirkar thehar raha hai.",
+    guidance: "Woh mushkil baatcheet Guruvaar subah ke liye rakhein.",
+    call: "Chhah minute, us badlaav ke baare mein — aur us par jo aapki maa kehtin.",
+    milestone: "Tara ke saath aapka pehla paath.",
+    anniversary: "Sudha ka janmdin 11 March hai",
+    preference: "Subah 6:30 par brief pasand hai, ghar ke jaagne se pehle",
+    practice: "Mangalvaar ko vrat rakhti hain",
+  },
+};
+
+function seedRecords(locale) {
+  const text = RECORDS_TEXT[locale] ?? RECORDS_TEXT.en;
+  const mother = "6f10000000000000000000f1";
+  const son = "6f10000000000000000000f2";
+  const msg = {
+    anniversary: "6c10000000000000000000b1",
+    preference: "6c10000000000000000000b2",
+    practice: "6c10000000000000000000b3",
+  };
+
+  return {
+    /** §32.4's vault rows. No embedding — that is derived data (§32.5). */
+    memories: [
+      {
+        memory_id: "6b10000000000000000000a1",
+        type: "date_anniversary",
+        content: text.anniversary,
+        consent_granted_at: "2026-06-02T09:14:00Z",
+        wording_reconfirmed: false,
+        muted: false,
+        source_state: "present",
+        decay_score: 1,
+        created_at: "2026-06-02T09:14:00Z",
+        source_message_id: msg.anniversary,
+      },
+      {
+        memory_id: "6b10000000000000000000a2",
+        type: "preference",
+        content: text.preference,
+        consent_granted_at: "2026-07-19T04:02:00Z",
+        wording_reconfirmed: false,
+        muted: false,
+        source_state: "present",
+        decay_score: 0.72,
+        created_at: "2026-07-19T04:02:00Z",
+        source_message_id: msg.preference,
+      },
+      {
+        memory_id: "6b10000000000000000000a3",
+        type: "spiritual_practice",
+        content: text.practice,
+        consent_granted_at: "2026-05-11T16:40:00Z",
+        wording_reconfirmed: false,
+        muted: false,
+        source_state: "present",
+        decay_score: 1,
+        created_at: "2026-05-11T16:40:00Z",
+        source_message_id: msg.practice,
+      },
+    ],
+
+    /**
+     * §30.5's timeline. A DAY is the unit and an entry points at an artefact
+     * that lives elsewhere — the Journal keeps no copy (§44.2), so `preview` is
+     * rendered from the source and `null` where the source is gone.
+     */
+    journal: [
+      {
+        local_date: TODAY,
+        entries: [
+          {
+            artefact_type: "brief",
+            ref: `brief:${TODAY}`,
+            local_date: TODAY,
+            saved: false,
+            save_id: null,
+            note: null,
+            preview: text.brief,
+            message_id: null,
+            conversation_id: null,
+            confidence: "verified",
+            occurred_at: `${TODAY}T01:30:00Z`,
+            message_ids: [],
+          },
+        ],
+      },
+      {
+        local_date: "2026-08-14",
+        entries: [
+          {
+            artefact_type: "reflection",
+            ref: "reflection:2026-08-14",
+            local_date: "2026-08-14",
+            saved: false,
+            save_id: null,
+            note: null,
+            preview: text.reflection,
+            message_id: null,
+            conversation_id: null,
+            confidence: null,
+            occurred_at: "2026-08-14T16:05:00Z",
+            message_ids: [],
+          },
+          {
+            artefact_type: "guidance",
+            ref: "guidance:6d10000000000000000000c1",
+            local_date: "2026-08-14",
+            saved: true,
+            save_id: "6d10000000000000000000c1",
+            note: null,
+            preview: text.guidance,
+            message_id: msg.preference,
+            conversation_id: "6a90000000000000000000e1",
+            confidence: "verified",
+            occurred_at: "2026-08-14T11:22:00Z",
+            // The turns this artefact was built from — what §30.5's checkbox
+            // acts on, and the reason it can act on anything at all.
+            message_ids: [msg.preference],
+          },
+        ],
+      },
+      {
+        local_date: "2026-08-12",
+        entries: [
+          {
+            artefact_type: "call",
+            ref: "call:6e10000000000000000000d1",
+            local_date: "2026-08-12",
+            saved: false,
+            save_id: null,
+            note: null,
+            preview: text.call,
+            message_id: null,
+            conversation_id: "6a90000000000000000000e1",
+            confidence: null,
+            occurred_at: "2026-08-12T13:40:00Z",
+            message_ids: [],
+          },
+          {
+            artefact_type: "milestone",
+            ref: "milestone:first_reading",
+            local_date: "2026-08-12",
+            saved: false,
+            save_id: null,
+            note: null,
+            preview: text.milestone,
+            message_id: null,
+            conversation_id: null,
+            confidence: null,
+            occurred_at: "2026-08-12T06:02:00Z",
+            message_ids: [],
+          },
+        ],
+      },
+    ],
+
+    family: [
+      {
+        member_id: mother,
+        relation: "mother",
+        name: "Sudha",
+        language_tag: "hi",
+        has_birth_details: true,
+        attested: true,
+        memorial_state: "living",
+        created_at: "2026-05-30T10:00:00Z",
+      },
+      {
+        member_id: son,
+        relation: "son",
+        name: "Arjun",
+        language_tag: "en",
+        has_birth_details: false,
+        attested: false,
+        memorial_state: "living",
+        created_at: "2026-06-14T10:00:00Z",
+      },
+    ],
+
+    /**
+     * The collections §32.15 hard-deletes, counted. Not served by any product
+     * route — they exist so a test can assert a chart is GONE rather than
+     * merely unreachable, and so the memorial conversion can be proved to have
+     * touched neither.
+     */
+    birth_details: { [mother]: 1, [son]: 0 },
+    charts: { [mother]: 3, [son]: 0 },
+    /**
+     * §32.15's DPDP clause: the attestation is REVOKED, never deleted. The
+     * consent is a fact about the account-holder; the birth details were a fact
+     * about someone else.
+     */
+    attestations: { [mother]: "granted", [son]: "none" },
+
+    /** §27 binds a reflection to the user's local calendar day at creation. */
+    reflections: {},
+  };
+}
+
 /** §34.4 — the only error shape that may leave a Sitara service. */
 function envelope(code, messageKey, retryable) {
   return { code, message_key: messageKey, trace_id: "trace-stub", retryable };
@@ -252,6 +519,7 @@ function clientFor(req) {
       state: emptyState(),
       scenario: "ok",
       today: { variant: "normal_morning", locale: "en" },
+      records: seedRecords("en"),
     });
   }
   return clients.get(id);

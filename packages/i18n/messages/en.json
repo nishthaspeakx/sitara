@@ -934,6 +934,20 @@
       "keeps": "Your journal stays as written, and the notes Tara keeps about them stay unless you tick them below.",
       "also_memories": "Also forget these notes about them",
       "confirm": "Remove"
+    },
+    "memorial": {
+      "sheet_title": "What happens to {name}'s record",
+      "title": "Keep them in memory",
+      "body": "{name} stays in your family, with their birth details, their chart, and everything already written about them.",
+      "keeps": "Nothing is deleted. Not one detail, not one note, not one line of your journal.",
+      "reminders": "One thing changes: Tara stops bringing their birthday and anniversaries to you as dates coming up, and speaks about them in the past tense.",
+      "confirm": "Keep in memory",
+      "reversible": "You can change this back whenever you like.",
+      "badge": "In memory",
+      "revert_title": "Return {name} to your family list",
+      "revert_body": "Their birthday and anniversaries come back as dates ahead. Nothing else changes, because nothing was ever taken away.",
+      "revert": "Return to the family list",
+      "or": "Or, if you would rather the record itself did not stay:"
     }
   }
 }

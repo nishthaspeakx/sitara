@@ -110,6 +110,97 @@ export const SCOPE_COPY: Record<DeletionScope, ScopeCopy> = {
 };
 
 /**
+ * ── §45's alternative, on the same sheet (CC-012) ──────────────────────────
+ *
+ * §32.15 offers "in memory of" as the alternative to deletion, and §45.3 puts
+ * both on ONE sheet with the non-destructive one first. So the memorial copy
+ * lives beside the scopes rather than in a screen: it is read at the same
+ * moment, by the same person, and the two promises have to be told apart.
+ *
+ * **The discipline here is inverted, and that is the whole point.** For a
+ * deletion, the dangerous drift is a sheet that promises less damage than it
+ * does. For this one it is the opposite: a conversion that quietly removed
+ * something would be a bereaved user losing her mother's chart because she
+ * chose the gentle option. So this copy states what SURVIVES first, states the
+ * one thing that changes explicitly (§45.2's reminders — a sheet that said
+ * "nothing changes" would be lying by a different route), and says it is
+ * reversible, because §45.2 makes it so and a wrong tap that week must not be
+ * another loss.
+ */
+export interface MemorialCopy {
+  /** The shared sheet's title. Neutral — §45.3 will not let it presume the
+   *  destructive branch, which is the one presented SECOND. */
+  sheetTitleKey: string;
+  /** The non-destructive block's heading. */
+  titleKey: string;
+  /** What the conversion does. */
+  bodyKey: string;
+  /** What survives it: everything. Stated, never implied. */
+  keepsKey: string;
+  /** §45.2's single behavioural change — the reminders soften. */
+  remindersKey: string;
+  confirmKey: string;
+  /** §45.2: reversible, and the sheet says so. */
+  reversibleKey: string;
+  /** The list/detail marker for a member already `in_memory`. */
+  badgeKey: string;
+  /** The same sheet, seen by someone undoing it. */
+  revertTitleKey: string;
+  revertBodyKey: string;
+  revertKey: string;
+  /** The bridge to §32.15's destructive half, below it (§45.3). */
+  orDeleteKey: string;
+  /**
+   * True, and asserted against every scope's `irreversible`. The pair is the
+   * property: one of these four sheets is a door that does not open again and
+   * this one is not, and a screen must never present them as the same weight.
+   */
+  reversible: boolean;
+}
+
+export const MEMORIAL_COPY: MemorialCopy = {
+  sheetTitleKey: "family.memorial.sheet_title",
+  titleKey: "family.memorial.title",
+  bodyKey: "family.memorial.body",
+  keepsKey: "family.memorial.keeps",
+  remindersKey: "family.memorial.reminders",
+  confirmKey: "family.memorial.confirm",
+  reversibleKey: "family.memorial.reversible",
+  badgeKey: "family.memorial.badge",
+  revertTitleKey: "family.memorial.revert_title",
+  revertBodyKey: "family.memorial.revert_body",
+  revertKey: "family.memorial.revert",
+  orDeleteKey: "family.memorial.or",
+  reversible: true,
+};
+
+/**
+ * §45.3: "The two are offered together on one sheet, and the non-destructive
+ * one is presented first." An ORDER rather than a comment, so the sheet reads
+ * it instead of a reviewer remembering it.
+ */
+export const FAMILY_SHEET_ORDER = ["memorial", "delete"] as const;
+export type FamilySheetSection = (typeof FAMILY_SHEET_ORDER)[number];
+
+/**
+ * The memorial keys that make a PROMISE about what survives.
+ *
+ * Separated from `orDeleteKey`, which bridges to §32.15's destructive half and
+ * therefore says "remove" on purpose. Everything in this list is a sentence
+ * about the gentle option, and `tests/deletion-scope.spec.ts` asserts no
+ * destructive verb appears in any of them in any locale — the failure being
+ * someone drafting this block by editing a copy of `family.delete.*`.
+ */
+export const MEMORIAL_PROMISE_KEYS: readonly (keyof MemorialCopy)[] = [
+  "bodyKey",
+  "keepsKey",
+  "remindersKey",
+  "confirmKey",
+  "reversibleKey",
+  "revertBodyKey",
+];
+
+/**
  * Which scopes offer §30.5's checkbox. Derived rather than listed, so adding
  * a `checkboxKey` cannot leave a screen that never renders one.
  */

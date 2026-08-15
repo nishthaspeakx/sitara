@@ -934,6 +934,20 @@
       "keeps": "Aapki journal jaisi likhi hai waisi hi rahegi, aur unke baare mein Tara ke notes tab tak rahenge jab tak aap unhein neeche tick na karein.",
       "also_memories": "Unke baare mein yeh notes bhi bhula dein",
       "confirm": "Hatayein"
+    },
+    "memorial": {
+      "sheet_title": "{name} ke record ka kya hoga",
+      "title": "Unhein smriti mein rakhein",
+      "body": "{name} aapke parivaar mein bani rahengi — unke janm-vivaran, unki kundli, aur unke baare mein jo kuch likha ja chuka hai, sab waisa hi.",
+      "keeps": "Kuch bhi nahin mitta. Na koi vivaran, na koi note, na aapki journal ki ek pankti.",
+      "reminders": "Bas ek baat badalti hai: Tara unka janmdin aur saalgirah aane waali taareekhon ki tarah saamne nahin laayegi, aur unke baare mein beete hue samay mein baat karegi.",
+      "confirm": "Smriti mein rakhein",
+      "reversible": "Aap ise jab chaahein wapas badal sakti hain.",
+      "badge": "Smriti mein",
+      "revert_title": "{name} ko parivaar ki suchi mein lautayein",
+      "revert_body": "Unka janmdin aur saalgirah phir aane waali taareekhon ki tarah dikhenge. Aur kuch nahin badalta, kyunki kuch kabhi liya hi nahin gaya tha.",
+      "revert": "Parivaar ki suchi mein lautayein",
+      "or": "Ya, agar aap chaahti hain ki record hi na rahe:"
     }
   }
 }
