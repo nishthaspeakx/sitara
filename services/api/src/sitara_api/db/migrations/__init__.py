@@ -6,7 +6,11 @@ rather than discovered by filename glob — a deploy should never depend on how 
 directory listing sorts.
 """
 
-from sitara_api.db.migrations import m0001_baseline, m0002_journal_saves
+from sitara_api.db.migrations import (
+    m0001_baseline,
+    m0002_journal_saves,
+    m0003_memorial_state,
+)
 from sitara_api.db.migrations.runner import (
     ContractTooEarlyError,
     DestructiveExpandError,
@@ -16,7 +20,11 @@ from sitara_api.db.migrations.runner import (
     run_phase,
 )
 
-ALL: tuple[Migration, ...] = (m0001_baseline, m0002_journal_saves)  # type: ignore[assignment]
+ALL: tuple[Migration, ...] = (  # type: ignore[assignment]
+    m0001_baseline,
+    m0002_journal_saves,
+    m0003_memorial_state,
+)
 
 __all__ = [
     "ALL",

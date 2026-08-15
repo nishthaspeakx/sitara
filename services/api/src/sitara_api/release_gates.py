@@ -43,6 +43,11 @@ _REVIEWED_PREFIX = "reviewed"
 class Stage(StrEnum):
     CLOSED_BETA = "closed_beta"
     PUBLIC_LAUNCH = "public_launch"
+    #: §7's Stage-2 scale band. A gate here is a real ceiling that is NOT a
+    #: launch blocker — the distinction matters, because filing a scale
+    #: ceiling under `closed_beta` is how a genuine blocker gets tuned out by
+    #: the people reading this list every week.
+    SCALE = "scale"
 
 
 @dataclass(frozen=True)
@@ -98,6 +103,25 @@ def _indic_streaming_stt_status() -> str:
     if not blocked:
         return "reviewed — every launch locale has a streaming recogniser"
     return f"blocked — no streaming STT for {', '.join(blocked)}"
+
+
+def _atlas_search_status() -> str:
+    """Read from the code rather than a constant.
+
+    The gate closes when a second backend exists, which is exactly what
+    `test_search_provenance.py` asserts does not. Reading it here means the
+    gate cannot go stale in either direction.
+    """
+    from sitara_api.journal import search as journal_search
+
+    backends = [
+        name
+        for name in dir(journal_search)
+        if name.endswith("Search") and name != "JournalSearch"
+    ]
+    if backends == ["ExactTextSearch"]:
+        return "keyword search only — no Atlas index (scan-capped, logged)"
+    return f"reviewed — backends: {', '.join(sorted(backends))}"
 
 
 def gates() -> tuple[Gate, ...]:
@@ -212,6 +236,35 @@ def gates() -> tuple[Gate, ...]:
                 "unreviewed catalog shows up as a thinner brief, not as an error. "
                 "Drafts until the §14 named native reviewer signs off, same as the "
                 "safety corpora."
+            ),
+        ),
+        Gate(
+            id="journal.atlas_search",
+            spec_ref="§30.5 / §6.4 (CC-011 §44)",
+            blocks=Stage.SCALE,
+            status=_atlas_search_status(),
+            detail=(
+                "§30.5 specifies P0 search as keyword+filters over Journal+thread "
+                "\"via Atlas Search\". The CONTRACT is met — every artefact containing "
+                "every term, newest first — by `journal.search.ExactTextSearch`, which "
+                "scans the user's own rows. What is missing is the INDEX, and that is a "
+                "scale property rather than a correctness one, which is why this blocks "
+                "`scale` and not `closed_beta`.\n"
+                "\n"
+                "The ceiling is concrete: the scan is capped at DEFAULT_SCAN_LIMIT rows "
+                "per source and LOGS when it truncates, so a heavy journal returns "
+                "incomplete results and says so rather than pretending. Fix this before "
+                "journals get big, not before they work.\n"
+                "\n"
+                "Deliberately NOT closed by a capability probe. The memory module asks "
+                "the deployment whether it has Atlas Search and picks a backend; doing "
+                "the same here would select an UNEXERCISED `$search` path in production "
+                "on the first real query, against an index nothing creates — Community "
+                "mongo has no `createSearchIndexes`, so it could never have run once "
+                "before shipping. `tests/journal/test_search_provenance.py` is the "
+                "marker and asserts there is exactly ONE backend; closing this gate "
+                "means an Atlas deployment, a search-index spec in `db.registry`, and "
+                "the parity test that file already carries."
             ),
         ),
         Gate(

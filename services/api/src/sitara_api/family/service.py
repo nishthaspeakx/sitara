@@ -21,6 +21,7 @@ from sitara_api.family.models import (
     AttestationRequired,
     DeletionEffects,
     FamilyMember,
+    MemorialState,
     MemoryAboutMember,
     Relation,
 )
@@ -113,6 +114,32 @@ class FamilyService:
                 "member's birth details may be stored"
             )
         return member
+
+    # -- §45 (CC-012) -------------------------------------------------------
+
+    async def set_memorial_state(
+        self,
+        *,
+        owner_user_id: ObjectId,
+        member_id: ObjectId,
+        state: MemorialState,
+        now: dt.datetime | None = None,
+    ) -> FamilyMember | None:
+        """§32.15's "in memory of", offered on the same sheet as the deletion.
+
+        It delegates and adds nothing, and that is the design: every line of
+        logic added here is a line that could destroy something. §45.2 makes
+        the conversion reversible for the same reason it makes it
+        non-destructive — a wrong tap in the week after a death must not be
+        another loss.
+        """
+        return await self._store.set_memorial_state(
+            owner_user_id=owner_user_id, member_id=member_id, state=state, now=now
+        )
+
+    async def reminder_candidates(self, owner_user_id: ObjectId) -> list[FamilyMember]:
+        """Who §23.2's family-reminder trigger may be about (§45.2)."""
+        return await self._store.living_members(owner_user_id)
 
     # -- §32.15 -------------------------------------------------------------
 

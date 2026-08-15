@@ -17,7 +17,7 @@ from bson import ObjectId
 from pymongo import ASCENDING
 
 from sitara_api.db.documents import stamp
-from sitara_api.family.models import FamilyMember, Relation
+from sitara_api.family.models import FamilyMember, MemorialState, Relation
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +66,10 @@ class FamilyStore:
                 "language_tag": language_tag,
                 "has_birth_details": False,
                 "attested_at": None,
+                # §45's default, written at creation rather than left absent —
+                # a field that is sometimes missing is a field every reader
+                # has to defend against.
+                "memorial_state": MemorialState.LIVING.value,
             },
             now=now,
         )
@@ -137,6 +141,46 @@ class FamilyStore:
             )
         )
         return FamilyMember.from_doc(doc)
+
+    async def set_memorial_state(
+        self,
+        *,
+        owner_user_id: ObjectId,
+        member_id: ObjectId,
+        state: MemorialState,
+        now: dt.datetime | None = None,
+    ) -> FamilyMember | None:
+        """§45's conversion — and the whole point is what it does NOT write.
+
+        One `$set`, one field (plus the `updated_at` every §6.4 document
+        carries). No cascade, no other collection, no cleanup pass. The
+        person who chose this over §32.15's deletion chose it because she did
+        not want anything destroyed, and the way to keep that promise is for
+        there to be no code here that could break it.
+        """
+        moment = now or dt.datetime.now(dt.UTC)
+        doc = await self._db.family_members.find_one_and_update(
+            {"_id": member_id, "owner_user_id": owner_user_id},
+            {"$set": {"memorial_state": state.value, "updated_at": moment}},
+            return_document=True,
+        )
+        return FamilyMember.from_doc(doc) if doc else None
+
+    async def living_members(self, owner_user_id: ObjectId) -> list[FamilyMember]:
+        """§45.2: those a forward-looking reminder may be about (§23.2).
+
+        A QUERY, never a deletion. The memorial member is still in
+        `list_members`, still charted, still in every past artefact — she is
+        simply not the subject of "her birthday is on Sunday" three days after
+        her funeral.
+        """
+        cursor = self._db.family_members.find(
+            {
+                "owner_user_id": owner_user_id,
+                "memorial_state": {"$ne": MemorialState.IN_MEMORY.value},
+            }
+        ).sort("created_at", ASCENDING)
+        return [FamilyMember.from_doc(doc) async for doc in cursor]
 
     async def set_has_birth_details(
         self, *, owner_user_id: ObjectId, member_id: ObjectId, value: bool

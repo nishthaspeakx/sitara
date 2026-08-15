@@ -25,6 +25,7 @@ from sitara_api.errors import ApiError
 from sitara_api.family.models import (
     DeletionEffects,
     FamilyMember,
+    MemorialState,
     MemoryAboutMember,
     Relation,
 )
@@ -40,6 +41,9 @@ class MemberView(BaseModel):
     language_tag: str
     has_birth_details: bool
     attested: bool
+    #: §45 (CC-012). Served so the family list can render her differently and
+    #: the delete sheet can offer the alternative she has not taken yet.
+    memorial_state: MemorialState = MemorialState.LIVING
     created_at: dt.datetime | None = None
 
     @classmethod
@@ -53,6 +57,7 @@ class MemberView(BaseModel):
             # The timestamp is §13 evidence and stays server-side; the client
             # needs to know only whether the gate is open.
             attested=member.attested_at is not None,
+            memorial_state=member.memorial_state,
             created_at=member.created_at,
         )
 
@@ -106,6 +111,16 @@ class EditMemberRequest(BaseModel):
     relation: Relation | None = None
     name: str | None = Field(default=None, min_length=1, max_length=120)
     language_tag: str | None = Field(default=None, max_length=16)
+
+
+class MemorialRequest(BaseModel):
+    """§45's conversion, both directions.
+
+    A state rather than a `remember: true` flag, because §45.2 makes it
+    reversible and a one-way verb would quietly say otherwise.
+    """
+
+    memorial_state: MemorialState
 
 
 class DeleteMemberRequest(BaseModel):
@@ -190,6 +205,31 @@ async def attest(member_id: str, request: Request, session: CurrentSession) -> M
     birth details, recorded permanently in the §6.4 consent ledger."""
     member = await _service(request).attest_birth_details(
         owner_user_id=_user_id(session), member_id=_object_id(member_id)
+    )
+    if member is None:
+        raise ApiError(ErrorCode.SYS_VALIDATION, "errors.family.not_found")
+    return MemberView.of(member)
+
+
+@router.post("/{member_id}/memorial", response_model=MemberView)
+async def set_memorial_state(
+    member_id: str,
+    payload: MemorialRequest,
+    request: Request,
+    session: CurrentSession,
+) -> MemberView:
+    """§32.15's alternative, offered on the same sheet as the deletion (§45).
+
+    Its own endpoint rather than a field on the delete request, and that is
+    not tidiness: they are opposite acts. One destroys birth details, charts
+    and — if she ticks them — memories; this one writes a single field and
+    touches nothing else. Sharing a request body would put them one boolean
+    apart.
+    """
+    member = await _service(request).set_memorial_state(
+        owner_user_id=_user_id(session),
+        member_id=_object_id(member_id),
+        state=payload.memorial_state,
     )
     if member is None:
         raise ApiError(ErrorCode.SYS_VALIDATION, "errors.family.not_found")

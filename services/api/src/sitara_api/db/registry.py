@@ -319,6 +319,13 @@ SPECS: tuple[CollectionSpec, ...] = (
             "has_birth_details": BOOL,
             # §13: adding a family member's birth details requires attestation.
             "attested_at": [DT, "null"],
+            # §45 (CC-012): `living` | `in_memory`. §32.15 offers "in memory
+            # of" as the alternative to deletion on the same sheet, and had no
+            # field to hold it — so the product's only answer to bereavement
+            # was "delete her". The conversion writes THIS FIELD AND NOTHING
+            # ELSE: a memorial state that quietly began pruning would be a
+            # deletion wearing a gentler word.
+            "memorial_state": STR,
         },
         required=("owner_user_id", "relation"),
         indexes=(IndexSpec(_asc("owner_user_id")),),

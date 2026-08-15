@@ -46,30 +46,22 @@ class Relation(StrEnum):
     OTHER = "other"
 
 
-# ── §32.15's "in memory of" is NOT built, and this is the record ───────────
-#
-# §32.15 offers "'In memory of' conversion … as the alternative on the same
-# sheet". It is a STATE of a family member — the records stay, the reminders
-# soften, nothing is destroyed — and §6.4's `family_members` row has no field
-# to hold it: owner_user_id, relation, name, language_tag, has_birth_details,
-# attested_at, and nothing else.
-#
-# That is the same shape as CC-011's saved guidance: a spec requirement with
-# no home in a frozen table. It is deliberately NOT solved the same way here,
-# because CC-011 was approved for `journal_saves` specifically and a second
-# amendment to §6.4 is a second founder decision, not an implementation
-# detail. Writing an undeclared field would be exactly the drift
-# `sitara_api.db.verify` exists to catch.
-#
-# Everything else in §32.15 IS built: the hard delete of birth details and
-# charts, the listed checkbox for memories, the retained attestation, and the
-# immediate removal from reminders and rankings. What is missing is the
-# gentler alternative to all of it, which is the half a grieving user most
-# needs — so it is named here rather than left to be discovered.
-MEMORIAL_STATE_IS_UNBUILT = (
-    "§32.15's 'in memory of' conversion needs a `family_members` field that "
-    "§6.4 does not declare; it awaits a change-control entry."
-)
+class MemorialState(StrEnum):
+    """§45 (CC-012) — §32.15's "in memory of", built.
+
+    §32.15 offers this as the alternative to deletion **on the same sheet**,
+    which means the two are read side by side by someone who has just lost a
+    person. Until CC-012 only the destructive one existed, so the product's
+    answer to bereavement was "delete her".
+
+    The conversion is non-destructive **by construction**: it writes this
+    field and touches nothing else. A memorial state that quietly began
+    pruning records would be a deletion wearing a gentler word, and the person
+    who chose it chose it precisely because she did not want that.
+    """
+
+    LIVING = "living"
+    IN_MEMORY = "in_memory"
 
 
 class AttestationRequired(ValueError):
@@ -86,6 +78,7 @@ class FamilyMember:
     language_tag: str
     has_birth_details: bool = False
     attested_at: dt.datetime | None = None
+    memorial_state: MemorialState = MemorialState.LIVING
     created_at: dt.datetime | None = None
 
     @classmethod
@@ -103,8 +96,20 @@ class FamilyMember:
             language_tag=doc.get("language_tag", "en"),
             has_birth_details=bool(doc.get("has_birth_details")),
             attested_at=doc.get("attested_at"),
+            # §45 defaults to `living`, and an unrecognised value reads as
+            # living too: the failure worth having is a reminder that fires
+            # for someone alive, not a living relative quietly memorialised
+            # by a bad string.
+            memorial_state=_memorial_state_of(doc.get("memorial_state")),
             created_at=doc.get("created_at"),
         )
+
+
+def _memorial_state_of(value: Any) -> MemorialState:
+    try:
+        return MemorialState(value)
+    except ValueError:
+        return MemorialState.LIVING
 
 
 @dataclass(frozen=True)
@@ -135,10 +140,10 @@ class DeletionEffects:
 
 
 __all__ = [
-    "MEMORIAL_STATE_IS_UNBUILT",
     "AttestationRequired",
     "DeletionEffects",
     "FamilyMember",
+    "MemorialState",
     "MemoryAboutMember",
     "Relation",
 ]

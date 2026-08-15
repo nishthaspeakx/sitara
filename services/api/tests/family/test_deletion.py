@@ -357,19 +357,22 @@ async def test_one_account_cannot_delete_anothers_family_member(
     assert await db.birth_details.count_documents({"family_member_id": member.member_id}) == 1
 
 
-async def test_the_in_memory_alternative_is_recorded_as_unbuilt() -> None:
-    """§32.15 offers "in memory of" on the same sheet as the deletion, and it
-    is NOT built — `family_members` has no field for it in §6.4 and a second
-    amendment to a frozen table is a founder decision, not an implementation
-    detail.
+async def test_the_in_memory_alternative_exists_beside_this_deletion() -> None:
+    """§32.15 offers "in memory of" **on the same sheet** as the deletion.
 
-    This test exists so the gap is visible in a test run rather than
-    discovered by a grieving user who was offered only the destructive option.
+    This file's predecessor asserted the alternative was UNBUILT — the marker
+    that made the gap visible in a test run rather than leaving it to be found
+    by a grieving user offered only the destructive option. CC-012 (§45) built
+    it, the marker fired, and this replaced it.
+
+    What is asserted now is that both paths still exist. A future tidy-up that
+    collapsed them — "the memorial state is just a soft delete" — would put
+    the product back where it started, and §45.3 keeps them separate on
+    purpose: one destroys and says so, the other destroys nothing.
     """
-    from sitara_api.family import models
+    from sitara_api.family.models import MemorialState
+    from sitara_api.family.service import FamilyService
 
-    assert models.MEMORIAL_STATE_IS_UNBUILT
-    assert not hasattr(models, "MemorialState"), (
-        "if this exists, the field landed — delete this test and update §32.15's "
-        "coverage note in services/api/CLAUDE.md"
-    )
+    assert MemorialState.IN_MEMORY
+    assert hasattr(FamilyService, "set_memorial_state")
+    assert hasattr(FamilyService, "delete"), "the alternative did not replace it"
