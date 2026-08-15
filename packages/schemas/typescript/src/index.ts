@@ -18,7 +18,7 @@ export type ConfidenceState = (typeof CONFIDENCE_STATES)[number];
 // ---------------------------------------------------------------------------
 // SPEC §6.3 / §34.4 — namespaced error codes + the ONE canonical envelope.
 // ---------------------------------------------------------------------------
-export const ERROR_CODES = ["AUTH_INVALID_TOKEN", "AUTH_SESSION_EXPIRED", "AUTH_FORBIDDEN", "AUTH_UNDERAGE", "AUTH_OTP_THROTTLED", "AUTH_PROVIDER_CONFLICT", "ASTRO_INSUFFICIENT_BIRTH_DATA", "ASTRO_PLACE_UNRESOLVED", "ASTRO_ENGINE_UNAVAILABLE", "ASTRO_PROVIDER_DISPUTED", "ASTRO_NAME_UNCONFIRMED", "ASTRO_NAME_INVALID", "VOICE_PROVIDER_UNAVAILABLE", "VOICE_MINUTES_EXHAUSTED", "VOICE_SESSION_NOT_FOUND", "VOICE_NOTE_EXPIRED", "PAY_PAYMENT_REQUIRED", "PAY_WEBHOOK_DUPLICATE", "PAY_PROVIDER_ERROR", "SAFE_CONTENT_BLOCKED", "SAFE_REVIEW_PENDING", "SYS_VALIDATION", "SYS_RATE_LIMITED", "SYS_IDEMPOTENCY_CONFLICT", "SYS_INTERNAL", "SYS_UNAVAILABLE"] as const;
+export const ERROR_CODES = ["AUTH_INVALID_TOKEN", "AUTH_SESSION_EXPIRED", "AUTH_FORBIDDEN", "AUTH_UNDERAGE", "AUTH_OTP_THROTTLED", "AUTH_PROVIDER_CONFLICT", "ASTRO_INSUFFICIENT_BIRTH_DATA", "ASTRO_PLACE_UNRESOLVED", "ASTRO_ENGINE_UNAVAILABLE", "ASTRO_PROVIDER_DISPUTED", "ASTRO_NAME_UNCONFIRMED", "ASTRO_NAME_INVALID", "VOICE_PROVIDER_UNAVAILABLE", "VOICE_MINUTES_EXHAUSTED", "VOICE_SESSION_NOT_FOUND", "VOICE_NOTE_EXPIRED", "PAY_PAYMENT_REQUIRED", "PAY_WEBHOOK_DUPLICATE", "PAY_PROVIDER_ERROR", "PAY_GIFT_UNREDEEMABLE", "PAY_RAIL_UNAVAILABLE", "PAY_REFUND_WINDOW_CLOSED", "SAFE_CONTENT_BLOCKED", "SAFE_REVIEW_PENDING", "SYS_VALIDATION", "SYS_RATE_LIMITED", "SYS_IDEMPOTENCY_CONFLICT", "SYS_INTERNAL", "SYS_UNAVAILABLE"] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];
 
 export const ERROR_HTTP_STATUS: Record<ErrorCode, number> = {
@@ -41,6 +41,9 @@ export const ERROR_HTTP_STATUS: Record<ErrorCode, number> = {
   PAY_PAYMENT_REQUIRED: 402,
   PAY_WEBHOOK_DUPLICATE: 409,
   PAY_PROVIDER_ERROR: 502,
+  PAY_GIFT_UNREDEEMABLE: 422,
+  PAY_RAIL_UNAVAILABLE: 503,
+  PAY_REFUND_WINDOW_CLOSED: 422,
   SAFE_CONTENT_BLOCKED: 422,
   SAFE_REVIEW_PENDING: 422,
   SYS_VALIDATION: 400,
@@ -70,6 +73,9 @@ export const ERROR_DEFAULT_RETRYABLE: Record<ErrorCode, boolean> = {
   PAY_PAYMENT_REQUIRED: false,
   PAY_WEBHOOK_DUPLICATE: false,
   PAY_PROVIDER_ERROR: true,
+  PAY_GIFT_UNREDEEMABLE: false,
+  PAY_RAIL_UNAVAILABLE: true,
+  PAY_REFUND_WINDOW_CLOSED: false,
   SAFE_CONTENT_BLOCKED: false,
   SAFE_REVIEW_PENDING: false,
   SYS_VALIDATION: false,
@@ -251,6 +257,61 @@ export const ENTITLEMENT_WARNING_MINUTES = [5, 2] as const;
 export const HOLDING_PHRASE_AFTER_MS = 1800 as const;
 
 // ---------------------------------------------------------------------------
+// SPEC §30.3 / §22.13 / §22.1 — the vocabulary of a subscription.
+// `grace` and `read_only` are BOTH failed renewals and are not one state:
+// §22.13's promise is that nothing is taken away at the moment the money
+// fails, and the difference between them is what she may still do.
+// ---------------------------------------------------------------------------
+/** What a person may BUY, plus the trial that precedes it. §30.3 names monthly and annual in both regions and §10-20 makes the trial 7 days. Deliberately NOT the same set as `voice.entitlements.CallPlan`, which is a POOL LOOKUP and carries `premium` (§7.3's unlimited fair-use tier, which nothing sells) and `none` (an account with no subscription at all, which is a state rather than a plan). The two are kept in step by a test rather than by being one enum: every purchasable plan must resolve to a minute pool, and `CallPlan` must keep the two members this set has no business naming. */
+export const PLAN_IDS = ["trial", "monthly", "annual"] as const;
+export type PlanId = (typeof PLAN_IDS)[number];
+
+/** §30.3's two rails, named for the BILLING relationship rather than for geography — which is the distinction the migration policy turns on. A subscriber who moves to Dubai stays `india` until renewal because their subscription is billed in ₹ through Razorpay; where they are standing is §30.2's Travel Mode and has nothing to do with this field. §22.1: the Indian entity bills India in INR with GST, and bills the diaspora through Stripe India as a zero-rated export of services under LUT. */
+export const BILLING_REGIONS = ["india", "international"] as const;
+export type BillingRegion = (typeof BILLING_REGIONS)[number];
+
+/** The currencies the price book actually declares. §22.1 says Stripe bills 'USD/GBP/etc.' and §30.3's worked case offers a departing subscriber 'USD/AED-equivalent' — neither is a price this milestone can state, so neither is a member. A currency with no declared price is a currency something would eventually have to convert into, and §30.3 forbids conversion outright. */
+export const CURRENCIES = ["INR", "USD"] as const;
+export type Currency = (typeof CURRENCIES)[number];
+
+/** §22.13's ladder, as states rather than as flags. The two that carry the whole section are `grace` and `read_only`: both are FAILED renewals, and the difference between them is exactly what a user may still do — grace keeps everything and shows a banner, read-only keeps her memories and stops new guidance. Collapsing them into one 'past due' would erase §22.13's central promise, which is that nothing is taken away at the moment the money fails. `cancelled` GRANTS ACCESS: §30.3 says 'access till period end stated', so the subscription is over and the entitlement is not, and modelling that as a flag on `active` put the same fact in two fields. */
+export const SUBSCRIPTION_STATUSES = ["pending", "trialing", "active", "grace", "read_only", "cancelled", "downgraded", "expired"] as const;
+export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number];
+
+/** S34's three states plus the one a receipt row needs afterwards. `pending` is §30.3's UPI wait and is emphatically NOT an error — it borrows no error colour on S34 and no error colour in `ReceiptRow`, which had this right before there was a payments module behind it. */
+export const PAYMENT_STATES = ["pending", "succeeded", "failed", "refunded"] as const;
+export type PaymentState = (typeof PAYMENT_STATES)[number];
+
+/** §30.3: 'mapped reasons in plain language: insufficient funds / mandate declined / bank timeout'. The mapping happens in the ADAPTER, so a vendor's own failure string never reaches a screen — §2.4 would render it in the wrong language even if §13 permitted it, which it does not. `unknown` is a real member and not a gap: a rail that returns something unmapped must still produce a screen, and the honest screen says the payment did not go through without inventing a cause. */
+export const PAYMENT_FAILURE_REASONS = ["insufficient_funds", "mandate_declined", "bank_timeout", "instrument_expired", "unknown"] as const;
+export type PaymentFailureReason = (typeof PAYMENT_FAILURE_REASONS)[number];
+
+/** §30.3's S33 branches, as an enum because the middle one is a MONEY MOVEMENT and not a message: 'already-subscribed → credit conversion'. A redemption that found an existing subscriber must EXTEND it — the giver bought time and the receiver already had time, so the two add. Replacing would silently destroy whatever the receiver had already paid for, which is the one outcome nobody would notice until the month they expected to still be subscribed. */
+export const GIFT_REDEMPTION_OUTCOMES = ["activated", "credit_converted", "expired", "already_redeemed", "invalid"] as const;
+export type GiftRedemptionOutcome = (typeof GIFT_REDEMPTION_OUTCOMES)[number];
+
+/** §22.13 — 'a 7-day grace with in-locale WhatsApp/push nudges'. Access is UNCHANGED throughout it. */
+export const GRACE_PERIOD_DAYS = 7 as const;
+
+/** §22.13 — 'then a 21-day read-only "your memories are safe" state before downgrade'. */
+export const READ_ONLY_PERIOD_DAYS = 21 as const;
+
+/** §22.13 — 'nudges (day 0, 2, 5)', counted from the failed renewal. Three, inside a seven-day grace, and no fourth: §29.2 forbids the escalating drumbeat that the fourth would be. */
+export const DUNNING_NUDGE_DAYS = [0, 2, 5] as const;
+
+/** §10-20 — 'trial 7 days full-featured'. */
+export const TRIAL_DAYS = 7 as const;
+
+/** §22.16 / §30.3 — '7-day no-questions on annual plans'. Monthly is deliberately absent from this constant: the spec grants the window to annual, and a helpful extension to monthly would be a policy decision made in a constants file. */
+export const ANNUAL_REFUND_WINDOW_DAYS = 7 as const;
+
+/** §30.3 — the pending screen's hold: 'UPI waiting: 5-min hold screen with "approve in your UPI app"'. After it the purchase is abandoned, not failed: nothing was taken. */
+export const UPI_PENDING_HOLD_MINUTES = 5 as const;
+
+/** §30.3 — 'single email/WhatsApp at +30d (Class M, consented) with nothing manipulative'. SINGLE. The number is here so the notification job and the screen copy cannot disagree about when, and the word 'single' is enforced where the job is written. */
+export const WIN_BACK_DAY = 30 as const;
+
+// ---------------------------------------------------------------------------
 // SPEC §34.6 — control-event payloads: the text chat (S18), voice notes
 // (M9) and the live call (M9-P10b). All fifteen members are typed now; the
 // member SET is unchanged and stays closed at fifteen (§31.3).
@@ -299,12 +360,15 @@ export interface VadStatePayload {
 
 /** Server → client, on `tts.start`. §25.4: 'Tara's replies arrive as voice-note bubbles rendered from her TTS with transcript toggle'. Emitted after her `captions.final`, so the transcript the toggle shows is on screen before any audio plays — and is the same validated text the audio was rendered from, not a second generation.
 
-`tts_audio_asset_id` became OPTIONAL in M9-P10b, and the null is load-bearing rather than lax. A voice NOTE is synthesised whole and stored, so it has an asset and a bubble that can replay it. A live CALL is streamed and its audio is never stored at all (§13, §33.1) — so there is no asset, and there is nothing to replay. Null is the type saying exactly that. Carrying an invented id would have promised a playback control over audio that does not exist anywhere. */
+`tts_audio_asset_id` became OPTIONAL in M9-P10b, and the null is load-bearing rather than lax. A voice NOTE is synthesised whole and stored, so it has an asset and a bubble that can replay it. A live CALL is streamed and its audio is never stored at all (§13, §33.1) — so there is no asset, and there is nothing to replay. Null is the type saying exactly that. Carrying an invented id would have promised a playback control over audio that does not exist anywhere.
+
+`holding` marks §25.3's holding phrase — the line she speaks when §9 has out-run HOLDING_PHRASE_AFTER_MS. It is her voice but it is NOT her answer, and that difference is load-bearing on three separate paths (see the field). */
 export interface TtsStartPayload {
   client_message_id: string;
   tts_audio_asset_id: string | null;
   sample_rate_hz: number;
   voice_id: string | null;
+  holding?: boolean;
 }
 
 /** Server → client, on `tts.chunk_meta`. §13 — shapes, never content. There is deliberately no text field: the words already crossed on `captions.final`, and a second copy travelling beside the audio is a second thing to keep in step with the validators. */
@@ -314,10 +378,13 @@ export interface TtsChunkMetaPayload {
   byte_length: number;
 }
 
-/** Server → client, on `tts.end`. Total duration for the bubble's scrubber, and the signal that no further chunk meta is coming. */
+/** Server → client, on `tts.end`. Total duration for the bubble's scrubber, and the signal that no further chunk meta is coming.
+
+`holding` repeats `tts.start`'s flag so each event is self-describing. The client could infer it by remembering the start, but then the meaning of an `end` would depend on a `start` it might not have seen — and the branch it drives is whether the screen goes back to `thinking` or to `listening`, which is the difference between showing a mic-live indicator over a live turn and not. */
 export interface TtsEndPayload {
   client_message_id: string;
   duration_ms: number;
+  holding?: boolean;
 }
 
 /** Server → client (§25.3, §7.3). Typed in M9-P10b because M9-P10b is the first milestone that emits it — the rule this package keeps, and the reason it stayed untyped through M9.

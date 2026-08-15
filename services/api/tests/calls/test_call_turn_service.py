@@ -301,3 +301,140 @@ async def test_words_that_lose_the_one_in_flight_race_are_still_recorded() -> No
     assert [m["content"] for m in rows] == ["and what about Thursday?"]
     # Still a spoken turn, not a typed one (§33.1).
     assert rows[0]["playback_policy"] == PlaybackPolicy.TRANSCRIPT_ONLY.value
+
+
+# ---------------------------------------------------------------------------
+# §25.3's holding phrase — her voice, and not her answer
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_the_holding_phrase_is_a_catalog_string_and_never_a_draft() -> None:
+    """The same rule `test_synthesis_reads_the_presented_turn_and_never_a_draft`
+    protects, at the one place that could have undone it.
+
+    A holding phrase needs arbitrary words synthesised, and the obvious way to
+    build that is `speak_text(text: str)` — after which a future caller can hand
+    the synthesiser a model draft and the audio carries the sentence grounding
+    REJECTED while the caption shows the one it accepted. So the method takes no
+    text at all, and this asserts that what reaches the synthesiser came from
+    the catalogs rather than from anywhere a turn could have put it.
+    """
+    from sitara_api.localisation import HOLDING_PHRASE_KEYS, resolve
+
+    spoken_texts: list[str] = []
+
+    class RecordingTts:
+        name = VoiceProviderName.CARTESIA
+
+        def stream(self, request):  # noqa: ANN001, ANN201
+            spoken_texts.append(request.text)
+
+            async def _chunks():  # noqa: ANN202
+                yield b"\x00\x01"
+
+            return _chunks()
+
+    env = build_env()
+    service = CallTurnService(
+        pipeline=env.pipeline, store=env.store, tts=RecordingTts(), voice_id="v1"
+    )
+    async for _ in service.speak_holding_phrase(locale="en", turn_index=0):
+        pass
+
+    assert spoken_texts == [resolve(HOLDING_PHRASE_KEYS[0], "en")]
+
+
+@pytest.mark.asyncio
+async def test_speak_holding_phrase_has_no_parameter_a_draft_could_arrive_through() -> None:
+    """Structural, not behavioural — the guarantee is the SIGNATURE.
+
+    A test that only checked today's behaviour would pass the day somebody adds
+    a `text` parameter "just for the tests", which is exactly how the shape
+    erodes.
+    """
+    import inspect
+
+    params = inspect.signature(CallTurnService.speak_holding_phrase).parameters
+    assert set(params) == {"self", "locale", "turn_index"}, (
+        "speak_holding_phrase grew a parameter — if it can carry text, a model "
+        "draft can reach the synthesiser without passing a single validator"
+    )
+
+
+@pytest.mark.asyncio
+async def test_the_phrases_rotate_so_they_do_not_become_a_tic() -> None:
+    """§25.3 asks for the wait to feel designed. Six identical words at every
+    pause is a tic, and rotation by INDEX rather than at random is what lets a
+    test say which line a given turn produced."""
+    from sitara_api.localisation import HOLDING_PHRASE_KEYS, resolve
+
+    spoken_texts: list[str] = []
+
+    class RecordingTts:
+        name = VoiceProviderName.CARTESIA
+
+        def stream(self, request):  # noqa: ANN001, ANN201
+            spoken_texts.append(request.text)
+
+            async def _chunks():  # noqa: ANN202
+                yield b"\x00\x01"
+
+            return _chunks()
+
+    env = build_env()
+    service = CallTurnService(
+        pipeline=env.pipeline, store=env.store, tts=RecordingTts(), voice_id="v1"
+    )
+    for index in range(len(HOLDING_PHRASE_KEYS) + 1):
+        async for _ in service.speak_holding_phrase(locale="en", turn_index=index):
+            pass
+
+    assert len(set(spoken_texts[: len(HOLDING_PHRASE_KEYS)])) == len(HOLDING_PHRASE_KEYS)
+    # …and it wraps rather than running out.
+    assert spoken_texts[-1] == resolve(HOLDING_PHRASE_KEYS[0], "en")
+
+
+@pytest.mark.asyncio
+async def test_the_phrase_exists_in_every_launch_locale_or_the_service_will_not_boot() -> None:
+    """§2.4 has no English fallback, and this line is SPOKEN.
+
+    A missing Hindi phrase would be a call that falls silent for the whole 5.8
+    seconds in exactly the locale the phrase exists to hold — and it would fail
+    1.8 seconds into a live call rather than at startup. `verify_catalogs` is
+    what moves that to boot; this asserts the keys are actually in its list.
+    """
+    from sitara_api.localisation import (
+        HOLDING_PHRASE_KEYS,
+        SERVER_RENDERED_KEYS,
+        verify_catalogs,
+    )
+
+    for key in HOLDING_PHRASE_KEYS:
+        assert key in SERVER_RENDERED_KEYS, f"{key} is spoken but not verified at boot"
+    verify_catalogs(("en", "hi", "hi-Latn"))
+
+
+@pytest.mark.asyncio
+async def test_the_phrase_writes_no_message() -> None:
+    """It is not a turn. §30.5's Journal, §32.11's handoff transcript and
+    tomorrow's memory retrieval all read the thread, and filler in any of them
+    is filler in all three."""
+
+    class RecordingTts:
+        name = VoiceProviderName.CARTESIA
+
+        def stream(self, request):  # noqa: ANN001, ANN201
+            async def _chunks():  # noqa: ANN202
+                yield b"\x00\x01"
+
+            return _chunks()
+
+    env = build_env()
+    service = CallTurnService(
+        pipeline=env.pipeline, store=env.store, tts=RecordingTts(), voice_id="v1"
+    )
+    before = len(env.store.messages)
+    async for _ in service.speak_holding_phrase(locale="en", turn_index=0):
+        pass
+    assert len(env.store.messages) == before

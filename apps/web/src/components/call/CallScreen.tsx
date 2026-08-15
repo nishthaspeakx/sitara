@@ -36,7 +36,7 @@ import { IconButton } from "@/components/ui/IconButton";
 import { Sheet } from "@/components/ui/Sheet";
 import { TaraPresence } from "@/components/ui/TaraPresence";
 import { ICON_STROKE, cn, focusRing } from "@/components/ui/_util";
-import type { CallModel, CallState } from "@/lib/call-state";
+import { holdingPhraseDue, type CallModel, type CallState } from "@/lib/call-state";
 
 /**
  * §25.3's states → §4.3's presence states, for the portrait.
@@ -203,7 +203,26 @@ export function CallScreen({
           </p>
           {/* State is announced in words, never by the portrait alone (§29.4:
               state is never colour — or here, never imagery — alone). */}
-          <Chip>{t(STATUS_KEY[model.state])}</Chip>
+          {/*
+            §25.3 caps the shimmer at 1.8s "before she speaks a holding
+            phrase". The phrase itself is the SERVER's — it is audio, and this
+            screen has no synthesiser. What this line does is honour the same
+            ceiling when the audio cannot come: a dead TTS provider, a wedged
+            media socket, or simply a locale whose phrase went missing. The
+            label changes so a long wait never looks like a frozen one.
+
+            It also reads correctly on the normal path. After she has spoken
+            the phrase the reducer returns to `thinking` and DELIBERATELY keeps
+            `thinkingSince`, because she has been thinking the whole time — so
+            the chip says "still thinking", which is exactly what is true.
+          */}
+          <Chip>
+            {t(
+              model.state === "thinking" && holdingPhraseDue(model, clock)
+                ? "ui.call.thinking_still"
+                : STATUS_KEY[model.state],
+            )}
+          </Chip>
 
           {model.captionsOn ? (
             <div

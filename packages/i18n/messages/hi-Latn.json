@@ -486,7 +486,8 @@
       "you": "Aap",
       "tara": "Tara",
       "summary_save": "Yeh call apni journal mein save karein?",
-      "start": "Tara ko call karein"
+      "start": "Tara ko call karein",
+      "thinking_still": "Abhi bhi soch rahi hoon"
     },
     "panchang": {
       "label": "Aaj ka panchang",
@@ -1031,7 +1032,9 @@
     "memories_detail": "{count, plural, =0 {Abhi kuch nahin} one {# note} other {# notes}}",
     "family": "Aapke apne",
     "family_detail": "{count, plural, =0 {Abhi koi nahin} one {# vyakti} other {# vyakti}}",
-    "later": "Subscription, settings aur nijta aage kisi release mein aayengi."
+    "later": "Settings aur nijta aage kisi release mein aayengi.",
+    "subscription": "Subscription",
+    "subscription_detail": "Aapka plan aur receipts"
   },
   "reflection": {
     "title": "Aaj raat",
@@ -1053,6 +1056,101 @@
       "steady": "Sthir",
       "light": "Halka",
       "joyful": "Anandmay"
+    }
+  },
+  "subscription": {
+    "title": "Aapki subscription",
+    "subtitle": "Aapke paas kya hai, aur aage kya hoga",
+    "none_title": "Aap free plan par hain",
+    "none_body": "Aapka save kiya hua sab kuch yahin rahega. Jab taiyaar hon, subscribe kar lijiyega.",
+    "renews_on": "{date} ko renew hoga",
+    "access_until": "{date} tak aapke paas poori suvidha hai",
+    "grace_body": "Is mahine ka payment nahi ho paaya. Kuch bhi nahi badla — {date} tak sab kuch aapke paas hai, aur ek tap mein yeh theek ho jaayega.",
+    "read_only_body": "Aapki yaadein surakshit hain. Jo aapne likha hai woh sab padh sakti hain; naya guidance payment hone tak ruka rahega. Kuch bhi delete nahi hua.",
+    "downgraded_body": "Aapki yaadein surakshit hain, kuch bhi delete nahi hua. Jab chahein phir se subscribe kar lijiyega.",
+    "mandate_body": "Aapka payment ho gaya. Agli baar ke liye diya gaya standing instruction nahi chal paaya — usse pehle hum aapse dobara set karne ko kahenge.",
+    "retry": "Payment phir se kijiye",
+    "cancel": "Subscription cancel kijiye",
+    "cancel_title": "Subscription cancel karein?",
+    "cancel_body": "{date} tak sab kuch aapke paas rahega. Uske baad aap free plan par aa jaayengi — kuch bhi delete nahi hoga.",
+    "cancel_confirm": "Haan, cancel kijiye",
+    "cancel_keep": "Rehne dijiye",
+    "cancel_why": "Kaaran bataiye (optional)",
+    "refund": "Refund ka anurodh",
+    "receipts": "Receipts",
+    "receipts_empty": "Abhi kuch nahi.",
+    "region_switch_title": "Billing region",
+    "region_switch_body": "Aapka renewal paas hai. Aap {current} mein billing rakh sakti hain, ya {price} par {other} mein badal sakti hain.",
+    "region_keep": "{current} hi rakhiye",
+    "region_switch": "{other} mein badliye",
+    "founding_note": "Aap founding price par hain. Yeh doosre billing region mein nahi jaata.",
+    "simulated": "Demo mode — koi paisa nahi jaata. Payments simulator par chalte hain (§30.3).",
+    "manage_store": "App Store mein manage kijiye",
+    "gift_extended": "Ek gift ne {days} din jode. Aapki subscription ka plan aur currency wahi rahenge.",
+    "unavailable": "Aapke region mein hum abhi payments nahi le sakte.",
+    "plan": {
+      "trial": "Trial",
+      "monthly": "Monthly",
+      "annual": "Annual"
+    },
+    "status": {
+      "pending": "Aapke bank ka intezaar",
+      "trialing": "Trial",
+      "active": "Chaalu",
+      "grace": "Payment nahi ho paaya",
+      "read_only": "Filhaal sirf padhne ke liye",
+      "cancelled": "Cancel",
+      "downgraded": "Free plan",
+      "expired": "Khatam"
+    },
+    "per_month": "per month",
+    "per_year": "per year",
+    "saving": "Saal mein {amount} ki bachat",
+    "paid_until": "{date} tak payment ho chuka hai"
+  },
+  "payresult": {
+    "success_body": "Aapki receipt email par aa rahi hai.",
+    "pending_body": "Hum aapke bank ka intezaar kar rahe hain. Aam taur par ek pal lagta hai — yeh screen khuli rehne dijiye.",
+    "pending_hold": "{minutes} minute tak intezaar",
+    "try_again": "Phir koshish kijiye",
+    "try_other": "Kisi aur tareeke se payment kijiye",
+    "back": "Apni subscription par waapas",
+    "reason": {
+      "insufficient_funds": "Account mein paryaapt raashi nahi thi.",
+      "mandate_declined": "Aapke bank ne standing instruction asweekaar kar diya.",
+      "bank_timeout": "Aapke bank ne samay par jawaab nahi diya.",
+      "instrument_expired": "Woh card khatam ho chuka hai.",
+      "unknown": "Aapke bank ne kaaran nahi bataya."
+    },
+    "title": {
+      "success": "Sab taiyaar hai",
+      "pending": "Apne UPI app mein approve kijiye",
+      "failed": "Woh payment nahi ho paaya"
+    }
+  },
+  "pay": {
+    "rail_pending": "Aapke region mein hum abhi payments nahi le paa rahe.",
+    "rail_unavailable": "Aapke region mein hum payments nahi le sakte.",
+    "rail": "Abhi aapke region mein hum payments nahi le paa rahe.",
+    "provider": "Aapke bank se sampark nahi ho paaya. Koi raashi nahi li gayi.",
+    "no_subscription": "Is account par koi subscription nahi hai.",
+    "no_such_price": "Woh plan aapke region mein uplabdh nahi hai.",
+    "refund_window_closed": "Bina-sawaal refund ki avadhi beet chuki hai. Humein likhiye, hum theek se dekhenge.",
+    "migration_mid_cycle": "Billing region aap agle renewal par badal sakti hain, beech mein nahi.",
+    "not_simulated": "Woh control sirf payment simulator ke saath kaam karta hai.",
+    "gift": {
+      "unredeemable": "Yeh gift code istemaal nahi ho sakta. Humein likhiye, hum hal kar denge."
+    }
+  },
+  "gift": {
+    "activated": "Aapka gift live ho gaya. Swaagat hai.",
+    "converted": "Aapki subscription mein jud gaya."
+  },
+  "call": {
+    "holding": {
+      "thinking": "Mujhe is par theek se sochne deejiye.",
+      "moment": "Ek pal — main yahin hoon.",
+      "time": "Is par mujhe thoda waqt deejiye."
     }
   }
 }

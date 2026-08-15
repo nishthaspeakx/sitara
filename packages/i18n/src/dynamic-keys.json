@@ -347,6 +347,45 @@
         "present",
         "removed"
       ]
+    },
+    "subscription.plan.${plan}": {
+      "$spec": "§30.3 / §10-20 — the purchasable plans plus the trial (PlanId)",
+      "values": [
+        "trial",
+        "monthly",
+        "annual"
+      ]
+    },
+    "subscription.status.${status}": {
+      "$spec": "§22.13's ladder (SubscriptionStatus). `grace` and `read_only` are BOTH failed renewals and say different things — collapsing them would lose §22.13's promise.",
+      "values": [
+        "pending",
+        "trialing",
+        "active",
+        "grace",
+        "read_only",
+        "cancelled",
+        "downgraded",
+        "expired"
+      ]
+    },
+    "payresult.reason.${reason}": {
+      "$spec": "§30.3's mapped failure reasons in plain language. `unknown` is a real member: a screen that guessed a cause would be inventing a fact about somebody's bank.",
+      "values": [
+        "insufficient_funds",
+        "mandate_declined",
+        "bank_timeout",
+        "instrument_expired",
+        "unknown"
+      ]
+    },
+    "payresult.title.${state}": {
+      "$spec": "§29.1's S34 — one screen, three states. `pending` is NOT an error.",
+      "values": [
+        "success",
+        "pending",
+        "failed"
+      ]
     }
   }
 }

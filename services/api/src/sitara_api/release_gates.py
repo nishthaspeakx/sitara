@@ -124,9 +124,87 @@ def _atlas_search_status() -> str:
     return f"reviewed — backends: {', '.join(sorted(backends))}"
 
 
+def _live_rails_status() -> str:
+    """Read the answer off the PAYMENT CAPABILITY MATRIX, never off a constant.
+
+    Same discipline as `_indic_streaming_stt_status`, and the same reason: a
+    gate whose status is a literal stays red after the thing it watches is
+    fixed, and an amber-forever gate is how a real blocker gets tuned out. The
+    day Razorpay's cell goes IMPLEMENTED, this gate closes itself.
+    """
+    from sitara_api.payments.providers.routing import unimplemented_rails
+
+    pending = unimplemented_rails()
+    if not pending:
+        return "reviewed — every billing region has an implemented rail"
+    named = ", ".join(f"{provider.value}/{region.value}" for provider, region in pending)
+    return f"declared, not implemented — {named}"
+
+
 def gates() -> tuple[Gate, ...]:
     """Every human-closed gate, with its status read from the artefact."""
     return (
+        Gate(
+            id="payments.live_rails",
+            spec_ref="§30.3 / §22.13 / §22.1",
+            blocks=Stage.CLOSED_BETA,
+            status=_live_rails_status(),
+            detail=(
+                "§30.3 specifies Razorpay for India (INR, GST-invoiced) and Stripe India "
+                "for the diaspora (USD, zero-rated export under LUT, §22.1). NEITHER is "
+                "implemented. The whole §30.3 flow — purchase, the UPI pending hold, "
+                "receipts, §22.13's grace and read-only ladder, recovery, cancellation, "
+                "refunds, gifting with credit conversion, and billing-region migration — "
+                "runs end to end against `payments.providers.simulator`, which moves no "
+                "money.\n"
+                "\n"
+                "This is a REAL gap and not a partial one: no subscription revenue can be "
+                "collected until it closes, so it blocks closed beta rather than launch.\n"
+                "\n"
+                "What is missing is mostly NOT code. Each rail needs an account with KYC "
+                "completed for the Indian entity, keys and a webhook secret in AWS Secrets "
+                "Manager (§13, never an env file), and a plan/price catalogue matching "
+                "`payments.money.PRICES` — a price that lives in two systems is a price "
+                "that will differ in one of them. §22.1 puts both rails' KYC, GST "
+                "registration and the LUT filing in W2 procurement, owned by legal counsel "
+                "and finance. Razorpay additionally needs the UPI Autopay per-transaction "
+                "cap checked against prevailing RBI limits (§22.13 states the fallback if "
+                "a cap intervenes); Stripe additionally needs SCA/3DS handled, which maps "
+                "onto the `pending` state §30.3's UPI hold already uses.\n"
+                "\n"
+                "The CODE is one matrix cell per rail — DECLARED → IMPLEMENTED in "
+                "`payments.providers.routing.CAPABILITIES` — plus an adapter implementing "
+                "the five `PaymentProvider` methods, a failure-code mapping onto "
+                "`PaymentFailureReason`, and that rail's signature verification. "
+                "`payments/service.py` does not change: it has never known which rail "
+                "answered. `razorpay.py` and `stripe.py` hold the place and every method "
+                "raises, so a caller that constructs one directly fails loudly rather "
+                "than quietly succeeding. The status above is READ from the matrix, so "
+                "this gate closes itself and cannot go stale."
+            ),
+        ),
+        Gate(
+            id="payments.gst_invoice_rate",
+            spec_ref="§22.1 / §29.2 (S31 acceptance)",
+            blocks=Stage.CLOSED_BETA,
+            status="open — no rate stated in the spec; finance owns it (§22.1, W2)",
+            detail=(
+                "§29.2's S31 acceptance requires the total including tax before the "
+                "payment rail, and `PriceCard` will not render without one. That line is "
+                "SATISFIED: §22.1 makes international billing a zero-rated export under "
+                "LUT (tax is nil, total = price), and the India prices are declared "
+                "tax-INCLUSIVE in `payments.money`, which is Indian consumer convention "
+                "and needs no rate to display.\n"
+                "\n"
+                "What is missing is the INVOICE SPLIT. §22.1 says Razorpay bills India "
+                "'GST-invoiced', so a compliant invoice must show a net-of-tax line and a "
+                "GST line — and no section of the spec states the rate. A plausible 18% "
+                "is exactly the kind of number this codebase does not invent (§5.3's rule "
+                "about facts, pointed at money), and getting it wrong is a filing error "
+                "rather than a display bug. Closes when finance supplies the rate and the "
+                "HSN/SAC code, alongside the GST registration §22.1 schedules for W2."
+            ),
+        ),
         Gate(
             id="call.indic_streaming_stt",
             spec_ref="§25.3 / §33.5 / §3.3 (CC-010)",

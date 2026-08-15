@@ -486,7 +486,8 @@
       "you": "You",
       "tara": "Tara",
       "summary_save": "Save this call to your journal?",
-      "start": "Call Tara"
+      "start": "Call Tara",
+      "thinking_still": "Still thinking"
     },
     "panchang": {
       "label": "Today's panchang",
@@ -1031,7 +1032,9 @@
     "memories_detail": "{count, plural, =0 {Nothing yet} one {# note} other {# notes}}",
     "family": "Your people",
     "family_detail": "{count, plural, =0 {No one yet} one {# person} other {# people}}",
-    "later": "Subscription, settings and privacy arrive in a later release."
+    "later": "Settings and privacy arrive in a later release.",
+    "subscription": "Subscription",
+    "subscription_detail": "Your plan and receipts"
   },
   "reflection": {
     "title": "Tonight",
@@ -1053,6 +1056,101 @@
       "steady": "Steady",
       "light": "Light",
       "joyful": "Joyful"
+    }
+  },
+  "subscription": {
+    "title": "Your subscription",
+    "subtitle": "What you have, and what happens next",
+    "none_title": "You're on the free plan",
+    "none_body": "Everything you've saved stays here. Subscribe whenever you're ready.",
+    "renews_on": "Renews on {date}",
+    "access_until": "You have full access until {date}",
+    "grace_body": "We couldn't collect this month's payment. Nothing has changed — you have everything until {date}, and one tap fixes it.",
+    "read_only_body": "Your memories are safe. You can read everything you've written; new guidance pauses until a payment goes through. Nothing is deleted.",
+    "downgraded_body": "Your memories are safe and nothing has been deleted. Subscribe again whenever you'd like.",
+    "mandate_body": "Your payment went through. The standing instruction for the next one didn't — we'll ask you to set it up again before then.",
+    "retry": "Try the payment again",
+    "cancel": "Cancel subscription",
+    "cancel_title": "Cancel your subscription?",
+    "cancel_body": "You'll keep everything until {date}. After that you move to the free plan — nothing is deleted.",
+    "cancel_confirm": "Yes, cancel",
+    "cancel_keep": "Keep it",
+    "cancel_why": "Tell us why (optional)",
+    "refund": "Request a refund",
+    "receipts": "Receipts",
+    "receipts_empty": "Nothing yet.",
+    "region_switch_title": "Billing region",
+    "region_switch_body": "You're renewing soon. You can keep billing in {current}, or switch to {other} at {price}.",
+    "region_keep": "Keep {current}",
+    "region_switch": "Switch to {other}",
+    "founding_note": "You're on the founding price. It doesn't carry across billing regions.",
+    "simulated": "Demo mode — no money moves. Payments run against a simulator (§30.3).",
+    "manage_store": "Manage in the App Store",
+    "gift_extended": "A gift added {days} days. Your subscription keeps its own plan and currency.",
+    "unavailable": "We can't take payments in your region yet.",
+    "plan": {
+      "trial": "Trial",
+      "monthly": "Monthly",
+      "annual": "Annual"
+    },
+    "status": {
+      "pending": "Waiting for your bank",
+      "trialing": "Trial",
+      "active": "Active",
+      "grace": "Payment didn't go through",
+      "read_only": "Reading only, for now",
+      "cancelled": "Cancelled",
+      "downgraded": "Free plan",
+      "expired": "Ended"
+    },
+    "per_month": "per month",
+    "per_year": "per year",
+    "saving": "Save {amount} a year",
+    "paid_until": "Paid up to {date}"
+  },
+  "payresult": {
+    "success_body": "Your receipt is on its way by email.",
+    "pending_body": "We're waiting for your bank. This usually takes a moment — you can leave this screen open.",
+    "pending_hold": "Waiting up to {minutes} minutes",
+    "try_again": "Try again",
+    "try_other": "Try another way to pay",
+    "back": "Back to your subscription",
+    "reason": {
+      "insufficient_funds": "There wasn't enough in the account.",
+      "mandate_declined": "Your bank declined the standing instruction.",
+      "bank_timeout": "Your bank didn't answer in time.",
+      "instrument_expired": "That card has expired.",
+      "unknown": "Your bank didn't say why."
+    },
+    "title": {
+      "success": "You're all set",
+      "pending": "Approve in your UPI app",
+      "failed": "That payment didn't go through"
+    }
+  },
+  "pay": {
+    "rail_pending": "We can't take payments in your region just yet.",
+    "rail_unavailable": "We can't take payments in your region.",
+    "rail": "We can't take payments in your region right now.",
+    "provider": "Your bank couldn't be reached. Nothing was charged.",
+    "no_subscription": "There's no subscription on this account.",
+    "no_such_price": "That plan isn't available in your region.",
+    "refund_window_closed": "The no-questions refund window has passed. Write to us and we'll look at it properly.",
+    "migration_mid_cycle": "You can change billing region at your next renewal, not mid-cycle.",
+    "not_simulated": "That control only works with the payment simulator.",
+    "gift": {
+      "unredeemable": "That gift code can't be used. Write to us and we'll sort it out."
+    }
+  },
+  "gift": {
+    "activated": "Your gift is live. Welcome.",
+    "converted": "Added to your subscription."
+  },
+  "call": {
+    "holding": {
+      "thinking": "Let me think about that properly.",
+      "moment": "One moment — I'm still with you.",
+      "time": "Give me a moment on that."
     }
   }
 }

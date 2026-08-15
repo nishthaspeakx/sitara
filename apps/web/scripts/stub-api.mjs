@@ -276,6 +276,117 @@ function reading(locale, scenario) {
 const TODAY = "2026-08-15";
 
 /**
+ * §30.3's subscription states, one per S30/S34 baseline.
+ *
+ * Seeded rather than recorded, for the reason M10's records are: a
+ * subscription is a state machine over the USER's own account, so what has to
+ * be right is its SHAPE and the relationships between its dates — not an
+ * engine's output. The dates are fixed relative to `TODAY` so a baseline never
+ * depends on when the suite ran.
+ *
+ * The §22.13 dates are SERVER-COMPUTED in the real API (`lifecycle.project`),
+ * so they are given here rather than derived by the screen — a stub that made
+ * the screen compute them would let a client-side reimplementation of §22.13
+ * pass every baseline.
+ */
+const SUB_PRICES = {
+  india: [
+    { plan: "monthly", region: "india", amount_minor: 49900, currency: "INR",
+      total_with_tax_minor: 49900, term_days: 30, founding: false },
+    { plan: "annual", region: "india", amount_minor: 399900, currency: "INR",
+      total_with_tax_minor: 399900, term_days: 365, founding: false },
+  ],
+  international: [
+    { plan: "monthly", region: "international", amount_minor: 1299, currency: "USD",
+      total_with_tax_minor: 1299, term_days: 30, founding: false },
+    { plan: "annual", region: "international", amount_minor: 9900, currency: "USD",
+      total_with_tax_minor: 9900, term_days: 365, founding: false },
+  ],
+};
+
+function subscriptionFor(scenario) {
+  const base = {
+    status: null, plan: null, region: "india",
+    renewal_failed_at: null, grace_ends_at: null, downgrades_at: null,
+    period_start: null, period_end: null,
+    price_minor: null, currency: null,
+    mandate_retry_required: false, founding: false, retains_history: true,
+    // Every S30 baseline shows the prototype disclosure, because every one of
+    // them IS the prototype. A stub that hid it would baseline a screen the
+    // build cannot produce.
+    simulated: true, region_switch_offered: false,
+    prices: SUB_PRICES.india, purchasable: true,
+  };
+  const active = {
+    ...base, status: "active", plan: "annual",
+    period_start: "2026-08-01T00:00:00Z", period_end: "2027-08-01T00:00:00Z",
+    price_minor: 399900, currency: "INR",
+  };
+  switch (scenario) {
+    case "sub_none":
+      return base;
+    case "sub_unavailable":
+      // §30.3's gap: no rail serves this region. No CTA renders at all.
+      return { ...base, purchasable: false };
+    case "sub_trialing":
+      return { ...active, status: "trialing", plan: "trial",
+               period_end: "2026-08-22T00:00:00Z", price_minor: null, currency: null };
+    case "sub_grace":
+      // §22.13 day 2 of 7. FULL access throughout — the copy says so.
+      // `period_end` EQUALS `renewal_failed_at`: a renewal is attempted at the
+      // end of the period it renews, and `lifecycle.fail_renewal` leaves
+      // `period_end` alone. Dating them apart produced a screen saying
+      // "renews on 1 August 2027" above "this month's payment didn't go
+      // through" — a state the real service cannot produce.
+      return { ...active, status: "grace",
+               period_start: "2025-08-13T00:00:00Z",
+               period_end: "2026-08-13T00:00:00Z",
+               renewal_failed_at: "2026-08-13T00:00:00Z",
+               grace_ends_at: "2026-08-20T00:00:00Z",
+               downgrades_at: "2026-09-10T00:00:00Z" };
+    case "sub_read_only":
+      return { ...active, status: "read_only",
+               period_start: "2025-08-01T00:00:00Z",
+               period_end: "2026-08-01T00:00:00Z",
+               renewal_failed_at: "2026-08-01T00:00:00Z",
+               grace_ends_at: "2026-08-08T00:00:00Z",
+               downgrades_at: "2026-08-29T00:00:00Z" };
+    case "sub_downgraded":
+      return { ...active, status: "downgraded",
+               period_start: "2025-07-01T00:00:00Z",
+               period_end: "2026-07-01T00:00:00Z",
+               renewal_failed_at: "2026-07-01T00:00:00Z",
+               grace_ends_at: "2026-07-08T00:00:00Z",
+               downgrades_at: "2026-07-29T00:00:00Z" };
+    case "sub_cancelled":
+      return { ...active, status: "cancelled" };
+    case "sub_mandate":
+      // §30.3 — active on the paid period; only the standing instruction failed.
+      return { ...active, mandate_retry_required: true };
+    case "sub_region_switch":
+      // §30.3's migration, offered AT renewal. The subscription is still ₹.
+      return { ...active, region_switch_offered: true };
+    case "sub_founding":
+      return { ...active, founding: true, price_minor: 299900 };
+    case "pay_pending":
+      // §30.3's hold: the purchase is in flight and nothing is granted yet.
+      // The default arm returns an ACTIVE subscription, which paired a
+      // "waiting for your bank" screen with an account that already had
+      // everything — a combination the real service cannot produce, and one
+      // that made S34's pending baseline offer a way back it should not have.
+      return { ...base, status: "pending", plan: "annual",
+               period_start: "2026-08-15T00:00:00Z", period_end: "2026-08-15T00:00:00Z",
+               price_minor: 399900, currency: "INR" };
+    case "sub_international":
+      return { ...active, region: "international", price_minor: 9900,
+               currency: "USD", prices: SUB_PRICES.international };
+    default:
+      return active;
+  }
+}
+
+
+/**
  * Record content per locale.
  *
  * A journal preview and a memory are things a Hindi user reads in Hindi. A stub
@@ -934,6 +1045,35 @@ const server = createServer(async (req, res) => {
   }
 
   // ── §28.2 Today ──────────────────────────────────────────────────────────
+  // §30.3's S30/S31 payload. One GET; the mutations below return the state
+  // the scenario already describes, because what these baselines test is how a
+  // STATE renders — the transitions themselves are `tests/payments` in the API,
+  // against the real §6.4 validators.
+  if (path === "/v1/subscription" && req.method === "GET") {
+    return send(res, 200, subscriptionFor(scenario));
+  }
+  if (path.startsWith("/v1/subscription/") && req.method === "POST") {
+    if (path.endsWith("/purchase") || path.endsWith("/retry")) {
+      if (scenario === "pay_pending") {
+        return send(res, 200, {
+          pending: true, checkout_url: null, failure_reason: null,
+          provider_ref: "sim_pi_000001",
+        });
+      }
+      if (scenario === "pay_failed") {
+        return send(res, 200, {
+          pending: false, checkout_url: null,
+          failure_reason: "insufficient_funds", provider_ref: "sim_pi_000002",
+        });
+      }
+      return send(res, 200, {
+        pending: false, checkout_url: null, failure_reason: null,
+        provider_ref: "sim_pi_000003",
+      });
+    }
+    return send(res, 200, subscriptionFor(scenario));
+  }
+
   if (path === "/v1/today" && req.method === "GET") {
     if (scenario === "today_unavailable") {
       // What the OFFLINE variant actually runs into. The screen falls back to

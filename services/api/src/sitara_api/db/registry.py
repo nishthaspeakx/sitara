@@ -908,6 +908,27 @@ SPECS: tuple[CollectionSpec, ...] = (
             "status": STR,
             "provider_sub_id": [STR, "null"],
             "gift_links": ARR,
+            # §30.3/§22.13's lifecycle, beyond the table's five columns. The
+            # §6.4 row names what a subscription IS; these are what §22.13's
+            # ladder needs to know where in it this one stands.
+            "period_start": DT,
+            "period_end": DT,
+            # §22.13's clock. Null whenever the last renewal succeeded —
+            # clearing it on recovery is what stops a stale grace banner.
+            "renewal_failed_at": [DT, "null"],
+            "failure_reason": [STR, "null"],
+            # §30.3's post-purchase mandate rejection. NOT a status: the
+            # subscription is active on the paid period.
+            "mandate_retry_required": BOOL,
+            # §10-20's founding price. Held on the row because §30.3 says it
+            # "does NOT transfer automatically across regions", which is only
+            # checkable if we know she has one.
+            "founding": BOOL,
+            "price_minor": [*NUM, "null"],
+            "currency": [STR, "null"],
+            # Derived from `status` by `lifecycle`, written by the store, and
+            # indexed below. See the index's own comment for why it exists.
+            "live": BOOL,
         },
         required=("user_id", "plan", "region", "provider", "status"),
         indexes=(
@@ -919,6 +940,29 @@ SPECS: tuple[CollectionSpec, ...] = (
                 partial={"status": "active"},
             ),
             IndexSpec(_asc("provider_sub_id")),
+            # §30.3 — one LIVE subscription per user, which is a wider set than
+            # `active`. §6.4's index was written when `status` had two values;
+            # §22.13's ladder gives access under `trialing`, `grace`,
+            # `read_only` and `cancelled` too, and every one of those is a row
+            # a second purchase could be made alongside — leaving two rows both
+            # granting access and a renewal job billing both. `live` is
+            # computed from the status in exactly one place
+            # (`lifecycle.is_live`, applied by `PaymentStore._document`) and a
+            # test asserts the two can never disagree.
+            IndexSpec(
+                _asc("user_id"),
+                unique=True,
+                name="subscriptions_one_live_per_user",
+                partial={"live": True},
+                cite="§30.3 / §22.13 — access is granted under more statuses than `active`",
+            ),
+            # §22.13's renewal sweep reads due rows; §30.3's ladder reads rows
+            # whose grace or read-only window has elapsed. Both are range scans
+            # over a date and neither is served by the two indexes above.
+            IndexSpec(
+                _asc("status", "period_end"),
+                cite="§22.13 — the renewal and dunning sweeps",
+            ),
         ),
     ),
     CollectionSpec(
@@ -935,13 +979,79 @@ SPECS: tuple[CollectionSpec, ...] = (
             "currency": STR,
             "invoice_ref": [STR, "null"],
             "instrument_ref": [STR, BIN, "null"],
+            # §30.3's two idempotency questions, and they are different ones.
+            # `provider_event_id` (uniq, below) catches a REDELIVERY of one
+            # event. `idempotency_key` is OURS and catches two genuinely
+            # distinct events that both charged for one purchase — which §30.3
+            # handles by refunding rather than by ignoring. One field could
+            # only guard one of the two.
+            "idempotency_key": [STR, "null"],
+            "kind": [STR, "null"],
+            "state": [STR, "null"],
+            "failure_reason": [STR, "null"],
+            "subscription_id": [OID, "null"],
+            # A receipt from the simulator must be distinguishable from a real
+            # one. A prototype whose receipts were not is a prototype somebody
+            # eventually shows to a customer.
+            "simulated": BOOL,
         },
         required=("user_id", "provider", "provider_event_id", "amount", "currency"),
         indexes=(
             IndexSpec(_asc("user_id", "created_at")),
             IndexSpec(_asc("provider_event_id"), unique=True),
+            # §30.3's duplicate-CHARGE guard — the second question above. Not
+            # unique: a refund row legitimately shares its key with the charge
+            # it reverses, and a uniqueness constraint here would refuse to
+            # record the reversal §30.3 requires.
+            IndexSpec(
+                _asc("idempotency_key"),
+                cite="§30.3 / §6.3 — idempotency keys on all mutation endpoints",
+            ),
         ),
         encrypted=(EncryptedField("instrument_ref", key_class="payment"),),
+    ),
+    CollectionSpec(
+        name="gifts",
+        # NOT a §6.4 row. §6.4 gives `subscriptions` a `gift_links` array and
+        # stops there, which is enough to say a subscription CAME from a gift
+        # and not enough to run §30.3's S33: a gift exists before anyone
+        # redeems it, is bought by one person for another, and carries its own
+        # currency, term and expiry independent of any subscription. Putting it
+        # inside `subscriptions` would mean a purchased-but-unredeemed gift had
+        # to live on the BUYER's subscription row — where §30.3's uniqueness
+        # rules would fight it, and where a buyer with no subscription could
+        # not buy one at all.
+        spec_ref="§30.3 (S32/S33), §10-20",
+        purpose="Gift codes, before and after redemption (§30.3's five S33 outcomes).",
+        # Same class of record as `payments`, and the same reason: a gift is a
+        # sale, it carries an invoice, and §22.1 states the tax treatment of
+        # one explicitly ("gift purchase is a service sale to the buyer's
+        # region; redemption creates no second taxable event").
+        retention="8 years (tax)",
+        shard_key="hashed(code)",
+        fields={
+            "code": STR,
+            "buyer_user_id": OID,
+            "plan": STR,
+            # Where it was BOUGHT — which fixes its currency and rail, and has
+            # nothing to do with where it is redeemed (§10-20's NRI case is
+            # exactly the two differing).
+            "region": STR,
+            "value_minor": NUM,
+            "currency": STR,
+            "term_days": NUM,
+            "expires_at": DT,
+            "redeemed_by_user_id": [OID, "null"],
+            "redeemed_at": [DT, "null"],
+            "redemption_outcome": [STR, "null"],
+        },
+        required=("code", "buyer_user_id", "plan", "region", "value_minor", "currency"),
+        indexes=(
+            # A gift code is a bearer instrument and this is the lookup every
+            # redemption makes. Unique because the code IS the identity.
+            IndexSpec(_asc("code"), unique=True, cite="§30.3 — S33 redeems by code"),
+            IndexSpec(_asc("buyer_user_id", "created_at"), cite="§30.3 — the buyer's own gifts"),
+        ),
     ),
     CollectionSpec(
         name="consents",

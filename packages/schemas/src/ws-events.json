@@ -116,12 +116,18 @@
       ]
     },
     "TtsStartPayload": {
-      "$comment": "Server → client, on `tts.start`. §25.4: 'Tara's replies arrive as voice-note bubbles rendered from her TTS with transcript toggle'. Emitted after her `captions.final`, so the transcript the toggle shows is on screen before any audio plays — and is the same validated text the audio was rendered from, not a second generation.\n\n`tts_audio_asset_id` became OPTIONAL in M9-P10b, and the null is load-bearing rather than lax. A voice NOTE is synthesised whole and stored, so it has an asset and a bubble that can replay it. A live CALL is streamed and its audio is never stored at all (§13, §33.1) — so there is no asset, and there is nothing to replay. Null is the type saying exactly that. Carrying an invented id would have promised a playback control over audio that does not exist anywhere.",
+      "$comment": "Server → client, on `tts.start`. §25.4: 'Tara's replies arrive as voice-note bubbles rendered from her TTS with transcript toggle'. Emitted after her `captions.final`, so the transcript the toggle shows is on screen before any audio plays — and is the same validated text the audio was rendered from, not a second generation.\n\n`tts_audio_asset_id` became OPTIONAL in M9-P10b, and the null is load-bearing rather than lax. A voice NOTE is synthesised whole and stored, so it has an asset and a bubble that can replay it. A live CALL is streamed and its audio is never stored at all (§13, §33.1) — so there is no asset, and there is nothing to replay. Null is the type saying exactly that. Carrying an invented id would have promised a playback control over audio that does not exist anywhere.\n\n`holding` marks §25.3's holding phrase — the line she speaks when §9 has out-run HOLDING_PHRASE_AFTER_MS. It is her voice but it is NOT her answer, and that difference is load-bearing on three separate paths (see the field).",
       "fields": [
         { "name": "client_message_id", "type": "string" },
         { "name": "tts_audio_asset_id", "type": "string?" },
         { "name": "sample_rate_hz", "type": "integer" },
-        { "name": "voice_id", "type": "string?" }
+        { "name": "voice_id", "type": "string?" },
+        {
+          "name": "holding",
+          "type": "boolean",
+          "default": false,
+          "description": "§25.3's holding phrase rather than her answer. True when this stream is the short line she speaks because §9 has been thinking longer than HOLDING_PHRASE_AFTER_MS — she has not answered yet.\n\nThree things downstream are wrong without it, and none of them announces itself: the screen returns to `listening` on `tts.end` and shows a mic-live indicator inviting the user to speak into a turn still in flight (which §7.3 then refuses); §33.5's `first_audio_seconds` times the PHRASE instead of the answer, turning a 5.8s reply into a 1.8s one and making the cheapest thing to fake the measure the gate reads; and the caption strip treats filler as the reply.\n\nAdding a FIELD is not adding a member — §34.6's closed set is fifteen types and stays fifteen. It defaults to false, so every producer that predates it is unchanged and the voice-note path never sets it."
+        }
       ]
     },
     "TtsChunkMetaPayload": {
@@ -133,10 +139,16 @@
       ]
     },
     "TtsEndPayload": {
-      "$comment": "Server → client, on `tts.end`. Total duration for the bubble's scrubber, and the signal that no further chunk meta is coming.",
+      "$comment": "Server → client, on `tts.end`. Total duration for the bubble's scrubber, and the signal that no further chunk meta is coming.\n\n`holding` repeats `tts.start`'s flag so each event is self-describing. The client could infer it by remembering the start, but then the meaning of an `end` would depend on a `start` it might not have seen — and the branch it drives is whether the screen goes back to `thinking` or to `listening`, which is the difference between showing a mic-live indicator over a live turn and not.",
       "fields": [
         { "name": "client_message_id", "type": "string" },
-        { "name": "duration_ms", "type": "integer" }
+        { "name": "duration_ms", "type": "integer" },
+        {
+          "name": "holding",
+          "type": "boolean",
+          "default": false,
+          "description": "The stream that just ended was §25.3's holding phrase, so she has NOT answered yet — the screen returns to `thinking`, not `listening`."
+        }
       ]
     },
     "BargeInPayload": {

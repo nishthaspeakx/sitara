@@ -64,6 +64,13 @@ export interface CallModel {
    * timer and this one cannot disagree.
    */
   thinkingSince: number | null;
+  /**
+   * Whether the audio playing right now is §25.3's holding phrase.
+   *
+   * It is her voice but not her answer, and the screen has to tell them apart:
+   * the phrase ends back in `thinking`, her answer ends in `listening`.
+   */
+  speakingHoldingPhrase: boolean;
 }
 
 export const IDLE_CALL: CallModel = {
@@ -81,6 +88,7 @@ export const IDLE_CALL: CallModel = {
   resumeOffered: false,
   error: null,
   thinkingSince: null,
+  speakingHoldingPhrase: false,
 };
 
 export type CallAction =
@@ -194,17 +202,50 @@ function applyEvent(model: CallModel, event: ControlEvent, at: number): CallMode
       };
     }
 
-    case "tts.start":
-      return { ...model, state: "speaking", thinkingSince: null };
+    case "tts.start": {
+      // §25.3's holding phrase is her voice and not her answer, so the shimmer
+      // clock keeps running: she has been thinking since before she spoke, and
+      // she is still thinking after. Clearing `thinkingSince` here would reset
+      // the very cap §25.3 sets on the silence.
+      const holding = payload.holding === true;
+      return {
+        ...model,
+        state: "speaking",
+        thinkingSince: holding ? model.thinkingSince : null,
+        speakingHoldingPhrase: holding,
+      };
+    }
 
-    case "tts.end":
-      return { ...model, state: model.state === "speaking" ? "listening" : model.state };
+    case "tts.end": {
+      if (model.state !== "speaking") return model;
+      // Back to THINKING after a holding phrase, never to listening. §9 is
+      // still working on the turn the user already asked, and `listening`
+      // lights §25.3's mic-live indicator — inviting them to speak into a turn
+      // §7.3 will then refuse to answer. The flag is read off the event rather
+      // than off `speakingHoldingPhrase` so an `end` whose `start` was missed
+      // still lands somewhere true.
+      const holding = payload.holding === true || model.speakingHoldingPhrase;
+      return {
+        ...model,
+        state: holding ? "thinking" : "listening",
+        speakingHoldingPhrase: false,
+      };
+    }
 
     case "barge_in":
       // Her audio stopped. Whether that is the user talking over her or a dead
       // synthesiser is `reason`'s job — and `handoff.to_text` follows for the
       // second, so this only has to stop looking like she is speaking.
-      return { ...model, state: model.state === "speaking" ? "listening" : model.state };
+      //
+      // Interrupting the HOLDING phrase returns to thinking, for the same
+      // reason `tts.end` does: the answer is still coming. Interrupting her
+      // answer returns to listening, because that turn is over.
+      if (model.state !== "speaking") return model;
+      return {
+        ...model,
+        state: model.speakingHoldingPhrase ? "thinking" : "listening",
+        speakingHoldingPhrase: false,
+      };
 
     case "entitlement.warning":
       return {

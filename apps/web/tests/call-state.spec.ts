@@ -132,6 +132,93 @@ test.describe("§25.3's 1.8s thinking cap", () => {
     );
     expect(holdingPhraseDue(model, 999_999)).toBe(false);
   });
+
+  test("the holding phrase ends back in THINKING, never in listening", async () => {
+    // The one that matters. §9 is still working on the turn the user already
+    // asked, so `listening` would light §25.3's mic-live indicator and invite
+    // them to speak into a turn §7.3 then refuses to answer — the app asking
+    // for something it will not accept.
+    const model = apply(
+      IDLE_CALL,
+      ready,
+      event("presence.state", { state: "thoughtful" }),
+      event("tts.start", { client_message_id: "u1", holding: true }),
+      event("tts.end", { client_message_id: "u1", duration_ms: 700, holding: true }),
+    );
+    expect(model.state).toBe("thinking");
+  });
+
+  test("her ANSWER ends in listening, as it always did", async () => {
+    const model = apply(
+      IDLE_CALL,
+      ready,
+      event("presence.state", { state: "thoughtful" }),
+      event("tts.start", { client_message_id: "u1" }),
+      event("tts.end", { client_message_id: "u1", duration_ms: 4200 }),
+    );
+    expect(model.state).toBe("listening");
+  });
+
+  test("the shimmer clock survives the phrase, because she never stopped thinking", async () => {
+    // She has been thinking since before she spoke and is still thinking
+    // after. Resetting the clock on `tts.start` would restart the very cap
+    // §25.3 sets on the silence — and the screen would go back to saying
+    // "Thinking" as though the wait had begun again.
+    const model = apply(
+      IDLE_CALL,
+      ready,
+      event("presence.state", { state: "thoughtful" }),
+      event("tts.start", { client_message_id: "u1", holding: true }),
+      event("tts.end", { client_message_id: "u1", duration_ms: 700, holding: true }),
+    );
+    expect(model.thinkingSince).not.toBeNull();
+    expect(holdingPhraseDue(model, 1_000 + HOLDING_PHRASE_AFTER_MS)).toBe(true);
+  });
+
+  test("her answer's audio DOES clear it", async () => {
+    const model = apply(
+      IDLE_CALL,
+      ready,
+      event("presence.state", { state: "thoughtful" }),
+      event("tts.start", { client_message_id: "u1" }),
+    );
+    expect(model.thinkingSince).toBeNull();
+  });
+
+  test("an `end` whose `start` was missed still lands somewhere true", async () => {
+    // Each event carries the flag so the branch never depends on having seen
+    // the other one — a reconnect mid-phrase must not leave the screen
+    // listening over a live turn.
+    const model = apply(
+      IDLE_CALL,
+      ready,
+      event("presence.state", { state: "thoughtful" }),
+      event("tts.end", { client_message_id: "u1", duration_ms: 700, holding: true }),
+    );
+    expect(model.state).toBe("thinking");
+  });
+
+  test("interrupting the phrase returns to thinking; interrupting her answer does not", async () => {
+    // §25.3's barge-in over FILLER leaves the answer coming. Over her answer,
+    // that turn is over.
+    const overPhrase = apply(
+      IDLE_CALL,
+      ready,
+      event("presence.state", { state: "thoughtful" }),
+      event("tts.start", { client_message_id: "u1", holding: true }),
+      event("barge_in", { client_message_id: "u1", reason: "user_speech" }),
+    );
+    expect(overPhrase.state).toBe("thinking");
+
+    const overAnswer = apply(
+      IDLE_CALL,
+      ready,
+      event("presence.state", { state: "thoughtful" }),
+      event("tts.start", { client_message_id: "u1" }),
+      event("barge_in", { client_message_id: "u1", reason: "user_speech" }),
+    );
+    expect(overAnswer.state).toBe("listening");
+  });
 });
 
 test.describe("§32.9's minute warnings and §25.3's plan chip", () => {
