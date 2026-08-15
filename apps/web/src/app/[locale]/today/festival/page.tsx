@@ -27,7 +27,6 @@ import type { MorningModule } from "@sitara/schemas";
 import {
   BriefCard,
   Card,
-  EmptyState,
   ErrorState,
   FestivalBanner,
   Header,
@@ -116,7 +115,14 @@ export default function FestivalPage() {
             </>
           ) : (
             <div data-testid="festival-empty" className="flex flex-1 items-center justify-center">
-              <EmptyState id="saved_guidance" />
+              {/* NOT `EmptyState id="saved_guidance"`, which renders "Nothing
+                  saved yet." — the §24.6 state for an empty SAVES list, on a
+                  screen that has nothing to do with saving. Both screens have
+                  carried their own correct sentence in the catalogs since M8
+                  and neither rendered it. §24.6 fixes the designed empty states
+                  at NINE and neither of these is one of them, so the honest
+                  shape is the screen's own line. */}
+              <p className="text-body text-ink-muted">{t("today.festival.empty")}</p>
             </div>
           )
         ) : null}

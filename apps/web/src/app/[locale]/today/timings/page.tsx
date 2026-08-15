@@ -26,7 +26,7 @@
 
 import { useEffect, useState } from "react";
 
-import { EmptyState, ErrorState, Header, PanchangStrip, Skeleton, TimingBar } from "@/components/ui";
+import { ErrorState, Header, PanchangStrip, Skeleton, TimingBar } from "@/components/ui";
 import type { TimingQuality as BarQuality } from "@/components/ui";
 import { useRouter } from "@/i18n/navigation";
 import { loadToday, type TodayView } from "@/lib/today";
@@ -109,7 +109,14 @@ export default function TimingsPage() {
             /* The panchang cell was cold. §24.6's designed empty state, with the
                honest sentence — not an empty axis. */
             <div data-testid="timings-empty" className="flex flex-1 items-center justify-center">
-              <EmptyState id="saved_guidance" />
+              {/* NOT `EmptyState id="saved_guidance"`, which renders "Nothing
+                  saved yet." — the §24.6 state for an empty SAVES list, on a
+                  screen that has nothing to do with saving. Both screens have
+                  carried their own correct sentence in the catalogs since M8
+                  and neither rendered it. §24.6 fixes the designed empty states
+                  at NINE and neither of these is one of them, so the honest
+                  shape is the screen's own line. */}
+              <p className="text-body text-ink-muted">{t("today.timings.empty")}</p>
             </div>
           )
         ) : null}

@@ -38,6 +38,7 @@ import type { ErrorEnvelope } from "@sitara/schemas";
 import { FamilyRecordSheet } from "@/components/deletion/FamilyRecordSheet";
 import { YouShell } from "@/components/you/YouShell";
 import { Button, Card, ErrorState, KundliChart, Skeleton } from "@/components/ui";
+import type { KundliStyle } from "@/components/ui";
 import { useRouter } from "@/i18n/navigation";
 import { loadChart, toKundliHouses, type Chart } from "@/lib/chart";
 import { MEMORIAL_COPY } from "@/lib/deletion-scope";
@@ -64,6 +65,11 @@ export default function FamilyMemberPage({ params }: { params: Promise<{ id: str
   const [sheetOpen, setSheetOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [sheetError, setSheetError] = useState<ErrorEnvelope | null>(null);
+  // CC-007: "neither is a fallback for the other" — a reader of one cannot read
+  // the other by squinting, which is why the switch exists at all. North is the
+  // default; the choice is per-view and deliberately not persisted, because it
+  // is how this reader reads a chart, not a fact about the chart.
+  const [style, setStyle] = useState<KundliStyle>("north");
 
   // A BARE identifier, hoisted out of the JSX: `i18n-lint` matches the literal
   // template text against `dynamic-keys.json`, and it cannot expand a call or a
@@ -154,6 +160,8 @@ export default function FamilyMemberPage({ params }: { params: Promise<{ id: str
               houses={toKundliHouses(view.chart)}
               confidence={view.chart.confidence as never}
               titleKey="family.chart_title"
+              style={style}
+              onStyleChange={setStyle}
             />
           ) : (
             <>

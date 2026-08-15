@@ -133,6 +133,14 @@ Nine surfaces: S21 `/journal` · S22 `/journal/[date]` · S23 `/journal/search` 
 
 **The baselines: 65** (9 surfaces × 3 locales × 2 themes = 54, plus 6 empty/degraded states, 3 memorial captures and 2 reduced-motion). **They earned their place on the first run**, catching two defects nothing else could see: `KundliChart` hardcoded `ui.kundli.title` — "Your kundli" — so S28 rendered "उनकी कुंडली" as its heading with "आपकी कुंडली" in the card beneath it, a correct diagram named after the wrong person; and the Hindi candidate-list gap above. Neither fails a typecheck, a lint or a behavioural test.
 
+## The live walkthrough (M10) — what only a real run could see
+
+`docs/runbooks/demo-walkthrough.md` is the script. Three client-side findings are worth keeping here:
+
+- **`apiCall` refreshes ONCE on a spent access token.** The access cookie lives 15 minutes and the refresh cookie 30 days, and no client code had ever called `POST /auth/session/refresh` — so every app open older than a quarter of an hour met a 401 on its first read and rendered "Tara will be right back … that sign-in didn't go through", with a trace code, because a token had done exactly what it was designed to do. Single-flight, only for `AUTH_SESSION_EXPIRED`/`AUTH_INVALID_TOKEN`, and never on the refresh endpoint itself — a 401 from that one is a real sign-out, and retrying it loops behind a screen that merely looks slow.
+- **`EmptyState id="saved_guidance"` is not a general "nothing here" state.** It renders "Nothing saved yet." S16 and S17 both used it for "the panchang cell was cold" and "no observance today", and both had carried their own correct sentence (`today.timings.empty`, `today.festival.empty`) in the catalogs since M8 without rendering it. §24.6 fixes the designed empty states at NINE; a screen that is not one of them says its own line.
+- **`KundliChart` renders its North/South switch only when `onStyleChange` is passed.** S28 shipped without it, so CC-007's "user-switchable" was not. The choice is per-view and deliberately not persisted: it is how this reader reads a chart, not a fact about the chart.
+
 ## Onboarding — the pre-auth screen (S02)
 
 **§29.1 runs language (S02) BEFORE auth (S03), so S02 has no session** — and every `/v1/onboarding` route is behind one (`CurrentSession`, §33.2/§34.5). S02 called it anyway: every language tap 401'd, `useStepCommit` correctly refused to advance a step it could not persist, and the first screen of onboarding was a dead end in a real browser. Same language or different made no difference.
