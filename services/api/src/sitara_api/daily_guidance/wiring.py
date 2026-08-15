@@ -12,6 +12,7 @@ from __future__ import annotations
 import datetime as dt
 import logging
 from collections.abc import Awaitable, Callable, Sequence
+from dataclasses import replace
 
 from sitara_schemas.facts import ConfidenceState, Tradition
 
@@ -108,16 +109,47 @@ class CompositeBriefFacts(BriefFactSource):
         place = ResolvedPlace(
             label=subject.timezone, lat=subject.lat, lon=subject.lon, tz=subject.timezone
         )
+        day = dt.date.fromisoformat(local_date)
         try:
-            return await self._panchang.panchang(
-                dt.date.fromisoformat(local_date), place, Tradition.AMANTA
-            )
+            result = await self._panchang.panchang(day, place, Tradition.AMANTA)
         except ProviderUnavailable:
             logger.warning(
                 "brief facts: panchang unavailable",
                 extra={"user_id": subject.user_id, "local_date": local_date},
             )
             return None
+
+        # §28.2 puts the day's windows on Today (the TimingBar) and S16 is their
+        # detail screen — and `present_timings` builds both from
+        # `panchang.day_timing` facts on the brief. Those are a SEPARATE call:
+        # `PanchangService.panchang` asks Layer A with `include_day_timings=False`
+        # because the panchang ROW does not need them, so nothing ever put a
+        # single timing fact into a brief and `TodayPayload.timings` was empty
+        # for every user, every morning.
+        #
+        # The symptom was not an error. Today rendered without its TimingBar and
+        # `/today/timings` rendered §24.6's designed empty state — which is the
+        # screen for "the panchang cell was cold", so a permanent absence looked
+        # like an honest occasional one.
+        #
+        # A failure here costs the windows and nothing else: the panchang row,
+        # the modules and the citations are already in hand, and §5.3's rule is
+        # that a missing fact removes a claim rather than degrading the brief.
+        try:
+            timings = await self._panchang.day_timings(day, place, Tradition.AMANTA)
+        except ProviderUnavailable:
+            logger.info(
+                "brief facts: day timings unavailable",
+                extra={"user_id": subject.user_id, "local_date": local_date},
+            )
+            return result
+
+        if timings is None or not timings.facts:
+            return result
+
+        known = {f.fact_id for f in result.facts}
+        merged = list(result.facts) + [f for f in timings.facts if f.fact_id not in known]
+        return replace(result, facts=merged)
 
     async def _chart_facts(self, subject: BriefSubject, local_date: str):  # noqa: ANN202
         from sitara_api.astrology.chart_adapter import (

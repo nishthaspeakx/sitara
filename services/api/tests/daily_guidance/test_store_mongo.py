@@ -137,6 +137,50 @@ async def test_a_reread_brief_keeps_its_citations(db, full_facts) -> None:  # no
         assert module.fact_ids == original.fact_ids
 
 
+async def test_a_reread_brief_keeps_its_SNAPSHOTS_too(db, full_facts) -> None:  # noqa: ANN001
+    """The half `test_a_reread_brief_keeps_its_citations` did not cover.
+
+    Carrying the IDS across the read fixed the Trust Sheet. Three things on
+    §28.2's home surface are built from the SNAPSHOTS instead, and all three
+    silently emptied on every read after the first: item (6)'s panchang row,
+    S16's timings, and Tara's line (which drops from the cited register to the
+    claimless one when it has no facts to lean on).
+
+    Found on the first live walkthrough, and it is invisible by construction:
+    the request that GENERATES a brief holds the snapshots in memory, so the
+    morning always looks right when you make it and loses its panchang strip
+    when you come back to it. `/today/timings` becomes a permanently empty
+    screen whose designed empty state makes it look intentional.
+    """
+    store = BriefStore(db)
+    written = await store.upsert(brief_for(full_facts), now=NOW)
+    await store.write_guidance_log(written, now=NOW)
+    assert written.snapshots, "the generated brief carries snapshots"
+
+    reread = await store.get(USER_ID, LOCAL_DATE)
+    assert reread is not None
+    assert {s.fact_id for s in reread.snapshots} == {s.fact_id for s in written.snapshots}
+    # And the citations still hold — hydration must not shrink them.
+    assert reread.fact_ids == written.fact_ids
+
+
+async def test_a_reread_brief_without_its_log_still_cites(db, full_facts) -> None:  # noqa: ANN001
+    """No `guidance_logs` row → no snapshots, and that must degrade quietly.
+
+    §34.2's snapshot is READ, never recomputed: answering a Trust Sheet with
+    today's sky rather than the sky the sentence was written from is the exact
+    thing the two-collection split exists to prevent. So a missing log costs
+    the panchang row and costs nothing else.
+    """
+    store = BriefStore(db)
+    written = await store.upsert(brief_for(full_facts), now=NOW)  # no log written
+
+    reread = await store.get(USER_ID, LOCAL_DATE)
+    assert reread is not None
+    assert reread.snapshots == ()
+    assert reread.fact_ids == written.fact_ids
+
+
 async def test_generated_pairs_pre_filter(db, full_facts) -> None:  # noqa: ANN001
     store = BriefStore(db)
     await store.upsert(brief_for(full_facts), now=NOW)

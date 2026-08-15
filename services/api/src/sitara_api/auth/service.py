@@ -122,6 +122,26 @@ class AuthService:
             user = await self._db.users.find_one({"_id": existing["user_id"]})
             if user is None:  # identity without user — must never happen
                 raise ApiError(ErrorCode.SYS_INTERNAL)
+            # §24.4 puts language selection (S02) BEFORE auth (S03), so this
+            # exchange is the first authenticated moment the choice can reach.
+            # A NEW account stores it at creation below; a RETURNING one used to
+            # drop it silently, and the consequence is not cosmetic: the account
+            # locale is what §7.1 composes a brief and a first reading IN, while
+            # the URL locale drives the shell. A user whose account said `hi` and
+            # who chose English at S02 got an English screen reading "Your Moon
+            # was in पूर्वा फाल्गुनी" — §2.4's leakage rule broken in the
+            # direction nobody writes a test for, because every string was
+            # correctly localised, just not all into the same language.
+            #
+            # `LOCALES` is the same released set the creation path filters
+            # against, so an unreleased or malformed tag is ignored rather than
+            # stored — a locale is admitted by the §12 gate, never by a client.
+            if locale and locale in LOCALES and locale != user.get("locale"):
+                await self._db.users.update_one(
+                    {"_id": user["_id"]},
+                    {"$set": {"locale": locale, "updated_at": _now()}},
+                )
+                user["locale"] = locale
             return user, False
 
         # §27 sign-up row: verified email/phone matching an existing account

@@ -77,10 +77,13 @@ def test_it_does_activate_in_dev() -> None:
 def test_shipped_defaults_are_untouched() -> None:
     """Nothing here writes to `Settings`. A deployment that never sets the
     switch behaves precisely as it did before this file existed."""
-    settings = Settings()
-    assert settings.prototype_mode is False
-    assert settings.calls_enabled is False
-    assert settings.stories_enabled is False
+    # The DECLARED defaults, not `Settings()` — which loads the ambient
+    # `services/api/.env` and so asserted whatever the developer had set. It
+    # passed until someone enabled prototype mode for a local walkthrough, which
+    # is precisely what the switch is for.
+    for field in ("prototype_mode", "calls_enabled", "stories_enabled"):
+        assert Settings.model_fields[field].default is False, field
+    settings = Settings(_env_file=None)
     # …and with the switch off, the resolvers are the settings themselves.
     assert prototype.calls_enabled(settings) is settings.calls_enabled
     assert prototype.stories_enabled(settings) is settings.stories_enabled

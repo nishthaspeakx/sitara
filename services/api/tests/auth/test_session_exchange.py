@@ -67,6 +67,57 @@ def test_returning_user_needs_no_dob(client: TestClient, verifier: FakeVerifier)
     assert again.json()["user_id"] == user_id
 
 
+def test_returning_user_carries_the_S02_language_choice(
+    client: TestClient, verifier: FakeVerifier, mongo: MongoClient, settings: Settings
+) -> None:
+    """§24.4 S02 runs BEFORE auth, so this exchange is the first authenticated
+    moment the language choice can reach — for a RETURNING user as well as a new
+    one.
+
+    It used to reach only new ones, and the consequence was not cosmetic: the
+    ACCOUNT locale is what §7.1 composes a brief and a first reading in, while
+    the URL locale drives the shell. Found on the first live walkthrough, where
+    an account stored as `hi` signing in at `/en` produced an English screen
+    reading "Your Moon was in पूर्वा फाल्गुनी" — §2.4's no-leakage rule broken
+    in the direction no test looks for, because every string was correctly
+    localised, just not all into the same language.
+    """
+    verifier.add("tok-1", uid="fb-uid-1", provider="phone", phone="+911234500001")
+    first = exchange(client, "tok-1", locale="hi")
+    assert first.json()["locale"] == "hi"
+
+    again = exchange(client, "tok-1", locale="en", dob=None)
+    assert again.status_code == 200
+    assert again.json()["is_new_user"] is False
+    # The response says so...
+    assert again.json()["locale"] == "en"
+    # ...and so does the row every downstream composer reads.
+    db = mongo[settings.mongo_db]
+    user = db.users.find_one({"firebase_uid": "fb-uid-1"})
+    assert user is not None
+    assert user["locale"] == "en"
+
+
+def test_returning_user_locale_is_filtered_by_the_released_set(
+    client: TestClient, verifier: FakeVerifier, mongo: MongoClient, settings: Settings
+) -> None:
+    """§2.4: a locale is admitted by the §12 gate, never by a client.
+
+    The same filter the creation path applies. An unreleased tag on a returning
+    sign-in must leave the stored locale alone rather than storing a language
+    the catalogs cannot serve — which would render as raw keys, everywhere, for
+    that account only.
+    """
+    verifier.add("tok-1", uid="fb-uid-1", provider="phone", phone="+911234500001")
+    exchange(client, "tok-1", locale="hi")
+
+    again = exchange(client, "tok-1", locale="ta", dob=None)
+    assert again.status_code == 200
+    assert again.json()["locale"] == "hi"
+    db = mongo[settings.mongo_db]
+    assert db.users.find_one({"firebase_uid": "fb-uid-1"})["locale"] == "hi"
+
+
 def test_signup_without_dob_is_rejected(client: TestClient, verifier: FakeVerifier) -> None:
     verifier.add("tok-1", uid="fb-uid-1", provider="phone", phone="+911234500001")
     resp = exchange(client, "tok-1", dob=None)

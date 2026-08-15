@@ -41,8 +41,14 @@ def test_it_is_off_by_default() -> None:
     A production build with a missing key must fail loudly at sign-in rather
     than quietly accepting everybody — the rule `auth-client.ts` already states
     for the browser half, asserted here for the server half.
+
+    The assertion is on the DECLARED default, not on `Settings()`. `Settings()`
+    loads the ambient `services/api/.env`, so this used to assert the developer's
+    machine: it passed while nobody had the flag on, and failed the first time
+    somebody turned it on for the local walkthrough it exists for — a red suite
+    with no defect behind it. The shipped default is a property of the field.
     """
-    assert Settings().auth_dev_bypass is False
+    assert Settings.model_fields["auth_dev_bypass"].default is False
 
 
 def test_it_can_only_sign_in_as_a_seeded_synthetic_persona() -> None:
@@ -130,5 +136,9 @@ def test_the_app_refuses_to_boot_with_the_bypass_on_outside_dev() -> None:
     fails at BOOT, loudly, before a single session can be issued."""
     from sitara_api.app import create_app
 
+    # `_env_file=None` for the same reason the default assertion above avoids
+    # `Settings()`: the ambient .env must not decide what this test constructs.
     with pytest.raises(RuntimeError, match="refuses to run outside environment=dev"):
-        create_app(Settings(auth_dev_bypass=True, environment="production"))
+        create_app(
+            Settings(auth_dev_bypass=True, environment="production", _env_file=None)
+        )

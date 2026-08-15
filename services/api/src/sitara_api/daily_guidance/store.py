@@ -18,9 +18,11 @@ from __future__ import annotations
 
 import datetime as dt
 import logging
+from dataclasses import replace
 from typing import Any
 
-from sitara_schemas.facts import ConfidenceState
+from pydantic import ValidationError
+from sitara_schemas.facts import ConfidenceState, FactSnapshot
 from sitara_schemas.modules import MorningModule
 
 from sitara_api.chat_orchestration.store import to_object_id
@@ -71,11 +73,83 @@ class BriefStore:
         self._db = db
 
     async def get(self, user_id: str, local_date: str) -> Brief | None:
+        owner = to_object_id(user_id, field_name="daily_briefings.user_id")
         doc = await self._db.daily_briefings.find_one(
-            {"user_id": to_object_id(user_id, field_name="daily_briefings.user_id"),
-             "date": local_date}
+            {"user_id": owner, "date": local_date}
         )
-        return self._from_doc(doc) if doc else None
+        if not doc:
+            return None
+        return await self._hydrate(self._from_doc(doc), owner, local_date)
+
+    async def _hydrate(self, brief: Brief, owner: Any, local_date: str) -> Brief:
+        """Put §34.2's snapshots back on a re-read brief.
+
+        **This is the read half of the split §6.4 mandates**, and it was
+        missing. The row on `daily_briefings` carries fact IDs; the SNAPSHOTS
+        live in `guidance_logs`. `stored_fact_ids` already carried the ids
+        across the read so a Trust Sheet had something to show — but three
+        things on §28.2's home surface are built from the SNAPSHOTS, not the
+        ids, and all three silently emptied on every read after the first:
+
+          · item (6)'s panchang row (`present_panchang` reads tithi and
+            nakshatra boundary VALUES),
+          · S16's timings (`present_timings`, same),
+          · Tara's line, which drops from the cited register to the claimless
+            one when it has no facts to lean on.
+
+        The generating request holds the snapshots in memory, so a freshly
+        generated morning looked perfect and the same morning reloaded lost its
+        panchang strip and its timings screen. Nothing failed, nothing logged,
+        and `/today/timings` became a permanently empty screen with a designed
+        empty state making it look intentional.
+
+        §34.2's rule is unchanged and unbendable: the snapshot is read, never
+        RECOMPUTED. A recomputation eight months from now would answer a Trust
+        Sheet with today's sky rather than the sky the sentence was written
+        from, which is the whole reason the two collections are separate.
+        """
+        if not brief.modules or brief.snapshots:
+            return brief
+
+        log = await self._db.guidance_logs.find_one(
+            {"user_id": owner, "date": local_date, "why.source": "daily_brief"},
+            sort=[("created_at", -1)],
+        )
+        if not log:
+            return brief
+
+        by_id: dict[str, FactSnapshot] = {}
+        for raw in log.get("fact_snapshots") or []:
+            try:
+                snapshot = FactSnapshot.model_validate(raw)
+            except ValidationError:
+                # A snapshot this build cannot parse is a schema the brief was
+                # written under and we have since changed. Skipping it loses a
+                # panchang row; inventing one would lose the audit trail.
+                logger.warning(
+                    "guidance_log snapshot unreadable", extra={"date": local_date}
+                )
+                continue
+            by_id[snapshot.fact_id] = snapshot
+
+        if not by_id:
+            return brief
+
+        modules = []
+        for module in brief.modules:
+            ids = module.stored_fact_ids
+            # ALL or nothing per module. `ComposedModule.fact_ids` prefers
+            # snapshots over `stored_fact_ids`, so attaching a partial set
+            # would silently SHRINK the citation list — turning a missing
+            # snapshot into a missing citation, which is the one thing the
+            # stored ids exist to prevent.
+            if ids and all(fact_id in by_id for fact_id in ids):
+                modules.append(
+                    replace(module, snapshots=tuple(by_id[fact_id] for fact_id in ids))
+                )
+            else:
+                modules.append(module)
+        return replace(brief, modules=tuple(modules))
 
     async def upsert(self, brief: Brief, *, now: dt.datetime | None = None) -> Brief:
         """Write the brief under §32.13's key. Last writer for a local date wins.
