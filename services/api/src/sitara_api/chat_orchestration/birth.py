@@ -88,7 +88,8 @@ async def place_label_for(state: Any, user_id: str, supplied: str | None = None)
     if db is None:
         return None
     try:
-        profile = await db.profiles.find_one({"user_id": to_object_id(user_id, field_name="profiles.user_id")})
+        owner = to_object_id(user_id, field_name="profiles.user_id")
+        profile = await db.profiles.find_one({"user_id": owner})
     except Exception:
         logger.warning("profile unavailable; answering without a place")
         return None

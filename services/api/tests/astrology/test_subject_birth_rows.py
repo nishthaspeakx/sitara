@@ -13,6 +13,7 @@ import pytest
 import pytest_asyncio
 from bson import ObjectId
 
+from sitara_api.astrology.chart_adapter import AstroChartAdapter
 from sitara_api.astrology.service import AstrologyFacade
 from sitara_api.db.documents import stamp
 
@@ -20,6 +21,16 @@ pytestmark = pytest.mark.asyncio()
 
 OWNER = ObjectId()
 MEMBER = ObjectId()
+
+#: Constructed but never reached: every test here stops at the `birth_details`
+#: read, which is the whole point — the bug was in the QUERY, one layer before
+#: the engine. A real adapter rather than `None` so the facade is built exactly
+#: as the app builds it; the URL is never dialled.
+ADAPTER = AstroChartAdapter("http://127.0.0.1:1", timeout_seconds=0.1)
+
+
+def _facade(db) -> AstrologyFacade:  # noqa: ANN001
+    return AstrologyFacade(db=db, adapter=ADAPTER, crypto=None)
 
 
 def _row(*, user_id: ObjectId, member_id: ObjectId | None, date: str, accuracy: str) -> dict:
@@ -74,7 +85,7 @@ async def test_the_owners_own_chart_is_never_a_family_members(seeded) -> None:  
     confidence chip reading `verified`, because the row is complete and is
     genuinely theirs to hold. Nothing about it looks wrong.
     """
-    facade = AstrologyFacade(db=seeded, adapter=None, crypto=None)
+    facade = _facade(seeded)
 
     birth = await facade.birth_input(str(OWNER))
 
@@ -91,7 +102,7 @@ async def test_a_family_members_chart_resolves_at_all(seeded) -> None:  # noqa: 
     member with ASTRO_INSUFFICIENT_BIRTH_DATA while the screen said "Birth
     details on file" one line above it.
     """
-    facade = AstrologyFacade(db=seeded, adapter=None, crypto=None)
+    facade = _facade(seeded)
 
     birth = await facade.birth_input(str(MEMBER))
 
@@ -105,7 +116,7 @@ async def test_time_accuracy_follows_the_same_subject(seeded) -> None:  # noqa: 
     owner's `approximate` would label a correct diamond a guess, and the
     reverse would label a guess a certainty.
     """
-    facade = AstrologyFacade(db=seeded, adapter=None, crypto=None)
+    facade = _facade(seeded)
 
     assert await facade.time_accuracy(str(OWNER)) == "approximate"
     assert await facade.time_accuracy(str(MEMBER)) == "exact"
@@ -113,6 +124,6 @@ async def test_time_accuracy_follows_the_same_subject(seeded) -> None:  # noqa: 
 
 async def test_a_subject_with_no_row_declines(db) -> None:  # noqa: ANN001
     """§5.3: the engine declines rather than guessing, and so does this."""
-    facade = AstrologyFacade(db=db, adapter=None, crypto=None)
+    facade = _facade(db)
     assert await facade.birth_input(str(ObjectId())) is None
     assert await facade.time_accuracy(str(ObjectId())) == "unknown"
