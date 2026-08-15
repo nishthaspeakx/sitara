@@ -149,6 +149,42 @@ class ChartBundle:
         return (*self.natal, *self.dasha, *self.transits)
 
 
+def _subject_query(subject_id: str) -> dict[str, Any]:
+    """Find the birth row for a SUBJECT — an account holder or a family member.
+
+    Two bugs lived in the single-clause query this replaces, and the second is
+    the serious one.
+
+    **A family member's chart could never resolve.** `astrology/router.py` passes
+    `subject_id` for §32.15's members, and their row is stored with
+    `user_id` = the OWNER and `family_member_id` = the member. Looking up
+    `{"user_id": member_id}` matches nothing, so S28 — the first product surface
+    that draws CC-007's kundli — declined for every family member with
+    ASTRO_INSUFFICIENT_BIRTH_DATA while the screen said "Birth details on file"
+    one line above it.
+
+    **And the account-holder's own lookup could return a FAMILY MEMBER's row.**
+    `{"user_id": owner}` matches every row that user owns, their mother's
+    included, and `find_one` with no sort returns natural order. An account with
+    one family member could be shown their mother's chart as their own — with
+    every confidence chip reading `verified`, because the row IS complete and IS
+    theirs to hold. Nothing about it looks wrong. It had never fired only
+    because nothing had ever written birth details for a family member.
+
+    So the own-branch pins `family_member_id: None` — which is what the WRITE
+    path has always scoped to; only the read was ambiguous. An id is either a
+    user id or a member id and never both, which is what makes one query safe
+    for both.
+    """
+    oid = ObjectId(subject_id)
+    return {
+        "$or": [
+            {"user_id": oid, "family_member_id": None},
+            {"family_member_id": oid},
+        ]
+    }
+
+
 class AstrologyFacade:
     def __init__(
         self,
@@ -176,7 +212,7 @@ class AstrologyFacade:
         """
         from sitara_api.db.registry import BY_NAME
 
-        doc = await self._db.birth_details.find_one({"user_id": ObjectId(user_id)})
+        doc = await self._db.birth_details.find_one(_subject_query(user_id))
         if doc is None:
             return None
         if self._crypto is not None:
@@ -220,7 +256,7 @@ class AstrologyFacade:
         """
         from sitara_api.db.registry import BY_NAME
 
-        doc = await self._db.birth_details.find_one({"user_id": ObjectId(user_id)})
+        doc = await self._db.birth_details.find_one(_subject_query(user_id))
         if doc is None:
             return "unknown"
         if self._crypto is not None:

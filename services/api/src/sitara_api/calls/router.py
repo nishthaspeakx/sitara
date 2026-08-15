@@ -45,7 +45,7 @@ from sitara_api.calls.media import (
     CallDownFrame,
     CallUpFrame,
 )
-from sitara_api.chat_orchestration.birth import birth_profile_for
+from sitara_api.chat_orchestration.birth import birth_profile_for, place_label_for
 from sitara_api.chat_orchestration.presenter import present_turn
 from sitara_api.chat_orchestration.types import Stage, TurnRequest
 from sitara_api.chat_orchestration.ws_session import (
@@ -420,6 +420,10 @@ class _MediaSession:
         forwarder = asyncio.create_task(self._forward_stages(stages))
         try:
             profile = await birth_profile_for(self._app.state, self._grant.user_id)
+            # §25.3's spoken turn reaches the SAME resolution as the typed one.
+            # A call that could not say what today's timings are, on an account
+            # whose city is stored, is the defect one layer further in.
+            place_label = await place_label_for(self._app.state, self._grant.user_id)
             spoken = await service.answer(
                 TurnRequest(
                     user_id=self._grant.user_id,
@@ -428,6 +432,7 @@ class _MediaSession:
                     locale=self._grant.locale,
                     now=dt.datetime.now(dt.UTC),
                     profile=profile,
+                    place_label=place_label,
                 ),
                 on_stage=on_stage,
             )

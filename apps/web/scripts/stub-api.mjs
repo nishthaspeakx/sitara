@@ -776,6 +776,34 @@ const server = createServer(async (req, res) => {
   // That is the root CLAUDE.md rule, in the place it was broken: "a fake that
   // accepts what the real system rejects is a defect in the fake."
   const authed = client.state.session_user_id !== null;
+
+  // ── §34.5's rotating refresh ──────────────────────────────────────────────
+  //
+  // The real API serves this and, until M10's live run, no client code called
+  // it: the 15-minute access cookie expired and every screen rendered a fatal
+  // error. `session_expires_once` is the scenario that proves the client now
+  // recovers — the FIRST authenticated read 401s with AUTH_SESSION_EXPIRED, and
+  // only a real POST here (with the refresh cookie, over the real request path)
+  // clears it.
+  if (path === "/auth/session/refresh" && req.method === "POST") {
+    if (!authed) {
+      return send(res, 401, envelope("AUTH_SESSION_EXPIRED", "errors.auth.session_expired", false));
+    }
+    client.accessSpent = false;
+    return send(res, 200, { ok: true });
+  }
+
+  if (
+    scenario === "session_expires_once" &&
+    client.accessSpent !== false &&
+    path.startsWith("/v1/")
+  ) {
+    // Spent exactly once: the retry after a successful refresh must succeed,
+    // or the test would pass on a client that simply gave up quietly.
+    client.accessSpent = false;
+    return send(res, 401, envelope("AUTH_SESSION_EXPIRED", "errors.auth.session_expired", false));
+  }
+
   const needsSession = path.startsWith("/v1/onboarding") || path === "/v1/readings/first";
   if (needsSession && !authed) {
     return send(res, 401, envelope("AUTH_INVALID_TOKEN", "errors.auth.invalid_token", false));

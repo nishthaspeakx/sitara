@@ -77,7 +77,12 @@ export default function LanguagePage() {
                 // User-visible language names are DATA here, not copy: each is
                 // written in its own script and must not be translated.
                 label={t(`start.language.name.${code}`)}
-                detailKey={released ? undefined : "start.skip"}
+                // NOT `start.skip`, which is the ACTION label "Skip for now"
+                // and read as an invitation under a language you cannot pick —
+                // the first live walkthrough showed five rows offering to skip
+                // something that was never on offer. §2.4 admits a locale
+                // through the §12 gate, so the honest word is "not yet".
+                detailKey={released ? undefined : "start.language.not_released"}
                 disabled={!released || busy}
                 onClick={released ? () => choose(code) : undefined}
                 trailing={code === active ? <span aria-hidden="true">✓</span> : undefined}

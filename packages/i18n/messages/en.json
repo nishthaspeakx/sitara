@@ -685,7 +685,8 @@
         "mr": "मराठी",
         "ta": "தமிழ்",
         "te": "తెలుగు"
-      }
+      },
+      "not_released": "Not available yet"
     },
     "consent": {
       "title": "What you're agreeing to",

@@ -11,7 +11,7 @@ from __future__ import annotations
 import datetime as dt
 
 import pytest
-from bson import ObjectId
+from bson import Binary, ObjectId
 
 from sitara_api.journal.models import ArtefactType
 from sitara_api.journal.search import ExactTextSearch
@@ -52,7 +52,12 @@ async def _reflection(db, *, date: str, text: str = "a quiet evening") -> None:
             "_id": ObjectId(),
             "user_id": USER_ID,
             "date": date,
-            "entries": [text],
+            # The shape `reflection/service.py` actually writes. This fixture
+            # stored bare strings — a document the real service never produces
+            # — so every journal test ran against a `night_reflections` row
+            # that could not exist, and the reflection preview reader had to be
+            # written against the wrong shape to satisfy it.
+            "entries": [{"prompt": "gratitude", "text": text}],
             "memory_chips": [],
             "locale": "en",
             "created_at": NOW,
@@ -129,6 +134,72 @@ async def test_all_four_artefact_kinds_reach_the_timeline(
         ArtefactType.CALL,
         ArtefactType.GUIDANCE,
     }
+
+
+async def test_every_artefact_kind_previews_from_its_SOURCE(
+    service: JournalService, store: JournalStore, db
+) -> None:
+    """§30.5's Journal is a VIEW, so a row shows what the artefact says.
+
+    Only saved guidance ever rendered one. Briefs, reflections and call
+    summaries reached the client with `preview: null`, and the client's honest
+    absence line — "the original is no longer here" — is what a user then read
+    about a brief that was sitting right there. That sentence is the one thing
+    in the Journal that must never be wrong, and it was wrong on its three most
+    common rows.
+
+    Asserted per KIND rather than "some entry has a preview", because three
+    separate readers had to be fixed and one of them silently regressing would
+    otherwise hide behind the other two.
+    """
+    await _brief(db, date="2026-08-15", text="a settled start")
+    await _reflection(db, date="2026-08-15", text="a quiet evening")
+    await _call(db, ended=NOW)
+    message_id = await _guidance_message(db, content="the lease can wait until Thursday")
+    await store.save(
+        user_id=USER_ID,
+        artefact_type=ArtefactType.GUIDANCE,
+        artefact_ref=str(message_id),
+        message_id=message_id,
+        now=NOW,
+    )
+
+    entries = {e.artefact_type: e for day in await service.timeline(USER_ID) for e in day.entries}
+
+    assert entries[ArtefactType.BRIEF].preview == "a settled start"
+    assert entries[ArtefactType.REFLECTION].preview == "a quiet evening"
+    assert entries[ArtefactType.CALL].preview
+    assert entries[ArtefactType.GUIDANCE].preview == "the lease can wait until Thursday"
+
+
+async def test_a_preview_that_reads_back_as_ciphertext_declines(
+    service: JournalService, db
+) -> None:
+    """§6.4 marks several of these fields field-level encrypted, so a value can
+    come back as a `Binary` rather than a string.
+
+    The morning composer already settled this: a CSFLE name that reads back as
+    ciphertext DECLINES rather than composing a card around a blob. A row with
+    no preview is honest; a row showing base64 says nothing and looks like
+    corruption.
+    """
+    await db.night_reflections.insert_one(
+        {
+            "_id": ObjectId(),
+            "user_id": USER_ID,
+            "date": "2026-08-14",
+            "locale": "en",
+            "entries": [{"prompt": "gratitude", "text": Binary(b"\x01ciphertext")}],
+            "memory_chips": [],
+            "created_at": NOW,
+            "updated_at": NOW,
+            "schema_v": 1,
+        }
+    )
+
+    days = await service.timeline(USER_ID)
+    entry = next(e for day in days for e in day.entries)
+    assert entry.preview is None
 
 
 async def test_days_are_newest_first(service: JournalService, db) -> None:

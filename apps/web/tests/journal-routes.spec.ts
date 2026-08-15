@@ -173,3 +173,36 @@ test.describe("S26 — mute and delete are opposites and stay that way", () => {
     await expect(row).toHaveAttribute("data-muted", "true");
   });
 });
+
+test.describe("§34.5 — a spent access token refreshes instead of failing", () => {
+  test("a 401 mid-session is recovered, not rendered as a fatal error", async ({ page }) => {
+    // The access cookie lives 15 minutes and the refresh cookie 30 days. That
+    // pair exists so a session SURVIVES, and no client code called the refresh
+    // endpoint — so every app open older than a quarter of an hour met a 401 on
+    // its first read and rendered "Tara will be right back … that sign-in
+    // didn't go through", with a trace code, as though something had broken.
+    //
+    // The stub spends the token exactly ONCE, so this fails against a client
+    // that gives up quietly AND against one that loops.
+    await setupRecords(page, { scenario: "session_expires_once" });
+    await page.goto(`/en/journal${SKIP_LAUNCH}`);
+
+    await expect(page.getByTestId("journal")).toBeVisible();
+    await expect(page.getByText(/right back/i)).toHaveCount(0);
+    await expect(page.getByText(/didn't go through/i)).toHaveCount(0);
+  });
+
+  test("the refresh endpoint itself is never retried", async ({ page }) => {
+    // A 401 from the refresh means the refresh cookie is spent too — a real
+    // sign-out, not a hiccup. Retrying it would loop forever behind a screen
+    // that looks merely slow.
+    const calls: string[] = [];
+    page.on("request", (r) => {
+      if (r.url().includes("/auth/session/refresh")) calls.push(r.url());
+    });
+    await setupRecords(page, { state: { session_user_id: null } });
+    await page.goto(`/en/journal${SKIP_LAUNCH}`);
+    await expect(page.getByTestId("journal")).toBeVisible();
+    expect(calls.length).toBeLessThanOrEqual(1);
+  });
+});

@@ -155,6 +155,7 @@ class JournalStore:
                 local_date=doc["date"],
                 occurred_at=doc.get("generated_at") or doc.get("created_at"),
                 confidence=doc.get("confidence"),
+                preview=_first_module_text(doc),
             )
             async for doc in cursor
         ]
@@ -170,6 +171,7 @@ class JournalStore:
                 ref=doc["date"],
                 local_date=doc["date"],
                 occurred_at=doc.get("created_at"),
+                preview=_first_reflection_text(doc),
             )
             async for doc in cursor
         ]
@@ -200,6 +202,7 @@ class JournalStore:
                     conversation_id=(
                         str(doc["conversation_id"]) if doc.get("conversation_id") else None
                     ),
+                    preview=_plain_text(doc.get("summary")),
                 )
             )
         return entries
@@ -242,6 +245,55 @@ class JournalStore:
             return {}
         cursor = self._db.messages.find({"_id": {"$in": list(message_ids)}})
         return {doc["_id"]: doc async for doc in cursor}
+
+
+def _plain_text(value: Any) -> str | None:
+    """A preview, or nothing — never a blob.
+
+    §6.4 marks several of these fields field-level encrypted, and a value that
+    reads back as ciphertext is a `Binary`, not a string. The morning composer
+    already established the rule for exactly this case: a CSFLE name that reads
+    back as ciphertext DECLINES rather than composing a card around a blob.
+    Same here — a journal row with no preview says so honestly, and a row
+    showing base64 says nothing at all while looking like corruption.
+    """
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    return text or None
+
+
+def _first_module_text(doc: dict[str, Any]) -> str | None:
+    """What the morning actually SAID, read from the brief itself.
+
+    §30.5 makes the Journal a VIEW and §44.2 keeps no copy, so the preview is
+    rendered from the artefact where it lives — which is this document. Without
+    it every brief row rendered the client's honest-absence line, "the original
+    is no longer here", about a brief that was sitting right there: the one
+    sentence in the Journal that must never be wrong, on its most common row.
+
+    The FIRST module is the brief's own ordering (§28.2's core card leads), so
+    the preview is the line the user would have read first that morning.
+    """
+    for module in doc.get("modules") or []:
+        text = _plain_text(module.get("text"))
+        if text:
+            return text
+    return None
+
+
+def _first_reflection_text(doc: dict[str, Any]) -> str | None:
+    """Her own words from that night, in §27's prompt order.
+
+    A reflection with only a mood is a real reflection and has no text — that
+    row previews as an absence, which is true, rather than inventing a summary
+    of a night she chose not to write about.
+    """
+    for entry in doc.get("entries") or []:
+        text = _plain_text(entry.get("text") if isinstance(entry, dict) else None)
+        if text:
+            return text
+    return None
 
 
 def _date_query(user_id: ObjectId, since: str | None, until: str | None) -> dict[str, Any]:

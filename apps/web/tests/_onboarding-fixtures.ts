@@ -63,7 +63,10 @@ export type Scenario =
      the user's OWN records rather than a pipeline output, so the stub is a
      state machine over them (see `scripts/stub-api.mjs`). */
   | "records_empty"
-  | "records_unavailable";
+  | "records_unavailable"
+  /* §34.5: the access cookie is spent once, so the client must refresh and
+     retry rather than render a fatal error. */
+  | "session_expires_once";
 
 /**
  * §28.2's sixteen. The ids are the recorded fixtures' filenames, so a variant
@@ -389,7 +392,7 @@ export async function records(clientId: string): Promise<RecordsState> {
  */
 export async function setupRecords(
   page: Page,
-  options: { locale?: string; scenario?: Scenario } = {},
+  options: { locale?: string; scenario?: Scenario; state?: Partial<StubState> } = {},
 ): Promise<string> {
   return setupApi(page, {
     locale: options.locale ?? "en",
@@ -401,6 +404,9 @@ export async function setupRecords(
       has_city: true,
       time_accuracy: "exact",
       brief_time: "07:00",
+      // A spec about the signed-OUT world opts out here, the same way the
+      // onboarding specs do — `setupApi` defaults a client to signed-in.
+      ...(options.state ?? {}),
     },
   });
 }

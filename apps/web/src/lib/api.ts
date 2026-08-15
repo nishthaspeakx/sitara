@@ -89,7 +89,60 @@ export type ApiResult<T> = { ok: true; data: T } | { ok: false; error: ErrorEnve
  * need a try/catch — a screen that forgets one is a screen that swallows the
  * failure, which is the defect this file was written alongside.
  */
+/**
+ * ── The §34.5 refresh, which nothing was using ────────────────────────────
+ *
+ * The access cookie lives 15 minutes; the refresh cookie lives 30 days and
+ * rotates. That pair exists so a session SURVIVES — and no client code called
+ * `POST /auth/session/refresh`, so every app open older than fifteen minutes
+ * met a 401 on its first read and rendered "Tara will be right back. That
+ * sign-in didn't go through", with a trace code, as though something had
+ * broken. Nothing had; the short-lived half of a two-token design had simply
+ * done its job with no one to catch it.
+ *
+ * One attempt, single-flight, and only for the two codes that mean "this
+ * access token is spent". A 403 is a decision and must not be retried; a
+ * failed refresh returns the ORIGINAL envelope so the screen still reports
+ * what actually happened.
+ */
+const REFRESHABLE = new Set(["AUTH_SESSION_EXPIRED", "AUTH_INVALID_TOKEN"]);
+
+/** Shared so a screen firing four reads at once mints one refresh, not four. */
+let refreshInFlight: Promise<boolean> | null = null;
+
+async function refreshSession(): Promise<boolean> {
+  refreshInFlight ??= (async () => {
+    try {
+      const response = await fetch(apiUrl("/auth/session/refresh"), {
+        method: "POST",
+        credentials: "same-origin",
+      });
+      return response.ok;
+    } catch {
+      return false;
+    } finally {
+      // Cleared in a microtask so every caller awaiting THIS refresh sees the
+      // same answer, and the next 401 after it starts a new one.
+      queueMicrotask(() => {
+        refreshInFlight = null;
+      });
+    }
+  })();
+  return refreshInFlight;
+}
+
 export async function apiCall<T>(path: string, init?: RequestInit): Promise<ApiResult<T>> {
+  const first = await attempt<T>(path, init);
+  if (first.ok) return first;
+  // The refresh endpoint itself is never retried — a 401 from it means the
+  // refresh cookie is spent too, which is a real sign-out and not a hiccup.
+  if (path.startsWith("/auth/session/refresh")) return first;
+  if (!REFRESHABLE.has(first.error.code)) return first;
+  if (!(await refreshSession())) return first;
+  return attempt<T>(path, init);
+}
+
+async function attempt<T>(path: string, init?: RequestInit): Promise<ApiResult<T>> {
   try {
     const response = await fetch(apiUrl(path), {
       ...init,

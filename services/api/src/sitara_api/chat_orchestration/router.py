@@ -37,7 +37,7 @@ from sitara_schemas import ErrorCode
 from sitara_schemas.chat import ChatTurn
 
 from sitara_api.auth.router import CurrentSession
-from sitara_api.chat_orchestration.birth import birth_profile_for
+from sitara_api.chat_orchestration.birth import birth_profile_for, place_label_for
 from sitara_api.chat_orchestration.pipeline import ChatPipeline
 from sitara_api.chat_orchestration.presenter import present_turn
 from sitara_api.chat_orchestration.types import BirthProfile, Stage, TurnRequest
@@ -142,6 +142,9 @@ async def _run(
 ) -> ChatTurn:
     pipeline = _pipeline(request)
     profile = await _birth_profile(request, user_id)
+    # The caller's label wins (§30.2 lets a question name its own place); this
+    # fills the silence from the stored brief place. Every client sends none.
+    place_label = await place_label_for(request.app.state, user_id, place_label)
     result = await pipeline.run(
         TurnRequest(
             user_id=user_id,
