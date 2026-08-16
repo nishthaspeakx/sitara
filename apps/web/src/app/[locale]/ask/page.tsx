@@ -169,7 +169,8 @@ export default function AskPage() {
       onSend={send}
       onRetry={retry}
       onSelectTab={(tab) => router.push(`/${tab}`)}
-      onGetHelp={() => router.push("/you/help")}
+      // S39, which exists. `/you/help` never did — see SafetyTakeover.
+      onGetHelp={() => router.push("/support/now")}
       onCall={() => router.push("/ask/call")}
       onAcceptMemory={acceptMemory}
       onDeclineMemory={() => {}}

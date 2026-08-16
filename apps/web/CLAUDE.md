@@ -252,6 +252,28 @@ So the modes are disjoint by construction (`scripts/dist-dirs.mjs`):
 
 `tests/dist-dirs.spec.ts` (in the `library` project, no server needed) asserts the three stay distinct, that dev stays non-overridable, that the config still keys off the phase, and that all three are git-ignored. `next-env.d.ts` is **not committed** — every `next` command rewrites it to name whichever directory ran last, and a cold clone typechecks without it.
 
+## Reporting a test result (added after a false report, 16 Aug 2026)
+
+**Never report a test outcome from Playwright's tail output.** The tail lists
+PASSING tests; it is not a result. Always run with `--reporter=line` (or read
+the summary line) and quote BOTH counts — passed and failed — in any claim. A
+number with no failure count beside it is not a verification.
+
+This was not hypothetical: a device-frame change was reported as "459 passed,
+zero baseline churn" on the strength of a tail that happened to end in passing
+test names. The real figure was 459 passed / **122 failed**, and the 122 were
+pre-existing debt nobody had noticed either.
+
+Two corollaries from the same incident:
+
+- **Rebuild before every `--project=screens` run.** The suite tests `.next-test`,
+  not the working tree. A run against a stale build produced two phantom
+  failures that vanished on rebuild and sent a diagnosis down the wrong path.
+- **Open a diff image before theorising about a baseline failure.** Two rounds
+  of hypothesis (`100vh` vs `100dvh`, then the safe-area sweep) were both wrong;
+  one look at `test-results/**/*-diff.png` showed a uniform vertical offset and
+  named the inserted element on sight.
+
 ## Commands
 - Dev: `pnpm --filter web dev` (http://localhost:3000/en) · Build: `pnpm --filter web build`
 - Lint: `pnpm --filter web lint` · Types: `pnpm --filter web typecheck`

@@ -18,9 +18,9 @@ import { useRouter } from "@/i18n/navigation";
 export default function SupportNowPage() {
   const router = useRouter();
   return (
-    <SafetyTakeover
-      onBackToTara={() => router.push("/ask")}
-      onGetHelp={() => router.push("/you/help")}
-    />
+    // No `onGetHelp`: this screen IS the help surface (§29.1's S39), so the
+    // only exit is back to the thread. A button pointing at the page you are
+    // already on is a dead affordance; it pointed at `/you/help`, which 404'd.
+    <SafetyTakeover onBackToTara={() => router.push("/ask")} />
   );
 }
