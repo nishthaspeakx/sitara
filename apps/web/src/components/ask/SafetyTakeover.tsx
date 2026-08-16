@@ -52,9 +52,25 @@ export function SafetyTakeover({ onBackToTara, onGetHelp }: SafetyTakeoverProps)
       <p className="max-w-reading text-caption text-ink-muted">{t("ui.safety.disclosure")}</p>
 
       <div className="mt-auto flex flex-col gap-2">
-        <Button variant="primary" fullWidth onClick={onGetHelp}>
-          {t("ui.safety.get_help")}
-        </Button>
+        {/* Rendered only when there is somewhere to go — the convention
+            `ChatHeader`, `PaywallPanel` and `ErrorState` already follow: where
+            an action cannot happen, no control for it exists.
+
+            It matters more here than anywhere else in the product. This
+            handler pointed at `/you/help`, which does not exist, so the
+            PRIMARY button on the L3+ crisis screen 404'd in all three
+            locales. On `/support/now` the user is already at the help
+            surface, so the prop is omitted and the button is absent rather
+            than being a link to the page you are on.
+
+            The helpline itself is in the Card above and is never behind this
+            button — a crisis number that needed a tap would be the wrong
+            design regardless of whether the tap worked. */}
+        {onGetHelp ? (
+          <Button variant="primary" fullWidth onClick={onGetHelp}>
+            {t("ui.safety.get_help")}
+          </Button>
+        ) : null}
         <Button variant="tertiary" fullWidth onClick={onBackToTara}>
           {t("ui.safety.back_to_tara")}
         </Button>
