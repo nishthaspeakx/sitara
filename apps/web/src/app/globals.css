@@ -26,16 +26,17 @@
  * them with the iPhone 17's real insets.
  */
 :root {
-  /* `100vh`, NOT `100dvh` — this is the value `min-h-screen` compiled to
-     before the frame existed, and the fallback's job is to be behaviour-
-     identical when unframed. Swapping in `dvh` here churned 122 screenshot
-     baselines: the two units differ, so every screen's height moved.
+  /* `100dvh`, not `100vh`. On real iOS Safari a `100vh` screen is permanently
+     ~60px too tall under the collapsing URL bar, so the tab bar sits beneath
+     the browser chrome; `dvh` is the value the phone actually has.
 
-     `dvh` IS the better value on real iOS Safari (a `100vh` screen is
-     permanently ~60px too tall under the collapsing URL bar) — but that is a
-     separate decision with its own re-baseline, not something a dev-only
-     device frame should smuggle in. */
-  --app-vh: 100vh;
+     This was briefly switched to `100vh` on a theory that the swap explained
+     122 failing baselines. It did not — the two compute IDENTICALLY in
+     headless Chromium, which has no dynamic browser UI, so the change moved
+     the count by one and that one was this file's own test. The 122 were
+     pre-existing debt from M12's UI landing without a re-record, fixed in a
+     separate commit. Recorded because the wrong theory looked reasonable. */
+  --app-vh: 100dvh;
   --app-safe-top: env(safe-area-inset-top, 0px);
   --app-safe-bottom: env(safe-area-inset-bottom, 0px);
 }
